@@ -16,7 +16,7 @@ Adding a field here updates all four at once. That is the whole point of the tab
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from enum import StrEnum
 
 
@@ -123,11 +123,11 @@ _FIELDS: tuple[FieldSpec, ...] = (
     # in v2, but is accepted defensively). `.type` is frequently ABSENT on older records,
     # which is why `start_is_actual` is tri-state rather than boolean.
     FieldSpec(
-        key="start_year",
+        key="start_date",
         kind=FieldKind.TEMPORAL,
         source="protocolSection.statusModule.startDateStruct.date",
         projection=("StartDate", "StartDateType"),
-        label="Start Year",
+        label="Start Date",
         note="Registry lag undercounts the most recent periods; sponsors register and "
         "update on their own schedule.",
     ),
@@ -141,11 +141,11 @@ _FIELDS: tuple[FieldSpec, ...] = (
         "'Unknown' is not the same as 'estimated' and is never silently folded into it.",
     ),
     FieldSpec(
-        key="completion_year",
+        key="completion_date",
         kind=FieldKind.TEMPORAL,
         source="protocolSection.statusModule.completionDateStruct.date",
         projection=("CompletionDate", "CompletionDateType"),
-        label="Completion Year",
+        label="Completion Date",
     ),
     FieldSpec(
         key="completion_is_actual",
@@ -155,11 +155,11 @@ _FIELDS: tuple[FieldSpec, ...] = (
         label="Completion Date Is Actual",
     ),
     FieldSpec(
-        key="primary_completion_year",
+        key="primary_completion_date",
         kind=FieldKind.TEMPORAL,
         source="protocolSection.statusModule.primaryCompletionDateStruct.date",
         projection=("PrimaryCompletionDate", "PrimaryCompletionDateType"),
-        label="Primary Completion Year",
+        label="Primary Completion Date",
     ),
     # --- status -------------------------------------------------------------------
     FieldSpec(
@@ -185,17 +185,26 @@ _FIELDS: tuple[FieldSpec, ...] = (
     # buckets, never exclusions. They mean different things: NA is an interventional trial
     # for which phase does not apply (device, procedure, behavioural); absent means the
     # study is observational or expanded-access, where phase is not a concept.
+    #
+    # `multi=False` despite the source being a list, and this is deliberate. The API stores
+    # phases as an array, but a Phase 1/Phase 2 trial is one kind of trial, not one Phase 1
+    # trial plus one Phase 2 trial. The normalizer collapses the array into a single
+    # composite value ("PHASE1|PHASE2") which buckets on its own. ClinicalTrials.gov's own
+    # facets do the opposite and double-count: their per-phase counts plus their missing
+    # count sum to 622,213 against a corpus of 597,691, an excess of 24,522 — exactly the
+    # multi-phase population. Ours sum to the trial count. See docs/corpus-facts.md.
     FieldSpec(
         key="phases",
         kind=FieldKind.CATEGORICAL,
         source="protocolSection.designModule.phases",
         projection=("Phase",),
-        multi=True,
+        multi=False,
         enum_type="Phase",
         label="Phase",
         note="'Not Applicable' and 'Not Reported' together are roughly 63% of the registry. "
-        "Combination phases (e.g. Phase 1/Phase 2) are their own bucket and are never "
-        "double-counted into Phase 1 and Phase 2.",
+        "Combination phases (e.g. Phase 1/Phase 2) form their own bucket and are never "
+        "double-counted into Phase 1 and Phase 2, so these totals will not match "
+        "ClinicalTrials.gov's own phase facets, which do double-count.",
     ),
     FieldSpec(
         key="study_type",

@@ -40,7 +40,7 @@ def _leg(label: str = "All", **filters: object) -> Leg:
             "time trend",  # "How has the number of trials for [drug] changed per year?"
             Plan(
                 legs=[_leg("Pembrolizumab", intervention="pembrolizumab")],
-                group_by="start_year",
+                group_by="start_date",
                 granularity=Granularity.YEAR,
                 metric=Metric.COUNT,
                 sort=Sort.DIMENSION_ASC,
@@ -197,14 +197,14 @@ def test_legal_plans_pass(name: str, plan: Plan) -> None:
         ),
         (
             "temporal group_by without granularity",
-            Plan(legs=[_leg(condition="melanoma")], group_by="start_year"),
+            Plan(legs=[_leg(condition="melanoma")], group_by="start_date"),
             "requires an explicit granularity",
         ),
         (
             "top_n on a temporal dimension",
             Plan(
                 legs=[_leg(condition="melanoma")],
-                group_by="start_year",
+                group_by="start_date",
                 granularity=Granularity.YEAR,
                 top_n=10,
             ),

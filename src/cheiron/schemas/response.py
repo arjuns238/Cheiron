@@ -177,9 +177,13 @@ class Citation(BaseModel):
     brief_title: str
     field_path: str = Field(description="Dotted path in the source record, e.g. "
                             "'protocolSection.designModule.phases[0]'.")
-    field_value: str = Field(description="The value at that path that put this trial in the bucket.")
+    field_value: str = Field(
+        description="The value at that path that put this trial in the bucket."
+    )
     excerpt: str = Field(description="Verbatim substring of the fetched payload.")
-    offset: tuple[int, int] = Field(description="[start, end) offsets of `excerpt` within the payload.")
+    offset: tuple[int, int] = Field(
+        description="[start, end) offsets of `excerpt` within the payload."
+    )
 
 
 class RecordCounts(BaseModel):

@@ -102,7 +102,8 @@ class AnalyzeRequest(BaseModel):
         json_schema_extra={
             "examples": [
                 {
-                    "query": "How has the number of trials for this drug changed per year since 2015?",
+                    "query": "How has the number of trials for this drug changed per "
+                    "year since 2015?",
                     "drug_name": "Pembrolizumab",
                     "start_year": 2015,
                 },
