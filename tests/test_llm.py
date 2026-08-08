@@ -267,17 +267,41 @@ def test_derivation_only_applies_to_binned_plans() -> None:
 class FakeClient:
     """Replays a scripted sequence of plans (or errors) and records the prompts it saw."""
 
-    def __init__(self, script: list[Plan | Exception], provider: Provider = Provider.OPENAI):
+    def __init__(
+        self,
+        script: list[Plan | Exception],
+        provider: Provider = Provider.OPENAI,
+        probe_script: list[list[tuple[str, dict]]] | None = None,
+    ):
         self.script = list(script)
+        self.probe_script = list(probe_script or [])
         self.prompts: list[str] = []
         self.drops: list[frozenset[str]] = []
+        self.tools_offered: list[Any] = []
         self.settings = LLMSettings(
             provider=provider, api_key="test", model_small="small", model_large="large"
         )
 
-    async def complete(self, *, system, user, schema, tier, max_tokens=2048, drop=frozenset()):
+    async def complete(
+        self,
+        *,
+        system,
+        user,
+        schema,
+        tier,
+        max_tokens=2048,
+        drop=frozenset(),
+        tools=None,
+        executor=None,
+    ):
         self.prompts.append(user)
         self.drops.append(drop)
+        self.tools_offered.append(tools)
+        # Replay any scripted probe calls, so the planner's trace can be asserted without
+        # a real model deciding to probe.
+        for name, args in self.probe_script.pop(0) if self.probe_script else []:
+            assert executor is not None, "probe scripted but no executor supplied"
+            await executor(name, args)
         step = self.script.pop(0)
         if isinstance(step, Exception):
             raise step
@@ -406,6 +430,90 @@ async def test_a_withheld_bin_scale_is_derived_after_the_model_answers() -> None
 
     assert result.plan.bin_scale is BinScale.LOG
     assert "bin_scale" in client.drops[0]
+
+
+# --------------------------------------------------------------------------------------
+# Probes
+# --------------------------------------------------------------------------------------
+
+
+async def test_probe_tools_are_offered_only_when_a_runner_is_supplied() -> None:
+    """Without a runner the planner works from the schema alone — legal, but blind."""
+    bare = FakeClient([LEGAL])
+    await plan_query(bare, AnalyzeRequest(query="phases for melanoma"))
+    assert bare.tools_offered[0] is None
+
+    import httpx
+
+    from cheiron.ctgov.client import CtGovClient
+    from cheiron.llm.probes import ProbeRunner
+
+    transport = httpx.MockTransport(lambda r: httpx.Response(200, json={"totalCount": 1}))
+    probed = FakeClient([LEGAL])
+    await plan_query(
+        probed,
+        AnalyzeRequest(query="phases for melanoma"),
+        probes=ProbeRunner(CtGovClient(httpx.AsyncClient(transport=transport))),
+    )
+    assert {t["name"] for t in probed.tools_offered[0]} == {
+        "probe_count",
+        "field_values",
+        "fill_rate",
+    }
+
+
+async def test_probe_calls_are_recorded_on_the_planning_result() -> None:
+    """`meta.planning_trace` is built from this: what the model was shown, before it chose."""
+    import httpx
+
+    from cheiron.ctgov.client import CtGovClient
+    from cheiron.llm.probes import ProbeRunner
+
+    transport = httpx.MockTransport(lambda r: httpx.Response(200, json={"totalCount": 2922}))
+    runner = ProbeRunner(CtGovClient(httpx.AsyncClient(transport=transport)))
+    client = FakeClient(
+        [LEGAL], probe_script=[[("probe_count", {"intervention": "pembrolizumab"})]]
+    )
+
+    result = await plan_query(client, AnalyzeRequest(query="pembro phases"), probes=runner)
+
+    assert [c.tool for c in result.probes] == ["probe_count"]
+    assert result.probes[0].result["total"] == 2922
+    assert result.probes[0].args == {"intervention": "pembrolizumab"}
+
+
+async def test_the_probe_budget_spans_the_whole_planning_loop() -> None:
+    """The budget is per planning attempt in the prompt, but the runner bounds the loop.
+
+    A planner that probes on every revision would otherwise multiply its budget by the
+    revision count.
+    """
+    import httpx
+
+    from cheiron.ctgov.client import CtGovClient
+    from cheiron.llm.probes import PROBE_BUDGET, ProbeRunner
+
+    transport = httpx.MockTransport(lambda r: httpx.Response(200, json={"totalCount": 1}))
+    runner = ProbeRunner(CtGovClient(httpx.AsyncClient(transport=transport)))
+    probe = ("probe_count", {"condition": "melanoma"})
+    client = FakeClient([ILLEGAL, LEGAL], probe_script=[[probe] * 3, [probe] * 3])
+
+    result = await plan_query(client, AnalyzeRequest(query="melanoma"), probes=runner)
+
+    # Six probes were attempted across two attempts; only the budgeted four ran. Refused
+    # probes are deliberately not recorded as calls, so the trace shows work done, not
+    # work attempted.
+    assert len(result.probes) == PROBE_BUDGET
+    assert all("error" not in c.result for c in result.probes)
+
+
+async def test_the_prompt_tells_the_planner_what_probes_are_for() -> None:
+    prompt = build_system_prompt()
+    for tool in ("probe_count", "field_values", "fill_rate"):
+        assert tool in prompt
+    assert "probes shape the plan" in prompt, (
+        "the model must be told not to copy a probe result into the plan"
+    )
 
 
 async def test_a_plan_that_needs_no_repair_costs_one_call() -> None:

@@ -26,6 +26,7 @@ import logging
 from dataclasses import dataclass, field
 
 from cheiron.llm.client import LLMClient, LLMError, Provider, Tier
+from cheiron.llm.probes import PROBE_BUDGET, ProbeCall, ProbeRunner, probe_tool_specs
 from cheiron.schemas.fields import FIELDS, FieldKind
 from cheiron.schemas.plan import BinScale, Plan, validate_plan
 from cheiron.schemas.request import AnalyzeRequest
@@ -95,6 +96,9 @@ class PlanningResult:
     attempts: list[PlanAttempt] = field(default_factory=list)
     #: True when no attempt was fully legal and the least-bad one was committed anyway.
     contested: bool = False
+    #: Every probe the planner ran, in order, for `meta.planning_trace`. Recorded so a
+    #: reader can see exactly which aggregate facts the model was shown before it chose.
+    probes: list[ProbeCall] = field(default_factory=list)
 
     @property
     def warnings(self) -> list[str]:
@@ -143,6 +147,10 @@ def _field_lines() -> str:
 
 def _kind_list(kind: FieldKind) -> str:
     return ", ".join(k for k, f in FIELDS.items() if f.kind is kind) or "none"
+
+
+def _trace(probes: ProbeRunner | None) -> list[ProbeCall]:
+    return list(probes.calls) if probes is not None else []
 
 
 def _apply_derived_defaults(plan: Plan) -> Plan:
@@ -203,6 +211,19 @@ RULES
 - assumptions: state any interpretation you made that a careful reader would want to
   check — which field you read a term as, a date range you inferred, a default you chose.
 
+PROBES
+You may call up to {PROBE_BUDGET} probe tools before committing, and they are the only way
+you learn anything about the data. Probes return counts, never trial records. Use them when
+the answer changes your plan:
+- an entity you are unsure of: probe_count with it as intervention, then as condition.
+  Zero means it does not resolve there.
+- an entity group_by: field_values, to see whether it needs top_n and how large a tail.
+- a field that may be sparsely reported in this slice: fill_rate before grouping on it.
+- a slice that may be huge: probe_count, since above 20,000 the chart becomes a sample.
+Do not probe to confirm something the schema already tells you, and do not copy a probe
+result into the Plan as if it were an answer — probes shape the plan, they are not the
+output.
+
 Return only the Plan."""
 
 
@@ -247,6 +268,7 @@ async def plan_query(
     request: AnalyzeRequest,
     *,
     max_revisions: int = MAX_REVISIONS,
+    probes: ProbeRunner | None = None,
 ) -> PlanningResult:
     """Produce a validated plan for a request.
 
@@ -255,6 +277,9 @@ async def plan_query(
             decision in the system where model quality changes what gets computed.
         request: The caller's question and any structured overrides.
         max_revisions: Revisions after the first attempt.
+        probes: Gives the planner read access to aggregate counts. Optional: without it
+            the planner works from the schema alone, which is legal but blind — it cannot
+            tell whether a drug name resolves or how many buckets a grouping produces.
 
     Returns:
         A `PlanningResult` whose `plan` has passed `validate_plan`, or whose `contested`
@@ -275,6 +300,8 @@ async def plan_query(
         if client.settings.provider is Provider.ANTHROPIC
         else frozenset()
     )
+    tools = probe_tool_specs() if probes is not None else None
+    executor = probes.run if probes is not None else None
 
     for revision in range(max_revisions + 1):
         prompt = user
@@ -289,6 +316,8 @@ async def plan_query(
                 tier=Tier.LARGE,
                 max_tokens=2048,
                 drop=drop,
+                tools=tools,
+                executor=executor,
             )
         except LLMError as exc:
             # A schema-invalid response is a normal, recoverable step in this loop: the
@@ -301,7 +330,7 @@ async def plan_query(
         errors = validate_plan(plan)
         attempts.append(PlanAttempt(plan=plan, errors=errors))
         if not errors:
-            return PlanningResult(plan=plan, attempts=attempts)
+            return PlanningResult(plan=plan, attempts=attempts, probes=_trace(probes))
 
         log.info("planner attempt %d rejected: %s", revision + 1, "; ".join(errors))
         rejected.append(plan)
@@ -317,7 +346,9 @@ async def plan_query(
     # nearly-right chart into no answer at all, which serves nobody.
     best = min(usable, key=lambda a: a.score)
     assert best.plan is not None
-    return PlanningResult(plan=best.plan, attempts=attempts, contested=True)
+    return PlanningResult(
+        plan=best.plan, attempts=attempts, contested=True, probes=_trace(probes)
+    )
 
 
 __all__ = [

@@ -116,6 +116,20 @@ _DEFAULT_MODELS: dict[Provider, dict[Tier, str]] = {
 }
 
 
+#: Hard stop on the request/execute cycle. The probe budget already bounds useful work;
+#: this bounds a model that ignores it, so a planning call cannot loop forever.
+MAX_TOOL_ROUNDS = 8
+
+#: A tool call, as both providers describe one once their shapes are normalized.
+ToolCall = tuple[str, str, dict[str, Any]]  # (id, name, arguments)
+
+
+class ToolExecutor(Protocol):
+    """Runs one tool call and returns its result as a JSON-serializable dict."""
+
+    async def __call__(self, name: str, arguments: dict[str, Any]) -> dict[str, Any]: ...
+
+
 class LLMClient(Protocol):
     """What the four touchpoints require of a provider."""
 
@@ -130,6 +144,8 @@ class LLMClient(Protocol):
         tier: Tier,
         max_tokens: int = 2048,
         drop: frozenset[str] = frozenset(),
+        tools: list[dict[str, Any]] | None = None,
+        executor: ToolExecutor | None = None,
     ) -> T: ...
 
 
@@ -328,38 +344,73 @@ class AnthropicClient:
         tier: Tier,
         max_tokens: int = 2048,
         drop: frozenset[str] = frozenset(),
+        tools: list[dict[str, Any]] | None = None,
+        executor: ToolExecutor | None = None,
     ) -> T:
         import anthropic
 
         model = self.settings.model_for(tier)
-        try:
-            response = await self._client.messages.create(
-                model=model,
-                max_tokens=max_tokens,
-                system=system,
-                messages=[{"role": "user", "content": user}],
-                output_config={
-                    "format": {
-                        "type": "json_schema",
-                        "schema": json_schema_for(schema, Optionality.OMITTABLE, drop),
-                    }
-                },
+        messages: list[dict[str, Any]] = [{"role": "user", "content": user}]
+        request: dict[str, Any] = {
+            "model": model,
+            "max_tokens": max_tokens,
+            "system": system,
+            "output_config": {
+                "format": {
+                    "type": "json_schema",
+                    "schema": json_schema_for(schema, Optionality.OMITTABLE, drop),
+                }
+            },
+        }
+        if tools:
+            request["tools"] = tools
+
+        for _ in range(MAX_TOOL_ROUNDS):
+            try:
+                response = await self._client.messages.create(messages=messages, **request)
+            except anthropic.APIStatusError as exc:
+                raise LLMError(
+                    f"anthropic {model} returned {exc.status_code}: {exc.message}"
+                ) from exc
+            except anthropic.APIConnectionError as exc:
+                raise LLMError(f"could not reach anthropic: {exc}") from exc
+
+            # A refusal is a real outcome, not a malformed response: the model declined
+            # rather than failed, and `content` is empty or partial. Reading content[0]
+            # would raise an IndexError that says nothing about what happened.
+            if response.stop_reason == "refusal":
+                raise LLMError(f"anthropic {model} declined the request")
+
+            calls = [b for b in response.content if b.type == "tool_use"]
+            if not calls:
+                text = next((b.text for b in response.content if b.type == "text"), None)
+                if text is None:
+                    raise LLMError(f"anthropic {model} returned no text block")
+                return _validate(schema, text)
+
+            if executor is None:
+                raise LLMError(f"anthropic {model} called a tool but none was provided")
+
+            messages.append({"role": "assistant", "content": response.content})
+            # All results go back in one user message. Splitting them across messages
+            # trains the model out of making parallel calls.
+            messages.append(
+                {
+                    "role": "user",
+                    "content": [
+                        {
+                            "type": "tool_result",
+                            "tool_use_id": call.id,
+                            "content": json.dumps(
+                                await executor(call.name, dict(call.input))
+                            ),
+                        }
+                        for call in calls
+                    ],
+                }
             )
-        except anthropic.APIStatusError as exc:
-            raise LLMError(f"anthropic {model} returned {exc.status_code}: {exc.message}") from exc
-        except anthropic.APIConnectionError as exc:
-            raise LLMError(f"could not reach anthropic: {exc}") from exc
 
-        # A refusal is a real outcome, not a malformed response: the model declined rather
-        # than failed, and `content` is empty or partial. Reading content[0] would raise
-        # an IndexError that says nothing about what happened.
-        if response.stop_reason == "refusal":
-            raise LLMError(f"anthropic {model} declined the request")
-
-        text = next((b.text for b in response.content if b.type == "text"), None)
-        if text is None:
-            raise LLMError(f"anthropic {model} returned no text block")
-        return _validate(schema, text)
+        raise LLMError(f"anthropic {model} kept calling tools after {MAX_TOOL_ROUNDS} rounds")
 
 
 # --------------------------------------------------------------------------------------
@@ -385,38 +436,82 @@ class OpenAIClient:
         tier: Tier,
         max_tokens: int = 2048,
         drop: frozenset[str] = frozenset(),
+        tools: list[dict[str, Any]] | None = None,
+        executor: ToolExecutor | None = None,
     ) -> T:
         import openai
 
         model = self.settings.model_for(tier)
-        try:
-            response = await self._client.chat.completions.create(
-                model=model,
-                messages=[
-                    {"role": "system", "content": system},
-                    {"role": "user", "content": user},
-                ],
-                response_format={
-                    "type": "json_schema",
-                    "json_schema": {
-                        "name": schema.__name__.lower(),
-                        "strict": True,
-                        "schema": json_schema_for(schema, Optionality.NULLABLE, drop),
-                    },
+        messages: list[dict[str, Any]] = [
+            {"role": "system", "content": system},
+            {"role": "user", "content": user},
+        ]
+        request: dict[str, Any] = {
+            "model": model,
+            "response_format": {
+                "type": "json_schema",
+                "json_schema": {
+                    "name": schema.__name__.lower(),
+                    "strict": True,
+                    "schema": json_schema_for(schema, Optionality.NULLABLE, drop),
                 },
-                max_completion_tokens=max_tokens,
-            )
-        except openai.APIStatusError as exc:
-            raise LLMError(f"openai {model} returned {exc.status_code}: {exc}") from exc
-        except openai.APIConnectionError as exc:
-            raise LLMError(f"could not reach openai: {exc}") from exc
+            },
+            "max_completion_tokens": max_tokens,
+        }
+        if tools:
+            # OpenAI names the schema field `parameters` where Anthropic uses
+            # `input_schema`; the tool specs are written once in Anthropic's shape and
+            # translated here rather than being maintained twice.
+            request["tools"] = [
+                {
+                    "type": "function",
+                    "function": {
+                        "name": tool["name"],
+                        "description": tool["description"],
+                        "parameters": tool["input_schema"],
+                    },
+                }
+                for tool in tools
+            ]
 
-        choice = response.choices[0]
-        if choice.message.refusal:
-            raise LLMError(f"openai {model} declined the request: {choice.message.refusal}")
-        if not choice.message.content:
-            raise LLMError(f"openai {model} returned an empty response")
-        return _validate(schema, choice.message.content)
+        for _ in range(MAX_TOOL_ROUNDS):
+            try:
+                response = await self._client.chat.completions.create(
+                    messages=messages, **request
+                )
+            except openai.APIStatusError as exc:
+                raise LLMError(f"openai {model} returned {exc.status_code}: {exc}") from exc
+            except openai.APIConnectionError as exc:
+                raise LLMError(f"could not reach openai: {exc}") from exc
+
+            message = response.choices[0].message
+            if message.refusal:
+                raise LLMError(f"openai {model} declined the request: {message.refusal}")
+
+            calls = message.tool_calls or []
+            if not calls:
+                if not message.content:
+                    raise LLMError(f"openai {model} returned an empty response")
+                return _validate(schema, message.content)
+
+            if executor is None:
+                raise LLMError(f"openai {model} called a tool but none was provided")
+
+            messages.append(message.model_dump(exclude_none=True))
+            for call in calls:
+                try:
+                    arguments = json.loads(call.function.arguments or "{}")
+                except json.JSONDecodeError:
+                    arguments = {}
+                messages.append(
+                    {
+                        "role": "tool",
+                        "tool_call_id": call.id,
+                        "content": json.dumps(await executor(call.function.name, arguments)),
+                    }
+                )
+
+        raise LLMError(f"openai {model} kept calling tools after {MAX_TOOL_ROUNDS} rounds")
 
 
 def build_client(settings: LLMSettings | None = None) -> LLMClient:
@@ -433,7 +528,9 @@ __all__ = [
     "LLMError",
     "LLMSettings",
     "OpenAIClient",
+    "MAX_TOOL_ROUNDS",
     "Optionality",
+    "ToolExecutor",
     "Provider",
     "Tier",
     "build_client",
