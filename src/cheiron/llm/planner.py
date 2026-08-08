@@ -1,0 +1,333 @@
+"""The planner: natural-language question → validated `Plan`.
+
+This is the system's only unconstrained input, and the `Plan` schema is the wall it has to
+come through. The model may choose *what to compute*, expressed solely in terms of a closed
+vocabulary the deterministic core defines; it never sees a trial record and never produces
+a number that reaches the output.
+
+Two properties do the work:
+
+1. **The legal vocabulary is generated, not written.** `LEGAL_FIELDS` in the prompt comes
+   from the same field registry the validator checks against and the normalizer emits. A
+   field cannot exist in the prompt but not the validator, or vice versa, because there is
+   one table. Hand-maintaining that list is how a planner ends up confidently proposing a
+   field the aggregator has never heard of.
+
+2. **Rejection is feedback, not failure.** A plan that fails validation goes back to the
+   model with the validator's own error strings, which are written to be actionable. The
+   loop is bounded, previously-rejected plans cannot be re-proposed, and on exhaustion the
+   best attempt ships rather than the last — later attempts drift as a model over-corrects.
+"""
+
+from __future__ import annotations
+
+import json
+import logging
+from dataclasses import dataclass, field
+
+from cheiron.llm.client import LLMClient, LLMError, Provider, Tier
+from cheiron.schemas.fields import FIELDS, FieldKind
+from cheiron.schemas.plan import BinScale, Plan, validate_plan
+from cheiron.schemas.request import AnalyzeRequest
+
+log = logging.getLogger(__name__)
+
+#: `plan.md` §3: at most three revisions after the first attempt.
+MAX_REVISIONS = 3
+
+#: Plan fields withheld from the planner when the provider cannot accept the full schema.
+#:
+#: Anthropic caps a structured-output schema at 24 optional parameters and `Plan` plus
+#: `Filters` expose 31, so seven have to go. These seven were chosen because losing the
+#: model's judgement on them costs nothing:
+#:
+#: * `viz_hint` is advisory — the viz rules decide chart legality regardless.
+#: * `bin_scale` is derived deterministically from the field registry's `skewed` flag,
+#:   which is strictly better than a model guess: see `_apply_derived_defaults`.
+#: * the five filters are all reachable as structured request fields, which override the
+#:   planner anyway, so a caller who needs them still has them.
+#:
+#: Nothing here is silently defaulted without a reason. A field whose default would be
+#: *wrong* must not be added to this set.
+NARROW_SCHEMA_FIELDS = frozenset(
+    {
+        "viz_hint",
+        "bin_scale",
+        "site_status",
+        "date_certainty",
+        "has_results",
+        "enrollment_min",
+        "enrollment_max",
+    }
+)
+
+
+@dataclass
+class PlanAttempt:
+    """One proposal and the validator's verdict on it."""
+
+    plan: Plan | None
+    errors: list[str]
+    #: Set when the model failed to produce a schema-valid plan at all.
+    failure: str | None = None
+
+    @property
+    def is_legal(self) -> bool:
+        return self.plan is not None and not self.errors
+
+    @property
+    def score(self) -> tuple[int, int]:
+        """Lower is better: unusable attempts first, then by error count.
+
+        `plan.md` says to ship the best-scoring attempt on exhaustion rather than the last
+        one, but does not define the score. Error count is the honest choice — it is the
+        only quality signal the deterministic layer actually has, and ties break toward the
+        earliest attempt because later ones drift.
+        """
+        return (0 if self.plan is not None else 1, len(self.errors))
+
+
+@dataclass
+class PlanningResult:
+    """The committed plan and the trace of how it was reached."""
+
+    plan: Plan
+    attempts: list[PlanAttempt] = field(default_factory=list)
+    #: True when no attempt was fully legal and the least-bad one was committed anyway.
+    contested: bool = False
+
+    @property
+    def warnings(self) -> list[str]:
+        if not self.contested:
+            return []
+        errors = self.attempts[-1].errors if self.attempts else []
+        return [
+            "The plan was contested and not fully resolved after "
+            f"{len(self.attempts)} attempt(s); the closest-fitting plan was used. "
+            f"Unresolved: {'; '.join(errors[:3])}"
+        ]
+
+
+class PlanningError(RuntimeError):
+    """No usable plan could be produced.
+
+    Distinct from a contested plan: this means every attempt failed to produce even a
+    schema-valid `Plan`, so there is nothing to fall back to. The caller turns this into an
+    `unsupported` response rather than drawing a chart from nothing.
+    """
+
+
+# --------------------------------------------------------------------------------------
+# Prompt
+#
+# Generated from the field registry at import time. Adding a field to `schemas.fields`
+# changes the prompt, the validator and the aggregator together.
+# --------------------------------------------------------------------------------------
+
+
+def _field_lines() -> str:
+    """One line per legal field: name, kind, and the caveat that applies to it."""
+    lines = []
+    for key, spec in FIELDS.items():
+        flags = []
+        if spec.multi:
+            flags.append("multi-valued")
+        if spec.measurable:
+            flags.append("measurable")
+        if not spec.groupable:
+            flags.append("not groupable")
+        suffix = f" [{', '.join(flags)}]" if flags else ""
+        lines.append(f"  {key} ({spec.kind.value}){suffix} — {spec.label}")
+    return "\n".join(lines)
+
+
+def _kind_list(kind: FieldKind) -> str:
+    return ", ".join(k for k, f in FIELDS.items() if f.kind is kind) or "none"
+
+
+def _apply_derived_defaults(plan: Plan) -> Plan:
+    """Fill in choices the planner was not offered, from field metadata.
+
+    Only `bin_scale` needs this. Leaving it at its `linear` default would resurrect the
+    exact failure the log scale exists to prevent: enrollment spans 0 to over a million,
+    so equal-width bins put nearly every trial in the first bar and produce a chart that
+    is arithmetically correct and useless.
+
+    The registry already knows which fields are heavy-tailed, so the answer is read from
+    `FieldSpec.skewed` rather than guessed — a new skewed numeric field gets the right
+    binning without anyone remembering to come back here.
+    """
+    if plan.bins is None or plan.group_by is None:
+        return plan
+    spec = FIELDS.get(plan.group_by)
+    if spec is not None and spec.skewed and plan.bin_scale is BinScale.LINEAR:
+        return plan.model_copy(update={"bin_scale": BinScale.LOG})
+    return plan
+
+
+def build_system_prompt() -> str:
+    """The planner's static context, derived from the field registry."""
+    return f"""\
+You turn a question about clinical trials into an analysis Plan. You never see trial
+records and you never state a number: deterministic code computes every value from
+ClinicalTrials.gov data after you have chosen what to compute.
+
+Produce a Plan using ONLY the fields below. A field not in this list does not exist.
+
+LEGAL FIELDS
+{_field_lines()}
+
+Temporal fields: {_kind_list(FieldKind.TEMPORAL)}
+Numeric fields: {_kind_list(FieldKind.NUMERIC)}
+Entity fields (open vocabulary, high cardinality): {_kind_list(FieldKind.ENTITY)}
+Categorical fields (small closed vocabulary): {_kind_list(FieldKind.CATEGORICAL)}
+
+RULES
+- legs: one per population being compared. "Compare A vs B" is TWO legs with distinct
+  labels, one shared group_by. Never use series_by together with multiple legs.
+- group_by: the chart's x axis. Null means a single headline number.
+- series_by: a second dimension. Mutually exclusive with multiple legs.
+- metric: count | distinct_count | sum | median. sum/median require a numeric
+  metric_field; distinct_count requires distinct_of. Prefer median over sum for
+  enrollment, which is heavily skewed.
+- granularity: required when group_by is temporal; use "year" unless the question is
+  clearly about quarters.
+- top_n: required in practice for entity group_by, which can have tens of thousands of
+  values. 10 is a sensible default.
+- bins (2-50) with bin_scale "log": required when group_by is numeric. Use log for
+  enrollment.
+- layout "point": a scatter of one dot per trial; group_by is the x measure and
+  metric_field the y measure, both numeric.
+- filters: apply the user's constraints. Prefer intervention for drugs, condition for
+  diseases, sponsor for organisations. Use start_year_min/max for date ranges.
+- assumptions: state any interpretation you made that a careful reader would want to
+  check — which field you read a term as, a date range you inferred, a default you chose.
+
+Return only the Plan."""
+
+
+def build_user_prompt(request: AnalyzeRequest) -> str:
+    """The question plus any structured overrides the caller supplied."""
+    overrides = request.overrides()
+    parts = [f"QUESTION: {request.query}"]
+    if overrides:
+        parts.append(
+            "STRUCTURED OVERRIDES (the caller set these deliberately; they take "
+            "precedence over your reading of the question, and you must plan around "
+            f"them):\n{json.dumps(overrides, indent=2, default=str)}"
+        )
+    return "\n\n".join(parts)
+
+
+def build_repair_prompt(attempt: PlanAttempt, rejected: list[Plan]) -> str:
+    """Feedback for a rejected plan: the errors verbatim, plus what not to repropose."""
+    if attempt.plan is None:
+        body = f"Your response could not be read as a Plan: {attempt.failure}"
+    else:
+        body = (
+            "That plan was rejected by the validator:\n"
+            + "\n".join(f"  - {e}" for e in attempt.errors)
+        )
+    already = "\n".join(
+        f"  - {p.model_dump_json(exclude_defaults=True)}" for p in rejected
+    )
+    return (
+        f"{body}\n\nDo not repropose any of these:\n{already}\n\n"
+        f"Return a corrected Plan."
+    )
+
+
+# --------------------------------------------------------------------------------------
+# The loop
+# --------------------------------------------------------------------------------------
+
+
+async def plan_query(
+    client: LLMClient,
+    request: AnalyzeRequest,
+    *,
+    max_revisions: int = MAX_REVISIONS,
+) -> PlanningResult:
+    """Produce a validated plan for a request.
+
+    Args:
+        client: The provider client. The planner uses the large tier — this is the one
+            decision in the system where model quality changes what gets computed.
+        request: The caller's question and any structured overrides.
+        max_revisions: Revisions after the first attempt.
+
+    Returns:
+        A `PlanningResult` whose `plan` has passed `validate_plan`, or whose `contested`
+        flag is set when the loop was exhausted and the least-bad plan was committed.
+
+    Raises:
+        PlanningError: if no attempt produced even a schema-valid plan.
+    """
+    system = build_system_prompt()
+    user = build_user_prompt(request)
+    attempts: list[PlanAttempt] = []
+    rejected: list[Plan] = []
+
+    # Anthropic's schema-size limits force a narrower planner vocabulary; see
+    # NARROW_SCHEMA_FIELDS for what is withheld and why nothing is lost by it.
+    drop = (
+        NARROW_SCHEMA_FIELDS
+        if client.settings.provider is Provider.ANTHROPIC
+        else frozenset()
+    )
+
+    for revision in range(max_revisions + 1):
+        prompt = user
+        if revision:
+            prompt = f"{user}\n\n{build_repair_prompt(attempts[-1], rejected)}"
+
+        try:
+            plan = await client.complete(
+                system=system,
+                user=prompt,
+                schema=Plan,
+                tier=Tier.LARGE,
+                max_tokens=2048,
+                drop=drop,
+            )
+        except LLMError as exc:
+            # A schema-invalid response is a normal, recoverable step in this loop: the
+            # error becomes feedback like any validator error would.
+            log.warning("planner attempt %d unusable: %s", revision + 1, exc)
+            attempts.append(PlanAttempt(plan=None, errors=[], failure=str(exc)))
+            continue
+
+        plan = _apply_derived_defaults(plan)
+        errors = validate_plan(plan)
+        attempts.append(PlanAttempt(plan=plan, errors=errors))
+        if not errors:
+            return PlanningResult(plan=plan, attempts=attempts)
+
+        log.info("planner attempt %d rejected: %s", revision + 1, "; ".join(errors))
+        rejected.append(plan)
+
+    usable = [a for a in attempts if a.plan is not None]
+    if not usable:
+        raise PlanningError(
+            f"the planner produced no usable plan in {len(attempts)} attempt(s): "
+            f"{attempts[-1].failure if attempts else 'no attempts made'}"
+        )
+
+    # Exhausted, so commit the closest fit and say so. Failing closed here would turn a
+    # nearly-right chart into no answer at all, which serves nobody.
+    best = min(usable, key=lambda a: a.score)
+    assert best.plan is not None
+    return PlanningResult(plan=best.plan, attempts=attempts, contested=True)
+
+
+__all__ = [
+    "MAX_REVISIONS",
+    "NARROW_SCHEMA_FIELDS",
+    "PlanAttempt",
+    "PlanningError",
+    "PlanningResult",
+    "build_repair_prompt",
+    "build_system_prompt",
+    "build_user_prompt",
+    "plan_query",
+]

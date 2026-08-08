@@ -60,6 +60,10 @@ class FieldSpec:
         filterable: May appear in a leg's filters.
         label: Human-readable axis title, used by the spec assembler.
         note: A data-quality caveat surfaced to the user when the field is used.
+        skewed: True when the value distribution is heavy-tailed enough that equal-width
+            histogram bins collapse into a single bar. Drives the default bin scale, so a
+            numeric field added here brings its own binning behaviour rather than relying
+            on whoever writes the plan to remember.
     """
 
     key: str
@@ -73,6 +77,7 @@ class FieldSpec:
     filterable: bool = True
     label: str = ""
     note: str | None = None
+    skewed: bool = False
 
     def __post_init__(self) -> None:
         if not self.label:
@@ -220,6 +225,7 @@ _FIELDS: tuple[FieldSpec, ...] = (
         source="protocolSection.designModule.enrollmentInfo.count",
         projection=("EnrollmentCount", "EnrollmentType"),
         measurable=True,
+        skewed=True,
         label="Enrollment",
         note="Heavily right-skewed (observed values range from 0 to over 1.1 million), so "
         "median is preferred over mean. Mixes ACTUAL and ESTIMATED counts.",
@@ -304,6 +310,7 @@ _FIELDS: tuple[FieldSpec, ...] = (
         source="len(protocolSection.contactsLocationsModule.locations)",
         projection=("LocationCountry",),
         measurable=True,
+        skewed=True,
         label="Site Count",
         note="Counts listed sites only; absent location lists yield 0, which is a reporting "
         "gap rather than a trial with no sites.",
@@ -347,6 +354,7 @@ MEASURABLE_FIELDS: tuple[str, ...] = tuple(k for k, f in FIELDS.items() if f.mea
 ENTITY_FIELDS: tuple[str, ...] = tuple(k for k, f in FIELDS.items() if f.is_entity)
 TEMPORAL_FIELDS: tuple[str, ...] = tuple(k for k, f in FIELDS.items() if f.is_temporal)
 MULTI_FIELDS: tuple[str, ...] = tuple(k for k, f in FIELDS.items() if f.multi)
+SKEWED_FIELDS: tuple[str, ...] = tuple(k for k, f in FIELDS.items() if f.skewed)
 
 #: Every `fields=` piece name needed to populate the whole table. The query compiler
 #: narrows this per plan; this is the upper bound and the default for fixtures.
