@@ -12,6 +12,21 @@ tests exist yet. Implementation has not started.
 - `plan.md` — the design plan for the system. This is the source of truth for *architecture and
   implementation approach*. Read it in full before writing code; the summary below is not a
   substitute.
+- `docs/api-findings.md` — what the ClinicalTrials.gov API actually does, verified by curl. Two
+  items marked **CORRECTION** contradict `plan.md`; the findings win, because they were measured.
+- `docs/corpus-facts.md` — corpus-wide statistics, each with the exact query that produced it and
+  raw responses saved under `docs/corpus-evidence/`.
+
+## README: cite the corpus evidence
+
+When writing the README, the "Limitations" section **must** carry the figures in
+`docs/corpus-facts.md` *together with the query that produced each one* — 51,497 distinct lead
+sponsors, ~63% of studies with `NA` or absent phase, 528,741 distinct intervention names,
+enrollment spanning 0 to 188,814,085 with a mean of 5,510. Quoting the command alongside the
+number is what distinguishes having examined the corpus from having guessed about it, and each
+figure is the justification for a specific design decision (no sponsor deduplication; NA/absent
+phase as first-class buckets; MeSH terms for network nodes; median rather than mean). Do not
+paraphrase these into vague claims like "sponsor names are messy."
 
 There is no README, package manifest, or language chosen yet in the repo. If you scaffold the
 project, follow the build order in `plan.md` §6 and update this file with real commands (install,
