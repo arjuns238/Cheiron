@@ -21,7 +21,7 @@ import pytest
 
 from cheiron.agg.aggregator import aggregate
 from cheiron.ctgov.client import FetchResult
-from cheiron.ctgov.normalizer import NormalizedRecord, normalize_study
+from cheiron.ctgov.normalizer import PHASE_NOT_REPORTED, NormalizedRecord, normalize_study
 from cheiron.ctgov.retrieval import Retrieval
 from cheiron.ctgov.retrieval import assemble as assemble_retrieval
 from cheiron.schemas.plan import (
@@ -484,6 +484,11 @@ def test_citations_are_spread_across_buckets_not_concentrated(
     cited = set(response.citations)
     assert cited, "a chart with data must carry citations"
     for datum in response.visualization.data:  # type: ignore[union-attr]
+        if datum.model_dump()["phases"] == PHASE_NOT_REPORTED:
+            # An absent `phases` key is reported as its own bucket, but the registry never
+            # writes "NOT_REPORTED" — there is no text to quote, so no citation is honest.
+            assert not set(datum.nct_ids) & cited
+            continue
         assert set(datum.nct_ids) & cited, "every bar contributes at least one citation"
 
     for nct_id, citation in response.citations.items():

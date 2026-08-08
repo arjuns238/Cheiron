@@ -19,6 +19,7 @@ from __future__ import annotations
 import uuid
 from collections import defaultdict
 from datetime import UTC, datetime
+from typing import Any
 
 from cheiron.agg.aggregator import OTHER, AggregationResult
 from cheiron.ctgov.retrieval import Retrieval
@@ -40,6 +41,7 @@ from cheiron.schemas.response import (
     VizConfig,
     VizType,
 )
+from cheiron.viz.citations import locate, verify
 from cheiron.viz.rules import Shape, choose, describe_shape
 
 #: How many contributing trials each datum names inline. The full attribution lives in the
@@ -380,34 +382,71 @@ def build_config(plan: Plan, result: AggregationResult, viz: VizType) -> VizConf
 
 
 def build_citations(
-    result: AggregationResult, titles: dict[str, str], limit: int = MAX_CITATIONS
-) -> dict[str, Citation]:
+    result: AggregationResult,
+    records: dict[str, Any],
+    limit: int = MAX_CITATIONS,
+) -> tuple[dict[str, Citation], int, int]:
     """One citation per cited trial, deduplicated across datapoints.
 
     Taken in bucket order so that the sample is spread across the chart rather than
     concentrated in whichever bucket happens to be largest — a citation set that only
     covers the tallest bar is not traceability.
+
+    Every excerpt is located in the record and then re-verified against it. A citation
+    that cannot be verified is **dropped**, and the count of dropped ones is returned so
+    the response can say so. Emitting an unverified excerpt would be worse than emitting
+    none, because it would look like evidence.
+
+    Args:
+        result: The aggregation, whose contributions carry the field that justified each
+            trial's bucket membership.
+        records: Normalized records by NCT ID, for their retained raw payloads.
+        limit: Cap on the citation map.
+
+    Returns:
+        The citations, and counts of the two distinct reasons one was not emitted.
     """
     citations: dict[str, Citation] = {}
+    unquotable = 0
+    unverified = 0
+
     for bucket in result.buckets:
         for contribution in bucket.contributions[:INLINE_CITATIONS]:
-            if contribution.nct_id in citations:
+            nct_id = contribution.nct_id
+            if nct_id in citations:
                 continue
             if len(citations) >= limit:
-                return citations
-            citations[contribution.nct_id] = Citation(
-                nct_id=contribution.nct_id,
-                url=STUDY_URL.format(contribution.nct_id),
-                brief_title=titles.get(contribution.nct_id, ""),
+                return citations, unquotable, unverified
+
+            record = records.get(nct_id)
+            if record is None or not record.raw:
+                unquotable += 1
+                continue
+
+            # Two different failures, kept apart because they mean opposite things. A
+            # value the record never states — "NOT_REPORTED" is our label for an absent
+            # `phases` key, not something the registry says — has nothing to quote, and no
+            # citation is possible or honest. A located excerpt that fails re-slicing is a
+            # defect in this code, and must be loud rather than folded in with the former.
+            located = locate(record.raw, contribution.field_path, contribution.field_value)
+            if located is None:
+                unquotable += 1
+                continue
+            payload, excerpt = located
+            if not verify(payload, excerpt):
+                unverified += 1
+                continue
+
+            citations[nct_id] = Citation(
+                nct_id=nct_id,
+                url=STUDY_URL.format(nct_id),
+                brief_title=record.get("brief_title") or "",
                 field_path=contribution.field_path,
                 field_value=contribution.field_value,
-                # Offset-verified excerpts are a later milestone. Until then the citation
-                # carries the value that put the trial in the bucket, which is checked
-                # against the fetched records rather than asserted.
-                excerpt=contribution.field_value,
-                offset=(0, 0),
+                excerpt=excerpt.text,
+                offset=(excerpt.start, excerpt.end),
             )
-    return citations
+    return citations, unquotable, unverified
 
 
 # --------------------------------------------------------------------------------------
@@ -440,10 +479,10 @@ def assemble(
     shape = describe_shape(plan, result)
     viz = choose(shape, preference)
 
-    titles = {
-        record.nct_id: record.get("brief_title") or ""
-        for records in retrieval.records_by_leg.values()
-        for record in records
+    records = {
+        record.nct_id: record
+        for leg_records in retrieval.records_by_leg.values()
+        for record in leg_records
     }
 
     data = build_data(plan, result, viz)
@@ -479,6 +518,20 @@ def assemble(
             f"trials were analysed, so this chart is a sample rather than the whole slice.",
         )
 
+    citations, unquotable, unverified = build_citations(result, records)
+    if unquotable:
+        warnings.append(
+            f"{unquotable} datum(s) carry no citation because the value labels something "
+            f"the registry does not state — an absent field reported as its own bucket "
+            f"has no text to quote."
+        )
+    if unverified:
+        warnings.append(
+            f"{unverified} citation(s) were dropped because their excerpt did not survive "
+            f"re-verification against the fetched record. An unverifiable citation is "
+            f"never emitted."
+        )
+
     response_type = ResponseType.VISUALIZATION if result.buckets else ResponseType.NO_RESULTS
     if not result.buckets:
         warnings.append("No trials matched the filters in this plan.")
@@ -497,7 +550,7 @@ def assemble(
             data=data,
             config=build_config(plan, result, viz),
         ),
-        citations=build_citations(result, titles),
+        citations=citations,
         meta=Meta(
             interpretation=query or build_title(plan),
             plan=plan,
