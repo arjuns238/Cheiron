@@ -246,3 +246,71 @@ alternative the system already offers — `intervention_mesh` uses ClinicalTrial
 MeSH indexing and gives normalized nodes, at the cost of trial-level rather than arm-level
 edges (§9) and of dropping agents with no MeSH heading. Entity resolution across raw names
 belongs in "what I'd do with more time".
+
+---
+
+## 11. Networks are returned complete, on purpose
+
+**The problem.** A co-occurrence network is not bounded by the system. `query.cond=cancer`
+returns **4,274 nodes and 11,341 edges** — a 2.4 MB response. A reviewer opening that will
+read it as a failure to bound output.
+
+It is a deliberate choice, not an oversight. Thresholding a graph is a *presentation*
+decision, and the most useful thing a client can do with a co-occurrence network is move
+the threshold interactively — which only works if the client holds the whole network.
+VOSviewer, the standard tool for bibliometric co-occurrence graphs, works exactly this
+way: its minimum-occurrence filter is an interactive control, not a property of the data
+it is given. Trimming server-side would make the primary interaction impossible, and a
+client handed a trimmed graph cannot recover the rest without another request.
+
+The payload objection is also weaker than it looks. JSON of this shape compresses **8.9×**
+(measured, not estimated), so that 2.4 MB response is **288 KB** over the wire, and the
+20,000-record retrieval cap bounds the worst case to roughly 1 MB gzipped.
+
+What the system provides instead of a decision:
+
+- `Node.weight` is the node's distinct trial count — the input a client filters on.
+- `config.suggested_min_occurrences` is the smallest threshold that would render legibly,
+  offered as a starting position. Advisory; nothing is removed on account of it. It is
+  null when the graph already fits or when every node occurs equally often, since no
+  threshold would separate them.
+- An explicit `top_n` in the plan **is** honoured — that is a request rather than a default
+  — and the trials it removes are counted and reported (§6).
+
+**Why silence is not acceptable.** Returning 4,274 nodes looks identical to failing to
+bound the output. The distinction is entirely in the intent, so the intent has to be
+stated or the choice reads as a defect.
+
+**What the README must say.** That networks are complete by design, with the VOSviewer
+precedent and the 8.9× / 288 KB measurement, and that
+`config.suggested_min_occurrences` plus `Node.weight` are how a client renders it legibly.
+
+---
+
+## 12. Edge `strength` is derived, and misleading on its own
+
+**The problem.** Ranking edges by raw co-occurrence count ranks by *ubiquity*. On multiple
+myeloma the five heaviest edges all contain dexamethasone — not because those pairings are
+distinctive, but because dexamethasone is in nearly every regimen. `Edge.strength` is the
+standard bibliometric correction, `2m·w / (k_source · k_target)`, which divides out each
+endpoint's degree.
+
+Two caveats, and both matter:
+
+*It has no citations behind it.* `weight` is a fold over a trial list and every value in
+this system is otherwise traceable to records. `strength` is arithmetic over the graph. It
+ranks; it never replaces the countable value.
+
+*Alone, it is worse than raw counts.* A pair occurring only with each other scores
+maximally on a single trial. Measured live on myeloma, the top strengths were all `w=1`
+pairs. It is informative combined with an occurrence threshold and noise without one —
+which is precisely why VOSviewer applies its threshold first and normalizes second.
+
+**Why silence is not acceptable.** A frontend developer sorting by `strength` because it
+sounds more sophisticated than `weight` gets a chart of one-trial coincidences at the top,
+and nothing in the output looks wrong.
+
+**What the README must say.** The formula, that it is derived rather than counted, the
+dexamethasone example showing what it fixes, and the explicit instruction not to sort by it
+without applying `suggested_min_occurrences` first. The schema field description carries
+the same warning, since that is what a frontend developer actually reads.

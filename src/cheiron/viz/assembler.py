@@ -17,6 +17,7 @@ is already checked against the fetched record set by `check_citations`.
 from __future__ import annotations
 
 import uuid
+from collections import defaultdict
 from datetime import UTC, datetime
 
 from cheiron.agg.aggregator import OTHER, AggregationResult
@@ -274,27 +275,52 @@ def _build_network(plan: Plan, result: AggregationResult) -> NetworkData:
         Node(id=f"{kind}:{label}", label=label, kind=kind, weight=len(ids))
         for (kind, label), ids in node_trials.items()
     ]
+    _add_association_strength(edges)
     nodes.sort(key=lambda n: (-n.weight, n.id))
     edges.sort(key=lambda e: (-e.weight, e.source, e.target))
     return NetworkData(nodes=nodes, edges=edges)
 
 
-def network_omissions(result: AggregationResult) -> int:
-    """Distinct trials that sit in an `Other` bucket and so appear in no node or edge.
+def _add_association_strength(edges: list[Edge]) -> None:
+    """Annotate each edge with `2m·w / (k_source · k_target)`.
 
-    A network built after a top-N collapse cannot show the collapsed entities, because
-    "Other" is not a thing that co-occurs with anything. Those trials would otherwise
-    vanish between the record counts and the graph — visible in neither, contradicting
-    both. Counting them here is what lets the warning name a number.
+    Raw co-occurrence counts rank by ubiquity, not by affinity. On myeloma the five
+    heaviest edges all contain dexamethasone — not because those pairings are distinctive
+    but because dexamethasone is in nearly every regimen. Association strength divides out
+    each endpoint's total degree, which is the standard correction in bibliometric
+    co-occurrence analysis (VOSviewer applies it by default).
+
+    **Derived, and labelled as such.** Unlike `weight` this is arithmetic over the graph
+    rather than a fold over trials, so no citation stands behind it. It ranks; it never
+    replaces the countable value.
+
+    A caveat worth knowing before trusting the ordering: on its own this metric favours
+    pairs that occur only with each other, which score maximally on a single trial. It is
+    informative in combination with an occurrence threshold — hence
+    `config.suggested_min_occurrences` — and misleading without one.
     """
-    return len(
-        {
-            contribution.nct_id
-            for bucket in result.buckets
-            if bucket.dimension == OTHER
-            for contribution in bucket.contributions
-        }
-    )
+    degree: dict[str, int] = defaultdict(int)
+    for edge in edges:
+        degree[edge.source] += edge.weight
+        degree[edge.target] += edge.weight
+    total = sum(edge.weight for edge in edges)
+    if not total:
+        return
+    for edge in edges:
+        divisor = degree[edge.source] * degree[edge.target]
+        if divisor:
+            edge.strength = round((2 * total * edge.weight) / divisor, 4)
+
+
+def network_omissions(result: AggregationResult) -> int:
+    """Distinct trials that contributed an edge but appear in no node the graph kept.
+
+    Only non-zero when a plan asked for an explicit `top_n`: networks are otherwise
+    returned complete. A trimmed network cannot show the removed entities, because "Other"
+    is not a thing that co-occurs with anything, so those trials would otherwise vanish
+    between the record counts and the graph — visible in neither, contradicting both.
+    """
+    return result.omitted_trials
 
 
 def build_encoding(plan: Plan, shape: Shape, viz: VizType) -> Encoding:
@@ -344,6 +370,7 @@ def build_config(plan: Plan, result: AggregationResult, viz: VizType) -> VizConf
         stacked=viz in (VizType.STACKED_BAR, VizType.STACKED_AREA),
         y_starts_at_zero=plan.metric is not Metric.MEDIAN,
         value_format="integer" if plan.metric is Metric.COUNT else "decimal:1",
+        suggested_min_occurrences=result.suggested_min_occurrences,
     )
 
 

@@ -406,3 +406,145 @@ def test_node_weight_counts_distinct_trials_not_summed_edges() -> None:
     assert isinstance(data, NetworkData)
     assert len(data.edges) == 3
     assert all(node.weight == 1 for node in data.nodes)
+
+
+# --------------------------------------------------------------------------------------
+# Bounding: advice, not policy
+# --------------------------------------------------------------------------------------
+
+
+def wide_records(n: int = 60) -> list[NormalizedRecord]:
+    """A long tail of one-trial agents plus a few recurring ones.
+
+    Roughly 80% of agents in the registry appear in exactly one trial, which is what makes
+    an unfiltered graph mostly noise and what the suggested threshold is calibrated against.
+    The recurring pair exists so a threshold has something to separate — without varied
+    occurrence counts no threshold is meaningful, and none is offered.
+    """
+    tail = [
+        record(f"NCT{i:04d}", [agent(f"Drug{i}A", ["X"]), agent(f"Drug{i}B", ["X"])])
+        for i in range(n)
+    ]
+    recurring = [
+        record(f"NCT8{i:03d}", [agent("Common1", ["X"]), agent("Common2", ["X"])])
+        for i in range(5)
+    ]
+    return tail + recurring
+
+
+def test_a_network_is_returned_complete_by_default() -> None:
+    """Thresholding a graph is a presentation decision. A client holding the whole network
+    can move the threshold interactively; one handed a trimmed graph cannot get the rest
+    back without another request."""
+    result = aggregate(plan_for(), {"Slice": wide_records()})
+
+    nodes = {b.dimension for b in result.buckets} | {b.series for b in result.buckets}
+    assert len(nodes) == 122, "every node survives"
+    assert len(result.buckets) == 61
+    assert result.omitted_trials == 0
+
+
+def test_a_large_network_carries_a_suggested_threshold() -> None:
+    result = aggregate(plan_for(), {"Slice": wide_records()})
+    assert result.suggested_min_occurrences is not None
+    assert result.suggested_min_occurrences >= 2
+
+
+def test_a_small_network_needs_no_advice() -> None:
+    """Nothing to suggest when the graph already renders whole."""
+    assert aggregate(plan_for(), {"Slice": combo_records()}).suggested_min_occurrences is None
+
+
+def test_no_advice_when_every_node_occurs_equally_often() -> None:
+    """No threshold separates a uniform graph, and "appears in at least 1 trial" would be
+    advice that filters nothing."""
+    uniform = [
+        record(f"NCT{i:04d}", [agent(f"D{i}A", ["X"]), agent(f"D{i}B", ["X"])])
+        for i in range(60)
+    ]
+    assert aggregate(plan_for(), {"Slice": uniform}).suggested_min_occurrences is None
+
+
+def test_the_suggestion_removes_nothing() -> None:
+    """The whole point of calling it advice: the payload is unchanged by it."""
+    result = aggregate(plan_for(), {"Slice": wide_records()})
+    graphed = {c.nct_id for b in result.buckets for c in b.contributions}
+    assert len(graphed) == 65, "every contributing trial is still represented"
+
+
+def test_an_explicit_top_n_is_still_honoured() -> None:
+    """A plan that asks for a cap is making a request, not accepting a default."""
+    result = aggregate(plan_for(top_n=4), {"Slice": wide_records()})
+    nodes = {b.dimension for b in result.buckets} | {b.series for b in result.buckets}
+    assert len(nodes) <= 4
+    assert result.omitted_trials > 0
+
+
+def test_trimmed_trials_are_counted_so_the_gap_can_be_stated() -> None:
+    """Those trials stay in record_counts and appear in no node or edge — visible in
+    neither unless the number is reported."""
+    plan = plan_for(top_n=4)
+    result = aggregate(plan, {"Slice": wide_records()})
+    retrieval = Retrieval(records_by_leg={"Slice": wide_records()}, matched=65)
+    response = assemble(plan, result, retrieval)
+
+    warning = next(w for w in response.meta.warnings if "drawn in no node or edge" in w)
+    assert str(result.omitted_trials) in warning.replace(",", "")
+
+
+# --------------------------------------------------------------------------------------
+# Association strength
+# --------------------------------------------------------------------------------------
+
+
+def hub_records() -> list[NormalizedRecord]:
+    """A ubiquitous agent plus one distinctive pairing — the myeloma dexamethasone shape."""
+    records = [
+        record(f"NCT{i:03d}", [agent("Hub", ["X"]), agent(f"Partner{i}", ["X"])])
+        for i in range(6)
+    ]
+    records += [
+        record(f"NCT9{i:02d}", [agent("Alpha", ["X"]), agent("Beta", ["X"])]) for i in range(3)
+    ]
+    return records
+
+
+def test_raw_weight_ranks_by_ubiquity() -> None:
+    """On myeloma the five heaviest edges all contain dexamethasone, because it is in
+    nearly every regimen rather than because those pairings are distinctive."""
+    plan = plan_for()
+    result = aggregate(plan, {"Slice": hub_records()})
+    retrieval = Retrieval(records_by_leg={"Slice": hub_records()}, matched=9)
+    data = assemble(plan, result, retrieval).visualization.data
+
+    assert isinstance(data, NetworkData)
+    assert data.edges[0].weight == 3, "Alpha–Beta is the heaviest single edge"
+    assert sum(1 for e in data.edges if "Hub" in e.source or "Hub" in e.target) == 6
+
+
+def test_association_strength_corrects_for_degree() -> None:
+    """The distinctive pairing outranks the hub's edges once degree is divided out."""
+    plan = plan_for()
+    result = aggregate(plan, {"Slice": hub_records()})
+    retrieval = Retrieval(records_by_leg={"Slice": hub_records()}, matched=9)
+    data = assemble(plan, result, retrieval).visualization.data
+
+    assert isinstance(data, NetworkData)
+    by_strength = sorted(data.edges, key=lambda e: -(e.strength or 0))
+    assert "Alpha" in by_strength[0].source
+    hub_edges = [e for e in data.edges if "Hub" in e.source or "Hub" in e.target]
+    assert all(e.strength < by_strength[0].strength for e in hub_edges)
+
+
+def test_strength_is_derived_and_weight_stays_countable() -> None:
+    """Only `weight` has trials behind it, and it must remain the citable number."""
+    plan = plan_for()
+    result = aggregate(plan, {"Slice": hub_records()})
+    retrieval = Retrieval(records_by_leg={"Slice": hub_records()}, matched=9)
+    data = assemble(plan, result, retrieval).visualization.data
+
+    assert isinstance(data, NetworkData)
+    for edge in data.edges:
+        assert edge.weight == edge.nct_id_total
+        assert edge.nct_id_total >= len(edge.nct_ids)
+        assert edge.strength is not None

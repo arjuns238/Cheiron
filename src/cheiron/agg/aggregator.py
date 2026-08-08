@@ -76,6 +76,14 @@ NO_COOCCURRING_VALUES = "no_cooccurring_values"
 #: co-listed in the trial. See `_cooccurrence_pairs`.
 _ARM_SCOPED: dict[str, str] = {"intervention_names": "combination_groups"}
 
+#: Node count a *suggested* threshold aims for. Networks are returned complete — see
+#: `suggest_min_occurrences` — and this only calibrates the advice offered to a frontend.
+LEGIBLE_NETWORK_NODES = 40
+
+#: Ceiling on the suggested threshold. Past this the advice would be demanding so much
+#: evidence per node that almost nothing survives, which is not useful advice.
+MAX_OCCURRENCE_THRESHOLD = 50
+
 
 @dataclass(frozen=True)
 class Contribution:
@@ -141,6 +149,13 @@ class AggregationResult:
     collapsed_dimensions: int = 0
     #: Trials matching more than one leg, counted once per extra membership.
     overlapping_trials: int = 0
+    #: Networks only, and **advisory**: the smallest occurrence threshold that would yield
+    #: a legible graph. Nothing is removed on account of it — see `suggest_min_occurrences`.
+    suggested_min_occurrences: int | None = None
+    #: Trials that contributed an edge but whose nodes were trimmed away by an explicit
+    #: `top_n`. They remain in `record_counts` and appear in no node or edge, so the gap
+    #: has to be stated rather than left for the reader to find.
+    omitted_trials: int = 0
 
     @property
     def dimensions(self) -> list[str]:
@@ -206,35 +221,87 @@ def _cooccurrence_pairs(
     return (pairs, None) if pairs else ([], NO_COOCCURRING_VALUES)
 
 
+def _is_network(plan: Plan) -> bool:
+    """Whether this plan renders as a graph, by either route.
+
+    Co-occurrence pairs one field with itself; a crossed pair of entity fields counted by
+    trial is bipartite. Both produce edges, and both explode without bounding — 51,497
+    distinct lead sponsors corpus-wide — so the same trimming applies to each.
+    """
+    if plan.layout is Layout.COOCCURRENCE:
+        return True
+    dimensions = (FIELDS.get(plan.group_by or ""), FIELDS.get(plan.series_by or ""))
+    return (
+        plan.metric is Metric.COUNT
+        and all(d is not None and d.is_entity for d in dimensions)
+    )
+
+
+def _node_trials(result: AggregationResult) -> dict[str, set[str]]:
+    """Distinct trials per node, across both endpoints of every edge."""
+    trials: dict[str, set[str]] = defaultdict(set)
+    for bucket in result.buckets:
+        ids = set(bucket.nct_ids)
+        trials[bucket.dimension] |= ids
+        if bucket.series is not None:
+            trials[bucket.series] |= ids
+    return trials
+
+
+def suggest_min_occurrences(result: AggregationResult) -> int | None:
+    """The smallest "appears in at least N trials" threshold that would render legibly.
+
+    **Advice, not policy — nothing is removed on account of this.** The graph is returned
+    complete because thresholding is a presentation decision, and the most useful thing a
+    client can do with a co-occurrence network is move the threshold interactively. That
+    is how VOSviewer works, and it requires the client to hold the whole network.
+
+    The advice is worth computing because the right threshold is not obvious and the
+    default guess is wrong: roughly 80% of agents appear in exactly one trial (melanoma
+    yields 1,425 nodes at ≥1 and 288 at ≥2), so an unfiltered graph is mostly nodes that
+    say nothing about what co-occurs *frequently*. A client that starts here gets a
+    principled filter instead of inventing one.
+
+    Returns None when there is no useful advice to give: either the graph already renders
+    whole, or every node occurs equally often so no threshold separates them. Suggesting
+    "appears in at least 1 trial" would be advice that filters nothing.
+    """
+    trials = _node_trials(result)
+    if not trials or len(trials) <= LEGIBLE_NETWORK_NODES:
+        return None
+
+    ceiling = min(MAX_OCCURRENCE_THRESHOLD, max(len(ids) for ids in trials.values()))
+    if ceiling < 2:
+        return None
+    for threshold in range(2, ceiling + 1):
+        if sum(1 for ids in trials.values() if len(ids) >= threshold) <= LEGIBLE_NETWORK_NODES:
+            return threshold
+    return ceiling
+
+
 def _apply_network_top_n(result: AggregationResult, plan: Plan) -> None:
     """Keep the busiest `top_n` nodes and every edge between them.
 
-    A network cannot use the `Other` bucket that bar charts do: "Other" is not an entity,
-    so it has nothing to co-occur with. Trimming therefore removes nodes and the edges
-    touching them, and records how many so the assembler can say what is missing rather
-    than leaving the reader with a graph that looks complete.
+    Applied only when a plan asks for it explicitly. `Other` is not available here: it is
+    not an entity, so it has nothing to co-occur with. Trimming therefore removes nodes and
+    every edge touching them — a half-edge would point at a node that is not in the graph.
     """
     assert plan.top_n is not None
-    trials_by_node: dict[str, set[str]] = defaultdict(set)
-    for bucket in result.buckets:
-        ids = set(bucket.nct_ids)
-        trials_by_node[bucket.dimension] |= ids
-        if bucket.series is not None:
-            trials_by_node[bucket.series] |= ids
-
-    if len(trials_by_node) <= plan.top_n:
+    trials = _node_trials(result)
+    if len(trials) <= plan.top_n:
         return
 
     keep = {
         node
-        for node, _ in sorted(
-            trials_by_node.items(), key=lambda kv: (-len(kv[1]), kv[0])
-        )[: plan.top_n]
+        for node, _ in sorted(trials.items(), key=lambda kv: (-len(kv[1]), kv[0]))[: plan.top_n]
     }
-    result.collapsed_dimensions = len(trials_by_node) - len(keep)
+    before = {c.nct_id for b in result.buckets for c in b.contributions}
+    result.collapsed_dimensions = len(trials) - len(keep)
     result.buckets = [
         b for b in result.buckets if b.dimension in keep and (b.series or "") in keep
     ]
+    after = {c.nct_id for b in result.buckets for c in b.contributions}
+    result.omitted_trials = len(before - after)
 
 
 # --------------------------------------------------------------------------------------
@@ -623,18 +690,27 @@ def aggregate(
         else:
             bucket.value = _fold(plan.metric, bucket.contributions)
 
-    if plan.top_n is not None:
-        if plan.layout is Layout.COOCCURRENCE:
+    # Invariants are checked on the *aggregation*, before anything is trimmed for display.
+    # Trimming deliberately drops buckets, so running the checks afterwards would flag
+    # intentional presentation choices as lost records and mask the real thing they exist
+    # to catch.
+    check_invariants(plan, result)
+
+    # Networks are returned complete. Thresholding a graph is a presentation decision, and
+    # a client that holds the whole network can move the threshold interactively; one that
+    # receives a pre-trimmed graph cannot get the rest back without another request. An
+    # explicit `top_n` is still honoured, because that is a request rather than a default.
+    if _is_network(plan):
+        result.suggested_min_occurrences = suggest_min_occurrences(result)
+        if plan.top_n is not None:
             _apply_network_top_n(result, plan)
-        else:
-            _apply_top_n(result, plan)
+    elif plan.top_n is not None:
+        _apply_top_n(result, plan)
     _sort(result, plan)
 
     result.overlapping_trials = _count_overlap(records_by_leg)
     result.counting_semantics = _counting_semantics(plan, result)
     result.warnings = _warnings(plan, result)
-
-    check_invariants(plan, result)
     return result
 
 

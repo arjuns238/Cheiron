@@ -121,6 +121,17 @@ class Edge(BaseModel):
     source: str
     target: str
     weight: int
+    strength: float | None = Field(
+        None,
+        description="Association strength: 2m·w / (k_source · k_target), where k is a "
+        "node's total edge weight and m the graph's. **Derived arithmetic, not a fold over "
+        "records** — unlike `weight` it has no citations behind it, and it ranks edges "
+        "rather than replacing the countable value. It corrects for degree: by raw weight "
+        "an agent present in most regimens dominates purely by ubiquity. "
+        "**Do not sort by this alone.** A pair occurring only with each other scores "
+        "maximally on a single trial, so the top of an unfiltered strength ranking is "
+        "noise; apply `config.suggested_min_occurrences` to `Node.weight` first.",
+    )
     nct_ids: list[str] = Field(default_factory=list)
     nct_id_total: int = 0
 
@@ -147,6 +158,15 @@ class VizConfig(BaseModel):
     )
     stacked: bool = False
     y_starts_at_zero: bool = True
+    suggested_min_occurrences: int | None = Field(
+        None,
+        description="Networks only, and **advisory** — the graph is returned complete and "
+        "nothing has been removed on account of this. It is the smallest 'node appears in "
+        "at least N trials' filter that would render legibly, offered as a starting "
+        "position because roughly 80% of agents appear in exactly one trial and an "
+        "unfiltered graph is mostly nodes that say nothing about frequent co-occurrence. "
+        "Filter client-side on `Node.weight`, which is that trial count.",
+    )
     value_format: str | None = Field(None, description="e.g. 'integer', 'decimal:1'.")
 
 
