@@ -18,6 +18,7 @@ and the judge's job; this stage only separates questions from greetings.
 from __future__ import annotations
 
 import logging
+from enum import StrEnum
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -26,36 +27,78 @@ from cheiron.llm.client import LLMClient, LLMError, Tier
 log = logging.getLogger(__name__)
 
 
+class Intent(StrEnum):
+    """What kind of message this is, and therefore which response shape it gets."""
+
+    QUESTION = "question"
+    CONVERSATIONAL = "conversational"
+    UNSUPPORTED = "unsupported"
+
+
 class RouterVerdict(BaseModel):
     """What the router decides."""
 
     model_config = ConfigDict(extra="forbid")
 
-    in_domain: bool = Field(
-        description="True when the message asks something about clinical trials data."
+    intent: str = Field(
+        description="One of: question, conversational, unsupported.",
     )
     reply: str = Field(
         default="",
-        description="A brief conversational reply, used only when in_domain is false.",
+        description="A brief conversational reply. Used only for intent=conversational.",
     )
+    reason: str = Field(
+        default="",
+        description="Why the registry cannot answer this, naming the specific obstruction "
+        "in the data rather than a generic refusal. Used only for intent=unsupported.",
+    )
+    suggestions: list[str] = Field(
+        default_factory=list,
+        description="Up to three related questions this system *can* answer, phrased as "
+        "complete questions a user could send unchanged. Used only for unsupported.",
+    )
+
+    @property
+    def in_domain(self) -> bool:
+        """Whether the pipeline should run. Anything not explicitly diverted proceeds."""
+        return self.intent not in (Intent.CONVERSATIONAL, Intent.UNSUPPORTED)
 
 
 SYSTEM_PROMPT = """\
-You decide whether a message is a question about clinical trials data, or ordinary
-conversation.
+You classify a message into exactly one of three intents.
 
-Answer in_domain=true for anything asking about trials, drugs, interventions, conditions,
-sponsors, countries, phases, enrollment, dates, or any other property of clinical studies —
-including questions this system may turn out not to support. Deciding what is answerable
-happens later; you are only separating questions from conversation.
+**question** — anything answerable from ClinicalTrials.gov registration records: counts,
+trends over time, distributions across phases or countries, comparisons between drugs or
+conditions, sponsors, enrolment figures, study types, networks of co-occurring entities.
+This is the default and by far the most common. Choose it whenever the question is about
+trials, even if you are unsure the system supports that exact framing.
 
-Answer in_domain=false only for greetings, thanks, questions about you or your abilities,
-and messages with no informational request about trials at all. When you do, write one or
-two sentences in `reply` that answer conversationally and say the system can chart clinical
-trials data from ClinicalTrials.gov.
+**conversational** — greetings, thanks, questions about you or your abilities, anything
+with no informational request about trials. Write one or two sentences in `reply` that
+answer naturally and mention you chart ClinicalTrials.gov data.
 
-When genuinely unsure, choose true. A question wrongly refused looks broken; a greeting
-wrongly analysed merely returns nothing."""
+**unsupported** — the registry genuinely does not hold what is being asked. Only these:
+
+- COMPARATIVE EFFICACY ("which drug works better", "is X more effective than Y"). Trials
+  report outcome measures with incommensurable endpoints, units and analysis types, so
+  there is no field that means "worked better".
+- PATIENT-LEVEL DATA ("median age of participants", "how many women enrolled"). The
+  registry holds trial-level records, never individual participants.
+- ENROLMENT BY PLACE ("how many patients were enrolled in France"). Enrolment is recorded
+  once per trial, not per site, so a multi-country trial has no per-country figure.
+- ELIGIBILITY TEXT ("trials that exclude diabetics"). Eligibility criteria are free prose
+  and are not searched semantically.
+- TRIAL RESULTS ("what was the response rate"). Posted results are not read.
+
+For unsupported, put the specific obstruction in `reason` — name what the registry records
+instead, so the person understands the limit rather than just meeting a refusal. Then give
+up to three `suggestions`: complete questions, answerable from registration data, close to
+what they actually wanted. Someone asking which drug works better is usually interested in
+that drug, so suggest what *can* be shown about it — trial counts by phase, how activity
+changed over time, who sponsors it.
+
+When genuinely unsure between question and unsupported, choose question. A question wrongly
+refused looks broken; one wrongly attempted returns a chart with a caveat."""
 
 
 async def route(client: LLMClient, query: str) -> RouterVerdict:
@@ -70,7 +113,7 @@ async def route(client: LLMClient, query: str) -> RouterVerdict:
         )
     except LLMError as exc:
         log.warning("router unavailable, defaulting to in-domain: %s", exc)
-        return RouterVerdict(in_domain=True)
+        return RouterVerdict(intent=Intent.QUESTION)
 
 
-__all__ = ["SYSTEM_PROMPT", "RouterVerdict", "route"]
+__all__ = ["SYSTEM_PROMPT", "Intent", "RouterVerdict", "route"]

@@ -396,3 +396,35 @@ what was verified.
 **What the README must say.** That the selector is constrained by rules and separately
 measured for usefulness, the geography miss and its fix, and that a bounded stage still
 needs evaluating — being unable to do harm is not evidence of doing good.
+
+---
+
+## 15. First-request latency differs sharply by provider
+
+**The problem.** Anthropic compiles a grammar for each distinct structured-output schema
+and caches it. The first request carrying a new schema is dramatically slower than the
+rest, and can fail outright:
+
+```
+400 invalid_request_error: Grammar compilation timed out.
+```
+
+Measured on the planner's schema: **78–90 s cold, ~5 s warm.** OpenAI shows no comparable
+effect (~1–2 s throughout). The failure is transient — compilation continues server-side,
+so a retry finds the cache warm — and is now retried inside the LLM client rather than
+surfaced.
+
+That placement matters. Left to propagate, the failure looked like a rejected plan and
+consumed the planner's repair budget: a `/plan` call was observed spending three of its
+revisions on cold compiles. A genuinely wrong plan would then have had fewer chances to be
+repaired, for reasons entirely unrelated to the plan.
+
+**Why silence is not acceptable.** A reviewer running the first Anthropic query against a
+fresh deployment may wait over a minute and reasonably conclude the system is broken or
+unusably slow. The second query answers in seconds. Without the explanation the first
+impression is simply wrong.
+
+**What the README must say.** The cold/warm figures with the provider named, that the
+timeout is retried automatically, and that a first slow call is expected rather than
+representative. Worth adding to "how to run": issue one warm-up query before demoing on
+Anthropic.

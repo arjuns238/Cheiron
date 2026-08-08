@@ -27,7 +27,7 @@ from cheiron.llm.judge import (
 )
 from cheiron.llm.planner import plan_and_review
 from cheiron.llm.probes import ProbeCall
-from cheiron.llm.router import RouterVerdict, route
+from cheiron.llm.router import Intent, RouterVerdict, route
 from cheiron.llm.selector import ChartChoice, build_prompt, select
 from cheiron.schemas.fields import FieldKind
 from cheiron.schemas.plan import Filters, Layout, Leg, Metric, Plan
@@ -62,16 +62,36 @@ class Scripted:
 
 
 async def test_a_question_is_routed_in_domain() -> None:
-    client = Scripted(RouterVerdict(in_domain=True))
+    client = Scripted(RouterVerdict(intent=Intent.QUESTION))
     verdict = await route(client, "How many melanoma trials are there?")
     assert verdict.in_domain is True
 
 
 async def test_chit_chat_is_routed_out_with_a_reply() -> None:
-    client = Scripted(RouterVerdict(in_domain=False, reply="Hello! I chart trials data."))
+    client = Scripted(
+        RouterVerdict(intent=Intent.CONVERSATIONAL, reply="Hello! I chart trials data.")
+    )
     verdict = await route(client, "hi")
     assert verdict.in_domain is False
     assert verdict.reply
+
+
+async def test_an_unanswerable_question_is_diverted_with_a_reason_and_a_way_forward() -> None:
+    """A refusal that names the obstruction and offers a postable alternative is a
+    redirect; one that just says no makes the reader guess what would work."""
+    client = Scripted(
+        RouterVerdict(
+            intent=Intent.UNSUPPORTED,
+            reason="Trials report incommensurable outcome measures, so the registry has no "
+            "field meaning 'worked better'.",
+            suggestions=["How many pembrolizumab trials are there by phase?"],
+        )
+    )
+    verdict = await route(client, "Which works better, pembrolizumab or nivolumab?")
+
+    assert verdict.in_domain is False
+    assert "incommensurable" in verdict.reason
+    assert verdict.suggestions
 
 
 async def test_the_router_fails_open() -> None:
@@ -83,7 +103,7 @@ async def test_the_router_fails_open() -> None:
 
 async def test_the_router_uses_the_cheap_model() -> None:
     """One closed-set classification, and the only gate before any API call."""
-    client = Scripted(RouterVerdict(in_domain=True))
+    client = Scripted(RouterVerdict(intent=Intent.QUESTION))
     await route(client, "hi")
     assert client.tiers[0].value == "small"
 

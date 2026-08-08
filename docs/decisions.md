@@ -89,6 +89,17 @@ check a field it cannot see — which reproducibly broke METRIC MISMATCH on Anth
 receives `request.overrides()`, so a caller-pinned filter is not read as a field error.
 See `readme-notes.md` §13.
 
+## Pipeline and HTTP
+
+| Decision | Chosen | Rejected | Why |
+|---|---|---|---|
+| `unsupported` detection | Three-way router: question / conversational / unsupported, with reason + suggestions | Planner failure; a fifth touchpoint | User's call. Costs one cheap classification and zero retrieval; the reason names the obstruction and the suggestions are postable request bodies |
+| Response shape | `unsupported` and `no_results` carry an empty visualization block | Null visualization | One render path for the frontend; only `conversational` is null |
+| Endpoints | All five from `plan.md` §1 | `/analyze` only | User's call. `/plan` shows the agent layer with no retrieval; `/capabilities` and `/schema` generate from the models so they cannot drift |
+| `InvariantError` at HTTP | 500 with no chart | Chart plus a caveat | A reconciliation failure means the chart is wrong; failing loudly has to hold at the boundary too |
+| `.env` loading | In the app's lifespan | Left to the caller | `uvicorn` reads nothing; a `.env` beside the code would be silently ignored and read as a broken build |
+| Cold grammar compile | Retried in the client | Left to the planner's repair loop | Anthropic compiles and caches a grammar per schema: ~80s cold (can 400 with "Grammar compilation timed out") vs ~5s warm. Left to propagate it burned three planner revisions on an infrastructure hiccup, starving genuinely bad plans of repairs |
+
 ## Citations
 
 | Decision | Chosen | Rejected | Why |

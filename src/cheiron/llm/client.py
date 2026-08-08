@@ -19,6 +19,7 @@ and its errors feed the repair loop. Schema validity is the floor, not the ceili
 
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
 import os
@@ -107,6 +108,18 @@ class LLMSettings:
     def model_for(self, tier: Tier) -> str:
         return self.model_small if tier is Tier.SMALL else self.model_large
 
+
+#: Anthropic compiles a grammar for each distinct output schema and caches it. The first
+#: request with a new schema can exceed the request timeout and come back as a 400 reading
+#: "Grammar compilation timed out" — measured at 78-90s cold against ~5s once warm.
+#:
+#: It is retried in the client rather than surfaced, because it is an infrastructure hiccup
+#: rather than a bad plan. Left to propagate it consumes planner revisions: a `/plan` call
+#: was observed burning three of them on cold compiles, which would leave a genuinely wrong
+#: plan with fewer chances to be repaired.
+_GRAMMAR_TIMEOUT = "grammar compilation timed out"
+GRAMMAR_RETRIES = 3
+GRAMMAR_BACKOFF_SECONDS = 5.0
 
 #: Fallbacks when the environment names a provider but not its models. Kept here rather
 #: than only in `.env.example` so the service starts with a working configuration.
@@ -335,6 +348,31 @@ class AnthropicClient:
         self.settings = settings
         self._client = AsyncAnthropic(api_key=settings.api_key)
 
+    async def _send(
+        self, messages: list[dict[str, Any]], request: dict[str, Any], model: str
+    ) -> Any:
+        """One request, retrying a cold grammar compilation.
+
+        The retry is what warms the cache: compilation continues server-side after the
+        timeout, so the next attempt usually finds it ready.
+        """
+        import anthropic
+
+        for attempt in range(GRAMMAR_RETRIES):
+            try:
+                return await self._client.messages.create(messages=messages, **request)
+            except anthropic.APIStatusError as exc:
+                cold = _GRAMMAR_TIMEOUT in str(exc).lower()
+                if not cold or attempt == GRAMMAR_RETRIES - 1:
+                    raise
+                log.warning(
+                    "anthropic %s is compiling the output schema; retrying in %.0fs",
+                    model,
+                    GRAMMAR_BACKOFF_SECONDS,
+                )
+                await asyncio.sleep(GRAMMAR_BACKOFF_SECONDS)
+        raise AssertionError("unreachable")
+
     async def complete(
         self,
         *,
@@ -367,7 +405,7 @@ class AnthropicClient:
 
         for _ in range(MAX_TOOL_ROUNDS):
             try:
-                response = await self._client.messages.create(messages=messages, **request)
+                response = await self._send(messages, request, model)
             except anthropic.APIStatusError as exc:
                 raise LLMError(
                     f"anthropic {model} returned {exc.status_code}: {exc.message}"
