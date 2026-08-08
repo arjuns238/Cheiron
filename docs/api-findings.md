@@ -70,6 +70,42 @@ Two consequences:
    distinguish "estimated" from "unknown", and the ESTIMATED-start warning must not silently
    swallow unknowns.
 
+## CORRECTION 3 — every "local" filter is actually pushable
+
+`plan.md` §3 splits `Filters` into pushdown and local, the local ones being those "with no
+API equivalent", applied after fetch. All six have an equivalent. Measured against
+`query.cond=melanoma` (baseline 3,743):
+
+| plan.md calls it local | Working clause | Count |
+|---|---|---|
+| `study_type` | `AREA[StudyType]INTERVENTIONAL` | 3,111 |
+| `sponsor_class` | `AREA[LeadSponsorClass]INDUSTRY` | 1,274 |
+| `intervention_type` | `AREA[InterventionType]DRUG` | 2,113 |
+| `enrollment_min/max` | `AREA[EnrollmentCount]RANGE[100,MAX]` | 1,139 |
+| `has_results` | `AREA[HasResults]true` | 789 |
+| `date_certainty` | `AREA[StartDateType]ACTUAL` | 2,301 |
+
+**Everything is pushed down.** Fetching records only to discard them locally wastes the
+page budget, and the page cap is the thing that turns a chart into a sample. The
+consequence is that `retrieved` and `used` now diverge only through normalizer rejections
+and missing grouping dimensions, not through filtering — simpler to explain, not weaker.
+
+Composition confirmed:
+
+```
+AREA[Phase]PHASE3 AND AREA[LeadSponsorClass]INDUSTRY              → 122
+AREA[Phase](PHASE2 OR PHASE3)                                     → 1,728
+  vs PHASE2 (1,534) + PHASE3 (219) = 1,753 — the 25-trial difference is the
+  multi-phase population, counted once by the union. A naive sum over-reports.
+NOT AREA[StartDateType]ESTIMATED                                  → 3,528
+AREA[StartDateType]ESTIMATED                                      → 215
+  3,528 + 215 = 3,743 exactly, so NOT partitions cleanly and "unrecorded type"
+  falls on the NOT side — which is why ACTUAL_ONLY and EXCLUDE_ESTIMATED differ.
+```
+
+Multi-word values (`"United States"`) returned identical counts quoted and unquoted, but
+the compiler quotes them anyway rather than depend on an unspecified tokenizer.
+
 ## Field projection
 
 `fields` accepts **piece names** (`NCTId`, `Phase`, `LeadSponsorName`) or **module paths**
