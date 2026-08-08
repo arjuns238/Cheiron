@@ -33,6 +33,7 @@ what stops them from being aspirational:
 
 from __future__ import annotations
 
+import math
 import statistics
 from collections import Counter, defaultdict
 from dataclasses import dataclass, field
@@ -40,7 +41,7 @@ from typing import Any
 
 from cheiron.ctgov.normalizer import NormalizedRecord, date_quarter, date_year
 from cheiron.schemas.fields import FIELDS, FieldSpec, spec
-from cheiron.schemas.plan import Granularity, Metric, Plan, Sort
+from cheiron.schemas.plan import BinScale, Granularity, Layout, Metric, Plan, Sort
 
 #: Label for the bucket that absorbs everything past `top_n`. Held as a constant because
 #: the spec assembler, the warnings, and the sort all need to special-case it.
@@ -94,6 +95,13 @@ class Bucket:
     series: str | None
     contributions: list[Contribution] = field(default_factory=list)
     value: float = 0.0
+    #: Sort position for dimensions with an inherent order that their labels do not carry.
+    #: A histogram bin labelled "100–999" must sort after "10–99", which no string
+    #: comparison achieves. None means the label itself is the ordering.
+    order: float | None = None
+    #: The x coordinate, set only in point layout, where a datum is a trial rather than a
+    #: bucket and therefore needs two numbers rather than one.
+    point_x: float | None = None
 
     @property
     def key(self) -> tuple[str, str | None]:
@@ -139,6 +147,111 @@ class InvariantError(AssertionError):
 
 
 # --------------------------------------------------------------------------------------
+# Histogram binning
+# --------------------------------------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class Bins:
+    """Bin edges for a numeric histogram, derived from the observed values.
+
+    Edges come from the data rather than from the plan because the planner has never seen
+    the data — it knows how many bins are wanted, not where a sensible boundary lies.
+
+    Zero is held out into its own bin on a log scale. It is not a rounding artefact: a
+    withdrawn trial genuinely enrolled nobody (NCT04193930 in the fixtures), and folding it
+    into the lowest positive bin would misreport a real and meaningful population.
+    """
+
+    edges: tuple[float, ...]
+    scale: BinScale
+    zero_bucket: bool = False
+
+    def label_for(self, value: float) -> tuple[str, float]:
+        """The bin label and its sort position for one value."""
+        if self.zero_bucket and value <= 0:
+            return "0", -1.0
+        for index in range(len(self.edges) - 1):
+            low, high = self.edges[index], self.edges[index + 1]
+            # The last bin is closed so the maximum value does not fall off the end.
+            last = index == len(self.edges) - 2
+            if low <= value < high or (last and value <= high):
+                return f"{_num(low)}–{_num(high)}", float(index)
+        return f"{_num(self.edges[-1])}+", float(len(self.edges))
+
+
+def _num(value: float) -> str:
+    """Render a bin edge without trailing zeros: 430, 4.6, 0.05."""
+    if float(value).is_integer():
+        return f"{int(value)}"
+    return f"{value:.2f}".rstrip("0").rstrip(".")
+
+
+def _nice(value: float, mode: str = "round") -> float:
+    """Round a bin edge to two significant figures.
+
+    Log-spaced edges land on values like 94.87 and 432.67, which are arithmetically
+    correct and unreadable on an axis. The edges themselves are rounded rather than only
+    their labels, so that a trial enrolling 433 participants falls in the bin whose label
+    says it does — rounding the label alone would put values outside the range they claim.
+
+    The outermost edges round *outward* (`mode` of `floor` and `ceil`). Rounding the top
+    edge to nearest would move it below the largest observed value, pushing that trial out
+    of every bin — a silent loss, which is the one thing this system does not do.
+    """
+    if value == 0:
+        return 0.0
+    magnitude = math.floor(math.log10(abs(value)))
+    step = 10 ** (magnitude - 1)
+    scaled = value / step
+    if mode == "floor":
+        return math.floor(scaled) * step
+    if mode == "ceil":
+        return math.ceil(scaled) * step
+    return round(scaled) * step
+
+
+def build_bins(values: list[float], count: int, scale: BinScale) -> Bins | None:
+    """Compute bin edges over the observed values, or None if there is nothing to bin."""
+    if not values:
+        return None
+    low, high = min(values), max(values)
+
+    if scale is BinScale.LOG:
+        positive = [v for v in values if v > 0]
+        if not positive:
+            return Bins(edges=(0.0, 0.0), scale=scale, zero_bucket=True)
+        start, stop = math.log10(min(positive)), math.log10(max(positive))
+        if stop == start:
+            stop = start + 1
+        step = (stop - start) / count
+        edges = _rounded_edges([10 ** (start + step * i) for i in range(count + 1)])
+        return Bins(edges=edges, scale=scale, zero_bucket=any(v <= 0 for v in values))
+
+    if high == low:
+        high = low + 1
+    step = (high - low) / count
+    return Bins(edges=_rounded_edges([low + step * i for i in range(count + 1)]), scale=scale)
+
+
+def _rounded_edges(edges: list[float]) -> tuple[float, ...]:
+    """Round edges for readability, keeping them strictly increasing.
+
+    Rounding can collapse two adjacent edges into one — on a narrow range, 1.02 and 1.04
+    both become 1.0 — which would silently delete a bin. When that happens the raw edges
+    are kept: an ugly axis is better than a missing bucket.
+    """
+    rounded = [_nice(e) for e in edges]
+    rounded[0] = _nice(edges[0], "floor")
+    rounded[-1] = _nice(edges[-1], "ceil")
+    if len(set(rounded)) != len(rounded) or any(
+        b <= a for a, b in zip(rounded, rounded[1:], strict=False)
+    ):
+        return tuple(edges)
+    return tuple(rounded)
+
+
+# --------------------------------------------------------------------------------------
 # Dimension extraction
 # --------------------------------------------------------------------------------------
 
@@ -147,13 +260,14 @@ def _dimension_values(
     record: NormalizedRecord,
     field_key: str,
     granularity: Granularity | None,
-) -> tuple[list[tuple[str, str, str]], str | None]:
+    bins: Bins | None = None,
+) -> tuple[list[tuple[str, str, str, float | None]], str | None]:
     """Resolve a record's bucket label(s) for one dimension.
 
     Returns `(values, exclusion_reason)`, where `values` is a list of
-    `(label, field_path, field_value)` triples — more than one only for a multi-valued
-    field, where the trial genuinely belongs in several buckets. An empty list is always
-    accompanied by a reason, so a record can never vanish without being counted.
+    `(label, field_path, field_value, order)` tuples — more than one only for a
+    multi-valued field, where the trial genuinely belongs in several buckets. An empty list
+    is always accompanied by a reason, so a record can never vanish without being counted.
     """
     field_spec = spec(field_key)
     raw = record.get(field_key)
@@ -161,24 +275,30 @@ def _dimension_values(
     if field_spec.is_temporal:
         return _temporal_values(raw, field_spec, granularity)
 
+    if bins is not None:
+        if raw is None or isinstance(raw, bool) or not isinstance(raw, (int, float)):
+            return [], missing_reason(field_key)
+        label, order = bins.label_for(float(raw))
+        return [(label, field_spec.source, str(raw), order)], None
+
     if field_spec.multi:
         values = [v for v in (raw or []) if v]
         if not values:
             return [], missing_reason(field_key)
         return [
-            (str(v), f"{field_spec.source}[{i}]", str(v)) for i, v in enumerate(values)
+            (str(v), f"{field_spec.source}[{i}]", str(v), None) for i, v in enumerate(values)
         ], None
 
     if raw is None or raw == "":
         return [], missing_reason(field_key)
-    return [(str(raw), field_spec.source, str(raw))], None
+    return [(str(raw), field_spec.source, str(raw), None)], None
 
 
 def _temporal_values(
     raw: Any,
     field_spec: FieldSpec,
     granularity: Granularity | None,
-) -> tuple[list[tuple[str, str, str]], str | None]:
+) -> tuple[list[tuple[str, str, str, float | None]], str | None]:
     """Bucket a partial date into a year or a quarter.
 
     Quarterly bucketing needs at least month precision. A year-only date is excluded under
@@ -193,16 +313,25 @@ def _temporal_values(
         quarter = date_quarter(raw)
         if quarter is None:
             return [], IMPRECISE_FOR_QUARTER
-        return [(quarter, field_spec.source, str(raw))], None
+        return [(quarter, field_spec.source, str(raw), None)], None
 
     year = date_year(raw)
     if year is None:
         return [], missing_reason(field_spec.key)
-    return [(str(year), field_spec.source, str(raw))], None
+    return [(str(year), field_spec.source, str(raw), None)], None
 
 
 def _measure(record: NormalizedRecord, plan: Plan) -> tuple[Any, str | None]:
     """The value this record contributes to the fold, or a reason it cannot contribute."""
+    if plan.layout is Layout.POINT:
+        # `metric_field` is the y coordinate rather than something to fold, so it is
+        # required here whatever `metric` says.
+        assert plan.metric_field is not None, "validator guarantees a y measure for points"
+        raw = record.get(plan.metric_field)
+        if raw is None or isinstance(raw, bool) or not isinstance(raw, (int, float)):
+            return None, missing_reason(plan.metric_field)
+        return float(raw), None
+
     if plan.metric is Metric.COUNT:
         return None, None
 
@@ -291,6 +420,19 @@ def aggregate(
     def exclude(reason: str) -> None:
         result.excluded_by_reason[reason] = result.excluded_by_reason.get(reason, 0) + 1
 
+    # Bin edges need the whole value distribution, so they are computed in a pre-pass over
+    # every leg before any record is bucketed. Deriving them per leg would give the legs of
+    # a comparison different x axes, which is not a comparison.
+    bins: Bins | None = None
+    if plan.bins is not None and plan.group_by is not None:
+        observed = [
+            float(v)
+            for records in records_by_leg.values()
+            for r in records
+            if isinstance(v := r.get(plan.group_by), (int, float)) and not isinstance(v, bool)
+        ]
+        bins = build_bins(observed, plan.bins, plan.bin_scale)
+
     for leg_label, records in records_by_leg.items():
         # Legs become the series dimension; the validator guarantees `series_by` and
         # multiple legs are mutually exclusive, so at most one of these is in play.
@@ -303,11 +445,13 @@ def aggregate(
                 continue
 
             if plan.group_by is None:
-                dimension_values: list[tuple[str, str, str]] = [("All", "", "")]
+                dimension_values: list[tuple[str, str, str, float | None]] = [
+                    ("All", "", "", None)
+                ]
                 dimension_missing = None
             else:
                 dimension_values, dimension_missing = _dimension_values(
-                    record, plan.group_by, plan.granularity
+                    record, plan.group_by, plan.granularity, bins
                 )
             if dimension_missing:
                 exclude(dimension_missing)
@@ -320,14 +464,37 @@ def aggregate(
                 if series_missing:
                     exclude(series_missing)
                     continue
-                series_labels: list[str | None] = [label for label, _, _ in series_values]
+                series_labels: list[str | None] = [label for label, _, _, _ in series_values]
             else:
                 series_labels = [leg_label if multi_leg else None]
 
             result.used += 1
-            for label, path, value in dimension_values:
+
+            if plan.layout is Layout.POINT:
+                # One trial, one datum. The bucket still exists and still holds the
+                # contribution that justifies the point, so a scatter point is as
+                # traceable as a bar; it simply has an audience of one.
+                x_label, x_path, x_value, _ = dimension_values[0]
+                for series in series_labels:
+                    bucket = buckets.setdefault(
+                        (record.nct_id, series), Bucket(record.nct_id, series)
+                    )
+                    bucket.point_x = float(x_value)
+                    bucket.contributions.append(
+                        Contribution(
+                            nct_id=record.nct_id,
+                            value=measure,
+                            field_path=x_path,
+                            field_value=x_value,
+                        )
+                    )
+                continue
+
+            for label, path, value, order in dimension_values:
                 for series in series_labels:
                     bucket = buckets.setdefault((label, series), Bucket(label, series))
+                    if order is not None:
+                        bucket.order = order
                     bucket.contributions.append(
                         Contribution(
                             nct_id=record.nct_id,
@@ -339,7 +506,12 @@ def aggregate(
 
     result.buckets = list(buckets.values())
     for bucket in result.buckets:
-        bucket.value = _fold(plan.metric, bucket.contributions)
+        if plan.layout is Layout.POINT:
+            # A one-trial bucket folds to that trial's y value. Still a fold, still
+            # deterministic, still carrying its own citation.
+            bucket.value = float(bucket.contributions[0].value)
+        else:
+            bucket.value = _fold(plan.metric, bucket.contributions)
 
     if plan.top_n is not None:
         _apply_top_n(result, plan)
@@ -401,6 +573,15 @@ def _sort(result: AggregationResult, plan: Plan) -> None:
 
     def sort_key(bucket: Bucket) -> tuple[Any, ...]:
         residue = bucket.dimension == OTHER
+        if bucket.order is not None:
+            # Histogram bins carry their own order because their labels do not: "100–999"
+            # sorts before "10–99" under any string comparison, and reordering a
+            # histogram's bins destroys the distribution it exists to show.
+            return (residue, bucket.order, bucket.dimension, bucket.series or "")
+        if plan.layout is Layout.POINT:
+            # Points have no meaningful order; sorting by value would suggest a ranking
+            # that a scatter plot is specifically not making.
+            return (residue, bucket.point_x or 0.0, bucket.dimension, bucket.series or "")
         if plan.sort is Sort.DIMENSION_ASC:
             primary: Any = bucket.dimension
         elif plan.sort is Sort.VALUE_ASC:
@@ -521,7 +702,9 @@ def check_invariants(plan: Plan, result: AggregationResult) -> None:
             f"excluded={excluded} != retrieved={result.retrieved}"
         )
 
-    if any(b.value < 0 for b in result.buckets):
+    # Counts, distinct counts and sums over enrollment are all non-negative. A point's
+    # value is a raw measurement rather than a fold over many, so it is exempt.
+    if plan.layout is not Layout.POINT and any(b.value < 0 for b in result.buckets):
         raise InvariantError("a bucket folded to a negative value, which no metric admits")
 
     if result.used and not result.buckets:

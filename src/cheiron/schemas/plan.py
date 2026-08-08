@@ -51,6 +51,35 @@ class Granularity(StrEnum):
     QUARTER = "quarter"
 
 
+class Layout(StrEnum):
+    """Whether a datum is a bucket of trials or a single trial.
+
+    Everything in this system is an aggregation except one chart: a scatter plot asks
+    "how do these two measures relate across trials", and collapsing trials into buckets
+    would destroy exactly the relationship being asked about.
+
+    `POINT` does not weaken the core invariant. A point is still a fold over a bucket —
+    the bucket simply contains one trial — so the value is still produced by deterministic
+    code and still carries the citation that justifies it.
+    """
+
+    AGGREGATE = "aggregate"
+    POINT = "point"
+
+
+class BinScale(StrEnum):
+    """How a numeric range is divided for a histogram.
+
+    `LOG` exists because the registry's numeric fields are not merely skewed, they are
+    pathologically so: enrollment runs from 0 to over 1.1 million with a median in the
+    low hundreds. Equal-width bins over that range put essentially every trial in the
+    first bin and render a chart that is technically correct and useless.
+    """
+
+    LINEAR = "linear"
+    LOG = "log"
+
+
 class Sort(StrEnum):
     VALUE_DESC = "value_desc"
     VALUE_ASC = "value_asc"
@@ -144,6 +173,22 @@ class Plan(BaseModel):
     metric_field: str | None = Field(None, description="Required for sum and median.")
     distinct_of: str | None = Field(None, description="Required for distinct_count.")
     granularity: Granularity | None = None
+    layout: Layout = Field(
+        Layout.AGGREGATE,
+        description="'point' emits one datum per trial for a scatter plot; group_by is "
+        "the x measure and metric_field the y measure. Everything else aggregates.",
+    )
+    bins: int | None = Field(
+        None,
+        ge=2,
+        le=50,
+        description="Number of histogram bins. Requires a numeric group_by.",
+    )
+    bin_scale: BinScale = Field(
+        BinScale.LINEAR,
+        description="Bin edge spacing. Use 'log' for enrollment and other heavily "
+        "right-skewed measures, where linear bins collapse into one bar.",
+    )
     top_n: int | None = Field(None, ge=1, le=100)
     sort: Sort = Sort.VALUE_DESC
     viz_hint: str | None = Field(
@@ -194,6 +239,7 @@ def validate_plan(plan: Plan) -> list[str]:
     check_field(plan.distinct_of, "distinct_of")
 
     # 2. sum / median require a numeric metric_field
+    is_point = plan.layout is Layout.POINT
     if plan.metric in (Metric.SUM, Metric.MEDIAN):
         if plan.metric_field is None:
             errors.append(
@@ -202,6 +248,10 @@ def validate_plan(plan: Plan) -> list[str]:
             )
         else:
             check_field(plan.metric_field, "metric_field", allow=_NUMERIC_KINDS)
+    elif is_point:
+        # In point layout metric_field is the y measure rather than something to fold, so
+        # it is required regardless of `metric`.
+        pass
     elif plan.metric_field is not None:
         errors.append(
             f"metric_field={plan.metric_field!r} is only meaningful for metric 'sum' or "
@@ -271,7 +321,47 @@ def validate_plan(plan: Plan) -> list[str]:
                 f"got group_by={plan.group_by!r}, series_by={plan.series_by!r}"
             )
 
-    # 10. the plan must actually narrow or split something
+    # 10. histogram binning applies to numeric measures only
+    if plan.bins is not None:
+        if is_point:
+            errors.append("bins is a histogram setting and does not apply to layout='point'")
+        else:
+            check_field(plan.group_by, "group_by", allow=_NUMERIC_KINDS)
+            if plan.group_by is None:
+                errors.append(
+                    f"bins={plan.bins} requires a numeric group_by to divide, e.g. 'enrollment'"
+                )
+    elif plan.group_by and FIELDS.get(plan.group_by) and FIELDS[plan.group_by].is_numeric:
+        # Without bins a numeric grouping would emit one bucket per distinct value —
+        # thousands of single-trial bars, which is not a chart.
+        if not is_point:
+            errors.append(
+                f"group_by={plan.group_by!r} is numeric and requires bins to be set (2-50), "
+                f"otherwise every distinct value becomes its own bucket"
+            )
+
+    # 11. a scatter needs two numeric measures, one per axis
+    if is_point:
+        check_field(plan.group_by, "group_by", allow=_NUMERIC_KINDS)
+        check_field(plan.metric_field, "metric_field", allow=_NUMERIC_KINDS)
+        if plan.group_by is None or plan.metric_field is None:
+            errors.append(
+                "layout='point' requires group_by (the x measure) and metric_field (the y "
+                f"measure) to both be numeric fields, one of: "
+                f"{', '.join(k for k, f in FIELDS.items() if f.is_numeric)}"
+            )
+        if plan.granularity is not None:
+            errors.append("layout='point' has no time axis, so granularity does not apply")
+        if plan.top_n is not None:
+            errors.append("layout='point' plots trials individually, so top_n does not apply")
+        if plan.series_by is not None and FIELDS.get(plan.series_by, None) is not None:
+            if FIELDS[plan.series_by].kind not in _ENTITYISH_KINDS:
+                errors.append(
+                    f"series_by={plan.series_by!r} colours the points and must therefore be "
+                    f"a categorical or entity field"
+                )
+
+    # 12. the plan must actually narrow or split something
     if plan.group_by is None and all(leg.filters.is_empty() for leg in plan.legs):
         errors.append(
             "plan has neither a group_by nor any filters, so it would aggregate the entire "
