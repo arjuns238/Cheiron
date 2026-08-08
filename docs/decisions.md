@@ -72,6 +72,23 @@ answer but never an illegal one.
 | Graph size | **Return complete**; advise via `suggested_min_occurrences` | Server-side threshold; hard node cap | User's call. Thresholding is presentation, and VOSviewer-style interactive filtering needs the whole network. 2.4 MB → 288 KB gzipped (measured 8.9×) |
 | Edge ranking | `weight` (counted) + `strength` (derived, labelled) | Replace weight with strength | Only `weight` has citations behind it |
 
+## LLM touchpoints (judge, router, selector)
+
+| Decision | Chosen | Rejected | Why |
+|---|---|---|---|
+| Router failure | Fail **open** to in-domain | Fail closed | A wrong refusal looks broken; a wrongly-analysed greeting merely returns nothing |
+| Judge failure | Fail toward **approval** | Fail toward concern | Advisory, so an outage should cost nothing; failing toward concern spends a re-plan on no evidence |
+| Judge authority | One re-plan, then commit regardless | Veto; unlimited revisions | A reviewer that can veto is a second planner with no repair loop; unlimited revisions turn one disagreement into a loop |
+| Malformed verdict | Treated as a concern | Treated as approval | A garbled token must not read as silent approval |
+| `concern` with no concerns | **Not** a concern | Block anyway | A re-plan with no feedback has nothing to act on |
+| Selector failure | Fall back to `legal[0]` | Error | The model can only ever downgrade; membership is enforced, not trusted |
+
+The review prompt serializes the plan with `exclude_none=True`, **not** `exclude_defaults`.
+The latter drops `metric: "count"` because count is the default, leaving the judge asked to
+check a field it cannot see — which reproducibly broke METRIC MISMATCH on Anthropic. It also
+receives `request.overrides()`, so a caller-pinned filter is not read as a field error.
+See `readme-notes.md` §13.
+
 ## Citations
 
 | Decision | Chosen | Rejected | Why |

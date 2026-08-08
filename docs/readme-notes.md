@@ -314,3 +314,85 @@ and nothing in the output looks wrong.
 dexamethasone example showing what it fixes, and the explicit instruction not to sort by it
 without applying `suggested_min_occurrences` first. The schema field description carries
 the same warning, since that is what a frontend developer actually reads.
+
+---
+
+## 13. The judge was measured, and the measurement found a bug in the harness
+
+**The problem.** `plan.md` §7 asks for an adversarial set, a check that the judge flags
+deliberately wrong plans, and an honest report "including if it doesn't". A verification
+layer nobody has tested is a claim, not a feature — and a judge that approves everything is
+indistinguishable from no judge at all.
+
+`tests/adversarial_judge.py` holds eight cases: four plans that are **legal** (they pass
+every plan-validator rule) but answer a different question than the one asked, and four
+correct plans as controls. The controls matter as much as the failures, since a judge that
+flags everything is as useless as one that flags nothing, and only the correct plans reveal
+which it is.
+
+**First run:**
+
+| Provider | Wrong plans caught | Correct plans kept |
+|---|---|---|
+| OpenAI `gpt-5.4` | 4/4 | 4/4 |
+| Anthropic `claude-opus-5` | **3/4** | 4/4 |
+
+Anthropic consistently missed the metric mismatch — a plan counting trials for a question
+asking *median enrolment* — with `ok` on four repeat runs, so a reproducible gap rather
+than sampling noise.
+
+**The cause was not the model.** The plan was serialized into the review prompt with
+`exclude_defaults=True`, which drops `metric: "count"` *precisely because count is the
+default*. The judge was being asked whether the metric matched the question's noun while
+never being shown the metric. Serializing with `exclude_none=True` instead — so defaulted
+fields appear — took both providers to **4/4 and 4/4**.
+
+The first fix attempted was a more explicit prompt rule, and it also produced 4/4. That was
+a workaround treating the symptom: with the metric visible, the *original* short rule scores
+3/3 on the previously-failing case and its control. The explicit rule was kept because it
+covers `sum` and `distinct_count` too, but it is not what fixed this.
+
+**Why silence is not acceptable.** Claiming a review layer without saying how it was
+measured is the unearned assurance this system is otherwise built to avoid. This case also
+shows the measurement doing its actual job: the adversarial set found a harness bug, not a
+model weakness, and without running it the system would have shipped a judge structurally
+unable to check one of its five rules.
+
+**What the README must say.** The set, both providers' before-and-after scores, that the
+miss traced to a serialization bug rather than the model, and that eight cases is a smoke
+test rather than an evaluation. State that the judge is advisory and bounded to one
+re-plan, so even a missed concern degrades to the plan the planner would have produced
+anyway.
+
+---
+
+## 14. The chart selector was measured too, and it had the same shape of bug
+
+**The problem.** The selector cannot produce an *illegal* chart — membership is enforced in
+code, so the worst it can do is fall back to the rules' default. That safety property makes
+it easy to assume it needs no evaluation. What it can still do is pick the *worse* of two
+legal options, and nothing downstream notices.
+
+`tests/adversarial_selector.py` pairs questions over the **same result shape**, differing
+only in phrasing — which is the entire reason the stage exists, since the aggregation
+cannot tell "how has X changed" from "which year had the most".
+
+First run discriminated correctly on line-vs-bar and bar-vs-pie, and failed on geography:
+both providers chose `bar` for *"Where are recruiting NSCLC trials running?"*, the canonical
+map question, where `choropleth` is the rules' own default. The selector was **actively
+downgrading** the chart — worse than not running it.
+
+Cause: the prompt's guidance list covered line, bar, pie, stacked_area and grouped_bar, and
+never mentioned maps. A chart type with no guidance is one the model will not choose.
+Adding a geography rule — with the ranking exception, so "the top five countries" still
+gets a bar — took both providers to 8/8, including 3/3 on the cases whose right answer is
+*not* the default. Those three are the only ones that measure the model at all; the rest
+would pass with no model.
+
+**Why silence is not acceptable.** "The model cannot produce an illegal chart" is true and
+is not the same as "the model is helping". Reporting only the safety property would overstate
+what was verified.
+
+**What the README must say.** That the selector is constrained by rules and separately
+measured for usefulness, the geography miss and its fix, and that a bounded stage still
+needs evaluating — being unable to do harm is not evidence of doing good.

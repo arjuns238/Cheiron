@@ -24,6 +24,7 @@ from __future__ import annotations
 import json
 import logging
 from dataclasses import dataclass, field
+from typing import Any
 
 from cheiron.llm.client import LLMClient, LLMError, Provider, Tier
 from cheiron.llm.probes import PROBE_BUDGET, ProbeCall, ProbeRunner, probe_tool_specs
@@ -99,6 +100,11 @@ class PlanningResult:
     #: Every probe the planner ran, in order, for `meta.planning_trace`. Recorded so a
     #: reader can see exactly which aggregate facts the model was shown before it chose.
     probes: list[ProbeCall] = field(default_factory=list)
+    #: The judge's verdict, kept whether or not it was acted on. An objection that did not
+    #: change the plan is still something a reader should be able to see.
+    review: Any = None
+    #: True when the judge's concerns triggered the one permitted re-plan.
+    revised_after_review: bool = False
 
     @property
     def warnings(self) -> list[str]:
@@ -269,6 +275,7 @@ async def plan_query(
     *,
     max_revisions: int = MAX_REVISIONS,
     probes: ProbeRunner | None = None,
+    extra_context: str = "",
 ) -> PlanningResult:
     """Produce a validated plan for a request.
 
@@ -280,6 +287,9 @@ async def plan_query(
         probes: Gives the planner read access to aggregate counts. Optional: without it
             the planner works from the schema alone, which is legal but blind — it cannot
             tell whether a drug name resolves or how many buckets a grouping produces.
+        extra_context: Appended to the first prompt. Carries the judge's concerns on a
+            re-plan, so the second attempt starts from the objection rather than
+            rediscovering it.
 
     Returns:
         A `PlanningResult` whose `plan` has passed `validate_plan`, or whose `contested`
@@ -290,6 +300,8 @@ async def plan_query(
     """
     system = build_system_prompt()
     user = build_user_prompt(request)
+    if extra_context:
+        user = f"{user}\n\n{extra_context}"
     attempts: list[PlanAttempt] = []
     rejected: list[Plan] = []
 
@@ -354,6 +366,7 @@ async def plan_query(
 __all__ = [
     "MAX_REVISIONS",
     "NARROW_SCHEMA_FIELDS",
+    "plan_and_review",
     "PlanAttempt",
     "PlanningError",
     "PlanningResult",
@@ -362,3 +375,50 @@ __all__ = [
     "build_user_prompt",
     "plan_query",
 ]
+
+
+async def plan_and_review(
+    client: LLMClient,
+    request: AnalyzeRequest,
+    *,
+    judge: bool = True,
+    max_revisions: int = MAX_REVISIONS,
+    probes: ProbeRunner | None = None,
+) -> PlanningResult:
+    """Plan, then have the plan reviewed, then re-plan once if the reviewer objects.
+
+    The judge is advisory and bounded to a single re-plan, per `plan.md` §3. A reviewer
+    that can veto is a second planner with no repair loop of its own; a reviewer that can
+    trigger unlimited revisions turns one disagreement into a loop.
+
+    The re-planned result is committed **whether or not** the reviewer would still object,
+    because asking again would be the start of that loop. What the reviewer said is kept on
+    the result either way, so a reader can see the objection even when it was not resolved.
+    """
+    from cheiron.llm.judge import concern_feedback, review
+
+    result = await plan_query(
+        client, request, max_revisions=max_revisions, probes=probes
+    )
+    if not judge:
+        return result
+
+    verdict = await review(
+        client, request.query, result.plan, result.probes, request.overrides()
+    )
+    result.review = verdict
+    if not verdict.is_concerned:
+        return result
+
+    log.info("judge raised concerns: %s", "; ".join(verdict.concerns))
+    revised = await plan_query(
+        client,
+        request,
+        max_revisions=max_revisions,
+        probes=probes,
+        extra_context=concern_feedback(verdict),
+    )
+    revised.attempts = result.attempts + revised.attempts
+    revised.review = verdict
+    revised.revised_after_review = True
+    return revised
