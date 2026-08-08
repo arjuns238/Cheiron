@@ -171,3 +171,78 @@ who reruns them against a moved registry needs to know which mode they are in.
 
 **What the README must say.** The default (off), what the cache is for, that
 `meta.cache_hit` reports it per response, and how to clear it.
+
+---
+
+## 9. What a drug↔drug edge actually claims
+
+**The problem.** An edge in the drug network asserts that two agents were *given together*.
+The registry does not record that directly — it records interventions, arm groups, and a
+membership between them — so the edge rule is an interpretation, and three separate
+judgements go into it.
+
+*Arm-scoping.* Two drugs in the same trial are frequently the two sides of a comparison
+rather than a combination. Measured over 500 melanoma trials: 217 co-list two or more
+agents, but only 157 have two or more sharing an arm group. Pairing at trial level would
+assert combinations for roughly a third more trials than have one. NCT01748448 lists
+Vitamin D and Placebo — naive pairing draws an edge between a drug and its own control.
+So pairing happens strictly within an arm group, which is the registry's own statement of
+what was administered together.
+
+*Placebo exclusion is a name heuristic.* Arm membership alone is not sufficient.
+Double-dummy blinding places a placebo *in the active arm* so both groups receive the same
+number of injections, and sponsors type those placebos as `DRUG`: NCT01721772 yields the
+arm `BMS-936558 (Nivolumab) || Placebo matching Dacarbazine`. The registry has no
+"is placebo" flag, so these are excluded by matching name text (`placebo`, `sham`,
+`vehicle control`). That is prose matching, and it will miss a placebo named in some other
+way.
+
+*`BIOLOGICAL` counts as a drug, diverging from `plan.md`.* `plan.md` says DRUG.
+ClinicalTrials.gov's DRUG/BIOLOGICAL split is regulatory — which FDA centre reviews the
+filing — rather than pharmacological, and sponsors apply it inconsistently to the *same
+molecule*: pembrolizumab appears as `DRUG` in 405 records and `BIOLOGICAL` in 94. Excluding
+`BIOLOGICAL` would make a combination appear or vanish depending on who filed it.
+
+**Why silence is not acceptable.** This is the chart most likely to be read as clinical
+fact, and it is the one the assignment weights highest. Every one of the three judgements
+changes which edges exist. A reader comparing the graph against their own knowledge of a
+treatment landscape needs to know what was counted before concluding the system is wrong —
+or, worse, before concluding it is right about a combination it inferred from a comparison.
+
+**What the README must say.**
+
+- The arm-scoping rule, with the 217-versus-157 measurement, and that it is why edges are
+  trustworthy rather than merely plentiful.
+- That placebo exclusion is a name heuristic with no coded field behind it, so it is
+  best-effort and will have misses.
+- The `BIOLOGICAL` divergence from `plan.md` and the 405/94 evidence for it.
+- That the same machinery pairs `conditions` and `intervention_mesh` at *trial* level,
+  because those have no arm structure — and that those graphs therefore mean "co-listed",
+  which the response states in `meta.warnings` per chart.
+
+---
+
+## 10. Network node labels are free text
+
+**The problem.** Nodes in an intervention network are raw intervention names, and the
+registry holds 528,741 distinct ones. They are not a controlled vocabulary and are not
+deduplicated. A live run produced the edge `Nivolumab — Nivolumab + Relatlimab`, because a
+single intervention record is *named* "Nivolumab + Relatlimab": one node is a drug, the
+other is a two-drug regimen written into one name field.
+
+The same drug also appears under brand names, code names, and dosage-bearing strings
+(`BMS-936558 (Nivolumab)`), so one agent can occupy several nodes and its true edge weight
+is split between them.
+
+**Why silence is not acceptable.** Node identity is what a network graph is *for*. A reader
+counts distinct drugs by counting nodes, and here that count is an overestimate by an
+unknown factor. The failure is not visible from the chart: a duplicated node looks like a
+different drug.
+
+**What the README must say.** That intervention nodes are free text with the 528,741 figure
+and the query behind it, that no entity resolution is performed, and the concrete
+`Nivolumab + Relatlimab` example so the shape of the problem is unambiguous. State the
+alternative the system already offers — `intervention_mesh` uses ClinicalTrials.gov's own
+MeSH indexing and gives normalized nodes, at the cost of trial-level rather than arm-level
+edges (§9) and of dropping agents with no MeSH heading. Entity resolution across raw names
+belongs in "what I'd do with more time".

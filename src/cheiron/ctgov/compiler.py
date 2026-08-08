@@ -23,7 +23,7 @@ import re
 from dataclasses import dataclass
 
 from cheiron.schemas.fields import FIELDS
-from cheiron.schemas.plan import DateCertainty, Filters, Metric, Plan
+from cheiron.schemas.plan import DateCertainty, Filters, Layout, Metric, Plan
 
 #: The registry clamps `pageSize` at 1000 silently; asking for more returns 1000 without
 #: complaint. Requested explicitly because the default is 10, which would turn every fetch
@@ -33,6 +33,11 @@ PAGE_SIZE = 1000
 #: Fields fetched for every request regardless of plan, because a datum without an
 #: identifier and a title cannot be cited.
 CITATION_PROJECTION = ("NCTId", "BriefTitle")
+
+#: Co-occurrence fields whose edges come from a *derived* field rather than the named one.
+#: Mirrors `agg.aggregator._ARM_SCOPED`; the two are asserted equal in the tests so they
+#: cannot drift and leave the compiler under-projecting.
+ARM_SCOPED_SOURCES: dict[str, str] = {"intervention_names": "combination_groups"}
 
 #: Essie treats bare whitespace as a token separator, so any value that contains a space
 #: (`United States`, `Novo Nordisk A/S`) is quoted. Both forms happened to return identical
@@ -77,6 +82,15 @@ def projection(plan: Plan) -> tuple[str, ...]:
     """
     pieces: list[str] = list(CITATION_PROJECTION)
     referenced = [plan.group_by, plan.series_by, plan.metric_field, plan.distinct_of]
+
+    # A co-occurrence network on interventions is built from `combination_groups`, which
+    # is derived from arm-group membership rather than from `intervention_names` itself.
+    # Projecting only the named field returns interventions with no `type` and no
+    # `armGroupLabels`, so every trial yields no pairs and the graph comes back empty —
+    # silently, because an empty graph looks like a slice with no combinations in it.
+    if plan.layout is Layout.COOCCURRENCE and plan.group_by in ARM_SCOPED_SOURCES:
+        referenced.append(ARM_SCOPED_SOURCES[plan.group_by])
+
     for key in referenced:
         if key:
             pieces.extend(FIELDS[key].projection)

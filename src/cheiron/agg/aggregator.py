@@ -39,7 +39,12 @@ from collections import Counter, defaultdict
 from dataclasses import dataclass, field
 from typing import Any
 
-from cheiron.ctgov.normalizer import NormalizedRecord, date_quarter, date_year
+from cheiron.ctgov.normalizer import (
+    COMBINATION_SEPARATOR,
+    NormalizedRecord,
+    date_quarter,
+    date_year,
+)
 from cheiron.schemas.fields import FIELDS, FieldSpec, spec
 from cheiron.schemas.plan import BinScale, Granularity, Layout, Metric, Plan, Sort
 
@@ -61,6 +66,15 @@ def missing_reason(field_key: str) -> str:
 #: A year-only date cannot be placed in a quarter, and guessing Q1 would put a fabricated
 #: spike at the start of every year. Such records are excluded from quarterly charts only.
 IMPRECISE_FOR_QUARTER = "imprecise_date_for_quarter"
+
+#: A trial with fewer than two values in the paired field contributes no edge. Counted
+#: rather than dropped, because "how many trials had nothing to pair" is exactly the
+#: question a sparse-looking network raises.
+NO_COOCCURRING_VALUES = "no_cooccurring_values"
+
+#: Fields whose pairing is restricted to agents sharing an arm group, rather than anything
+#: co-listed in the trial. See `_cooccurrence_pairs`.
+_ARM_SCOPED: dict[str, str] = {"intervention_names": "combination_groups"}
 
 
 @dataclass(frozen=True)
@@ -144,6 +158,83 @@ class InvariantError(AssertionError):
     chart about to be returned is wrong, and `plan.md` is explicit that the system fails
     loudly rather than shipping a plausible chart built on a bad aggregation.
     """
+
+
+# --------------------------------------------------------------------------------------
+# Co-occurrence
+# --------------------------------------------------------------------------------------
+
+
+def _cooccurrence_pairs(
+    record: NormalizedRecord, field_key: str
+) -> tuple[list[tuple[str, str, str]], str | None]:
+    """Every unordered pair of values this trial contributes, and where they came from.
+
+    **The pairing rule depends on the field, and the difference is a correctness one.**
+
+    For `intervention_names` the pairs come from `combination_groups`, which pairs only
+    agents sharing an arm group. Two drugs in the same *trial* are frequently the two sides
+    of a comparison rather than a combination: over 500 melanoma trials, 217 co-list two or
+    more agents but only 157 share an arm, so trial-level pairing would assert roughly a
+    third more combinations than exist — including drug-versus-its-own-placebo edges.
+
+    For every other field — `conditions`, `intervention_mesh` — co-occurrence within the
+    trial *is* the relationship being asked about, and there is no arm structure to use.
+    Those pair the whole list, and the assembler warns that co-listing is what was measured.
+
+    Pairs are ordered within themselves so that (A, B) and (B, A) are one bucket, and
+    deduplicated so a trial listing the same combination in two arms contributes one edge.
+    """
+    if source_key := _ARM_SCOPED.get(field_key):
+        groups = [g.split(COMBINATION_SEPARATOR) for g in record.get(source_key) or []]
+        path = FIELDS[source_key].source
+    else:
+        groups = [record.get(field_key) or []]
+        path = FIELDS[field_key].source
+
+    pairs: list[tuple[str, str, str]] = []
+    seen: set[tuple[str, str]] = set()
+    for members in groups:
+        distinct = sorted({m.strip() for m in members if m and m.strip()})
+        for index, first in enumerate(distinct):
+            for second in distinct[index + 1 :]:
+                if (first, second) in seen:
+                    continue
+                seen.add((first, second))
+                pairs.append((first, second, path))
+
+    return (pairs, None) if pairs else ([], NO_COOCCURRING_VALUES)
+
+
+def _apply_network_top_n(result: AggregationResult, plan: Plan) -> None:
+    """Keep the busiest `top_n` nodes and every edge between them.
+
+    A network cannot use the `Other` bucket that bar charts do: "Other" is not an entity,
+    so it has nothing to co-occur with. Trimming therefore removes nodes and the edges
+    touching them, and records how many so the assembler can say what is missing rather
+    than leaving the reader with a graph that looks complete.
+    """
+    assert plan.top_n is not None
+    trials_by_node: dict[str, set[str]] = defaultdict(set)
+    for bucket in result.buckets:
+        ids = set(bucket.nct_ids)
+        trials_by_node[bucket.dimension] |= ids
+        if bucket.series is not None:
+            trials_by_node[bucket.series] |= ids
+
+    if len(trials_by_node) <= plan.top_n:
+        return
+
+    keep = {
+        node
+        for node, _ in sorted(
+            trials_by_node.items(), key=lambda kv: (-len(kv[1]), kv[0])
+        )[: plan.top_n]
+    }
+    result.collapsed_dimensions = len(trials_by_node) - len(keep)
+    result.buckets = [
+        b for b in result.buckets if b.dimension in keep and (b.series or "") in keep
+    ]
 
 
 # --------------------------------------------------------------------------------------
@@ -439,6 +530,25 @@ def aggregate(
         for record in records:
             result.retrieved += 1
 
+            if plan.layout is Layout.COOCCURRENCE:
+                assert plan.group_by is not None
+                pairs, pair_missing = _cooccurrence_pairs(record, plan.group_by)
+                if pair_missing:
+                    exclude(pair_missing)
+                    continue
+                result.used += 1
+                for first, second, path in pairs:
+                    bucket = buckets.setdefault((first, second), Bucket(first, second))
+                    bucket.contributions.append(
+                        Contribution(
+                            nct_id=record.nct_id,
+                            value=None,
+                            field_path=path,
+                            field_value=f"{first}{COMBINATION_SEPARATOR}{second}",
+                        )
+                    )
+                continue
+
             measure, measure_missing = _measure(record, plan)
             if measure_missing:
                 exclude(measure_missing)
@@ -514,7 +624,10 @@ def aggregate(
             bucket.value = _fold(plan.metric, bucket.contributions)
 
     if plan.top_n is not None:
-        _apply_top_n(result, plan)
+        if plan.layout is Layout.COOCCURRENCE:
+            _apply_network_top_n(result, plan)
+        else:
+            _apply_top_n(result, plan)
     _sort(result, plan)
 
     result.overlapping_trials = _count_overlap(records_by_leg)

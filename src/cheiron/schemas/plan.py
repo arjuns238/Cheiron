@@ -61,10 +61,18 @@ class Layout(StrEnum):
     `POINT` does not weaken the core invariant. A point is still a fold over a bucket —
     the bucket simply contains one trial — so the value is still produced by deterministic
     code and still carries the citation that justifies it.
+
+    `COOCCURRENCE` builds a network from a single multi-valued field by pairing the values
+    a trial carries: drug↔drug, condition↔condition. Each pair is a bucket whose value is
+    the number of trials containing both, so an edge weight is a fold over its own trial
+    list exactly like a bar. This is a new enum member rather than a new `Plan` field on
+    purpose — Anthropic's structured-output schema is at exactly its 24-optional-parameter
+    ceiling, and an added field would break planning on that provider.
     """
 
     AGGREGATE = "aggregate"
     POINT = "point"
+    COOCCURRENCE = "cooccurrence"
 
 
 class BinScale(StrEnum):
@@ -361,7 +369,32 @@ def validate_plan(plan: Plan) -> list[str]:
                     f"a categorical or entity field"
                 )
 
-    # 12. the plan must actually narrow or split something
+    # 12. a co-occurrence network pairs one field's values with each other
+    if plan.layout is Layout.COOCCURRENCE:
+        field = FIELDS.get(plan.group_by or "")
+        if field is None or not field.is_entity or not field.multi:
+            multi_entities = ", ".join(
+                k for k, f in FIELDS.items() if f.is_entity and f.multi and f.groupable
+            )
+            errors.append(
+                f"layout='cooccurrence' pairs a field's values with each other, so "
+                f"group_by must be a multi-valued entity field (one of: {multi_entities}), "
+                f"got group_by={plan.group_by!r}"
+            )
+        if plan.series_by is not None:
+            errors.append(
+                "layout='cooccurrence' derives both endpoints from group_by, so series_by "
+                "does not apply"
+            )
+        if plan.metric is not Metric.COUNT:
+            errors.append(
+                f"layout='cooccurrence' weighs an edge by how many trials contain both "
+                f"endpoints, so metric must be 'count', not {plan.metric.value!r}"
+            )
+        if plan.granularity is not None or plan.bins is not None:
+            errors.append("layout='cooccurrence' has no axis, so granularity and bins do not apply")
+
+    # 13. the plan must actually narrow or split something
     if plan.group_by is None and all(leg.filters.is_empty() for leg in plan.legs):
         errors.append(
             "plan has neither a group_by nor any filters, so it would aggregate the entire "

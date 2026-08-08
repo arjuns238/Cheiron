@@ -35,6 +35,34 @@ PHASE_NOT_REPORTED = "NOT_REPORTED"
 
 _ISO_DATE = re.compile(r"^(\d{4})(?:-(\d{2}))?(?:-(\d{2}))?$")
 
+#: Separator inside a `combination_groups` entry. Chosen because it does not occur in
+#: intervention names, which routinely contain commas, plus signs, slashes and brackets
+#: ("paclitaxel + cisplatin", "DTIC (dacarbazine)").
+COMBINATION_SEPARATOR = " || "
+
+#: Intervention types treated as administered therapeutic agents for combination
+#: detection.
+#:
+#: `plan.md` says DRUG. BIOLOGICAL is included because the ClinicalTrials.gov distinction
+#: is regulatory (which FDA centre reviews the filing) rather than pharmacological, and
+#: sponsors apply it inconsistently to the *same molecule*: pembrolizumab appears as DRUG
+#: in 405 records and BIOLOGICAL in 94. Excluding BIOLOGICAL would make a combination
+#: appear or vanish depending on who filed it.
+AGENT_TYPES = frozenset({"DRUG", "BIOLOGICAL"})
+
+#: Names excluded from combination detection even when typed as an agent.
+#:
+#: Arm membership is not sufficient on its own. Double-dummy blinding puts a placebo *in
+#: the active arm* so that both groups receive the same number of injections, and sponsors
+#: type those placebos as DRUG: NCT01721772 yields the arm
+#: "BMS-936558 (Nivolumab) || Placebo matching Dacarbazine". An edge there would assert
+#: that a drug is combined with a sham of a different drug.
+#:
+#: This is a name heuristic and therefore imperfect — it is matching prose, not a coded
+#: field, because the registry has no "is placebo" flag. It is deliberately narrow: it
+#: drops the term from pairing rather than dropping the trial.
+_PLACEBO_TERMS = ("placebo", "sham", "vehicle control", "matching injection")
+
 
 class ExclusionReason(StrEnum):
     """Why a fetched record did not become a used record.
@@ -163,6 +191,47 @@ def canonical_phase(phases: list[str] | None) -> str:
     return "|".join(ordered) if ordered else PHASE_NOT_REPORTED
 
 
+def is_placebo(name: str) -> bool:
+    """Whether an intervention name denotes a control rather than an agent."""
+    lowered = name.lower()
+    return any(term in lowered for term in _PLACEBO_TERMS)
+
+
+def combination_groups(interventions: list[dict[str, Any]]) -> list[str]:
+    """Sets of agents administered together, one entry per arm that has more than one.
+
+    This is what makes a drug↔drug network mean anything. Two drugs appearing in the same
+    *trial* are frequently not a combination at all — they are the two sides of a
+    comparison. Measured over 500 melanoma trials: 217 co-list two or more agents, but only
+    157 have two or more sharing an arm, so a third of co-listing trials would produce
+    edges asserting a combination that does not exist. NCT01748448 lists Vitamin D and
+    Placebo; naive pairing draws an edge between a drug and its own control.
+
+    Arm group membership is the registry's own statement of what was given together, so
+    pairing happens within an arm and nowhere else.
+
+    Returned as a flat list of separator-joined strings rather than a list of lists,
+    because the normalizer's contract with the aggregator is scalars and flat lists of
+    strings. The aggregator splits them back apart.
+    """
+    by_arm: dict[str, list[str]] = {}
+    for intervention in interventions:
+        if intervention.get("type") not in AGENT_TYPES:
+            continue
+        name = (intervention.get("name") or "").strip()
+        if not name or is_placebo(name):
+            continue
+        for label in intervention.get("armGroupLabels") or []:
+            by_arm.setdefault(label, []).append(name)
+
+    groups = []
+    for members in by_arm.values():
+        distinct = sorted(set(members))
+        if len(distinct) > 1:
+            groups.append(COMBINATION_SEPARATOR.join(distinct))
+    return sorted(set(groups))
+
+
 def _dedupe(values: list[str | None]) -> list[str]:
     """Order-preserving dedupe, dropping blanks."""
     return list(dict.fromkeys(v.strip() for v in values if v and v.strip()))
@@ -267,6 +336,7 @@ def normalize_study(raw: dict[str, Any]) -> NormalizedRecord | Exclusion:
         "conditions": _dedupe(_strings(protocol, "conditionsModule", "conditions")),
         "intervention_names": _dedupe([i.get("name") for i in interventions]),
         "intervention_types": _dedupe([i.get("type") for i in interventions]),
+        "combination_groups": combination_groups(interventions),
         # --- geography --------------------------------------------------------------
         # Deduplicated per trial: a trial with 40 German sites is one German trial, and
         # counting it 40 times would make the site list a proxy for trial size.

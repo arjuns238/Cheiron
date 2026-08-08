@@ -285,6 +285,19 @@ _FIELDS: tuple[FieldSpec, ...] = (
         "intervention_mesh for drug-network nodes.",
     ),
     FieldSpec(
+        key="combination_groups",
+        kind=FieldKind.ENTITY,
+        source="protocolSection.armsInterventionsModule.interventions[].armGroupLabels",
+        projection=("InterventionName", "InterventionType", "InterventionArmGroupLabel"),
+        multi=True,
+        groupable=False,
+        filterable=False,
+        label="Combination",
+        note="Agents sharing one arm group, which is the registry's own statement that "
+        "they were administered together. Drugs merely co-listed in a trial are often the "
+        "two sides of a comparison rather than a combination.",
+    ),
+    FieldSpec(
         key="intervention_types",
         kind=FieldKind.CATEGORICAL,
         source="protocolSection.armsInterventionsModule.interventions[].type",

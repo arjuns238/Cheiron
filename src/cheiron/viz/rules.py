@@ -87,6 +87,10 @@ def legal_charts(shape: Shape) -> tuple[VizType, ...]:
     if shape.layout is Layout.POINT:
         return (VizType.SCATTER,)
 
+    # A co-occurrence result is already a set of edges; nothing else renders it honestly.
+    if shape.layout is Layout.COOCCURRENCE:
+        return (VizType.NETWORK,)
+
     # Binned numeric data is a distribution. A bar chart of bins is a histogram; calling
     # it anything else would invite the frontend to reorder the bins.
     if shape.binned:

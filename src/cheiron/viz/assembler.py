@@ -57,6 +57,11 @@ STUDY_URL = "https://clinicaltrials.gov/study/{}"
 DIMENSION_KEY = "dimension"
 SERIES_KEY = "series"
 
+#: Fields whose co-occurrence edges mean "given together in one arm" rather than merely
+#: "listed in the same trial". The distinction changes what the chart is called, because
+#: calling a co-listing graph a combination graph would overstate it.
+_ARM_SCOPED_LABELS = frozenset({"intervention_names"})
+
 
 def _channel_type(kind: FieldKind | None) -> str:
     """Map a field kind onto the frontend's scale types."""
@@ -96,7 +101,16 @@ def build_title(plan: Plan) -> str:
     other than the one that was actually computed.
     """
     measure, _ = _metric_label(plan)
-    if plan.layout is Layout.POINT:
+    if plan.layout is Layout.COOCCURRENCE:
+        assert plan.group_by is not None
+        # "Trials by Intervention" would describe a bar chart. The subject of this chart
+        # is the pairing, so the title names it.
+        label = FIELDS[plan.group_by].label
+        pairing = (
+            "Co-administered" if plan.group_by in _ARM_SCOPED_LABELS else "Co-occurring"
+        )
+        title = f"{pairing} {label} Network"
+    elif plan.layout is Layout.POINT:
         assert plan.group_by is not None
         title = f"{measure} vs {FIELDS[plan.group_by].label}"
     elif plan.group_by:
@@ -139,10 +153,15 @@ def build_answer(
     if viz is VizType.NETWORK:
         # A network has no "highest bucket" — describing it as a ranked dimension would
         # misdescribe the chart. Its subject is the strongest link.
-        assert plan.group_by is not None and plan.series_by is not None
+        assert plan.group_by is not None
         if network is None or not network.edges:
-            return f"No links found between {FIELDS[plan.group_by].label.lower()} and "\
-                   f"{FIELDS[plan.series_by].label.lower()}."
+            between = (
+                f"between {FIELDS[plan.group_by].label.lower()} and "
+                f"{FIELDS[plan.series_by].label.lower()}"
+                if plan.series_by
+                else f"among {FIELDS[plan.group_by].label.lower()} values"
+            )
+            return f"No links found {between}."
         top = network.edges[0]
         return (
             f"{len(network.nodes):,} entities and {len(network.edges):,} links across "
@@ -220,7 +239,12 @@ def _build_network(plan: Plan, result: AggregationResult) -> NetworkData:
     edge weights. A sponsor running one trial that covers three conditions has three edges
     of weight one and a node weight of one; summing the edges would triple-count it.
     """
-    assert plan.group_by is not None and plan.series_by is not None
+    assert plan.group_by is not None
+    # In a co-occurrence graph both endpoints come from one field; in a bipartite graph
+    # they come from two. The node id carries its field so a frontend can colour by kind
+    # and so two entities that happen to share a label stay distinct.
+    source_kind = plan.group_by
+    target_kind = plan.series_by or plan.group_by
 
     edges: list[Edge] = []
     node_trials: dict[tuple[str, str], set[str]] = {}
@@ -236,15 +260,15 @@ def _build_network(plan: Plan, result: AggregationResult) -> NetworkData:
         ids = bucket.nct_ids
         edges.append(
             Edge(
-                source=f"{plan.group_by}:{bucket.dimension}",
-                target=f"{plan.series_by}:{bucket.series}",
+                source=f"{source_kind}:{bucket.dimension}",
+                target=f"{target_kind}:{bucket.series}",
                 weight=len(ids),
                 nct_ids=ids[:INLINE_CITATIONS],
                 nct_id_total=len(ids),
             )
         )
-        node_trials.setdefault((plan.group_by, bucket.dimension), set()).update(ids)
-        node_trials.setdefault((plan.series_by, bucket.series), set()).update(ids)
+        node_trials.setdefault((source_kind, bucket.dimension), set()).update(ids)
+        node_trials.setdefault((target_kind, bucket.series), set()).update(ids)
 
     nodes = [
         Node(id=f"{kind}:{label}", label=label, kind=kind, weight=len(ids))
@@ -398,6 +422,22 @@ def assemble(
     data = build_data(plan, result, viz)
 
     warnings = list(result.warnings)
+    if plan.layout is Layout.COOCCURRENCE:
+        assert plan.group_by is not None
+        warnings.insert(
+            0,
+            (
+                "An edge means the two agents shared an arm group, which is the registry's "
+                "own statement that they were given together. Agents merely listed in the "
+                "same trial are excluded, because those are usually the two sides of a "
+                "comparison rather than a combination."
+                if plan.group_by in _ARM_SCOPED_LABELS
+                else f"An edge means both values appear on the same trial. For "
+                f"{FIELDS[plan.group_by].label.lower()} the registry records no arm "
+                f"structure, so co-listing is what was measured — it does not by itself "
+                f"mean the two were studied together."
+            ),
+        )
     if viz is VizType.NETWORK and (omitted := network_omissions(result)):
         warnings.insert(
             0,
