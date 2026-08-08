@@ -1,2 +1,5 @@
 assignment-specs.md
 *.env*
+
+__pycache__/
+*.pyc

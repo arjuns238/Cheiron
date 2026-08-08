@@ -4,18 +4,18 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project state
 
-Implementation is **in progress**, following the build order in `plan.md` §6.
+Implementation follows the build order in `plan.md` §6.
 
-**Done:** ①–⑩ — schemas, normalizer, aggregator + invariants, API client + cache, viz rules +
+**Done:** ①–⑬ — schemas, normalizer, aggregator + invariants, API client + cache, viz rules +
 spec assembler, planner + repair loop, probe tools, network graph + co-occurrence, deep
-citations with offset verification.
+citations with offset verification, judge + router + chart selector, the pipeline and the
+five HTTP endpoints, and the captured example runs. Posted-results support (`resultsSection`)
+was added after ⑬ at the user's request.
 
-**Next:** ⑪ judge + router (the remaining two LLM touchpoints), then `unsupported` /
-`no_results` / `conversational` paths, example runs, README.
+**Remaining:** ⑭ the README itself, and ⑮ a self-review against the assignment's rubric.
 
-Nothing is wired into a FastAPI app yet — `src/cheiron/api/` is still empty. Every stage is
-importable and tested in isolation; assembling `POST /analyze` is the next integration step
-after ⑪.
+All **7** examples are captured, and `verify_examples.py` independently reconciles three of
+them (phases, countries, and the posted-results medians) with no mismatches.
 
 ### Read these first
 
@@ -29,37 +29,75 @@ after ⑪.
 - `docs/api-findings.md` — what the API actually does, verified by curl. Items marked
   **CORRECTION** contradict `plan.md`; the findings win, because they were measured.
 - `docs/corpus-facts.md` — corpus statistics with the exact query that produced each.
-- `docs/readme-notes.md` — 12 disclosures the README must carry, each with the problem, why
-  silence is unacceptable, and what to write.
+- `docs/readme-notes.md` — 17 disclosures the README must carry, each with the problem, why
+  silence is unacceptable, and what to write. This is the raw material for ⑭.
 
 ### Commands
 
 ```bash
-uv sync --all-extras          # install
-.venv/bin/pytest -q           # 385 tests, no network, no API key needed
-.venv/bin/ruff check src tests
+uv sync --all-extras                      # install
+.venv/bin/pytest -q                       # 444 tests, offline, no API key needed
+.venv/bin/ruff check src tests examples
+
+.venv/bin/python -m uvicorn cheiron.api.app:app --port 8000   # serve; /docs for Swagger
+.venv/bin/python examples/run_examples.py                     # capture examples (cached)
+.venv/bin/python examples/verify_examples.py                  # independent recount
 ```
 
-The whole suite runs offline: the API client is tested against a mock transport, the planner
-against a fake LLM client, and the deterministic core against 11 real records saved in
-`tests/fixtures/raw_studies/`. Live calls are made by hand during development, never in tests.
+The test suite runs **entirely offline**: the API client against a mock transport, the LLM
+stages against fake clients, the deterministic core against 11 real records in
+`tests/fixtures/raw_studies/` plus one results-bearing record in `results_studies/`.
 
-`.env` needs `LLM_PROVIDER` plus that provider's key; see `.env.example`. Model IDs there have
-been verified against both live APIs — **do not assume a model ID exists**, one set in the
-original config did not.
+**Two live evaluations are deliberately *not* pytest tests**, because they call a real model
+and cost money. `pytest` will not collect them (they are not named `test_*`):
+
+```bash
+.venv/bin/python tests/adversarial_judge.py    [anthropic|openai]   # 8 cases, expect 8/8
+.venv/bin/python tests/adversarial_selector.py [anthropic|openai]   # 8 cases, expect 8/8
+```
+
+Run both after touching a prompt. Each has already caught a real bug that unit tests could
+not — see `docs/readme-notes.md` §13 and §14.
+
+`.env` needs `LLM_PROVIDER` plus that provider's key; see `.env.example`. Model IDs there
+have been verified against both live APIs — **do not assume a model ID exists**, one set in
+the original config did not.
+
+**First Anthropic query after a schema change takes ~80s** and may return
+`Grammar compilation timed out`; it is retried automatically and warm calls are ~5s. See
+`readme-notes.md` §15 before concluding something is broken.
 
 ### Layout
 
 ```
 src/cheiron/
-  schemas/     fields.py (the field registry — four things derive from it), plan.py,
-               request.py, response.py
-  ctgov/       normalizer.py, compiler.py, client.py, cache.py, retrieval.py
-  agg/         aggregator.py  ← the heart; invariants live here
-  viz/         rules.py (chart legality), assembler.py (envelope), citations.py
-  llm/         client.py (both providers), planner.py, probes.py
-  api/         empty — not yet assembled
+  schemas/     fields.py  ← the field registry; the prompt, validator, viz rules and
+                            warnings all derive from it. Add a field here, not in four places.
+               plan.py (Plan + validator), request.py, response.py
+  ctgov/       normalizer.py (flatten + results extraction), compiler.py (Plan → Essie),
+               client.py (pagination, retry, rate limit), cache.py, retrieval.py
+  agg/         aggregator.py  ← the heart. Buckets, folds, co-occurrence, invariants.
+  viz/         rules.py (chart legality), assembler.py (envelope), citations.py (offsets)
+  llm/         client.py (both providers + schema translation), planner.py, probes.py,
+               router.py, judge.py, selector.py
+  pipeline.py  stages in sequence; decides which of four response types a request gets
+  api/app.py   five endpoints; /capabilities and /schema generate from the models
+
+examples/      captured runs + run_examples.py + verify_examples.py (imports no cheiron code)
+tests/         unit tests, plus adversarial_*.py live evaluations
+docs/          decisions, api findings, corpus facts, readme notes
 ```
+
+### Invariants that must not be broken
+
+1. **No LLM-visible number reaches the output.** Values are folded from records by the
+   aggregator; probe results go only to `meta.planning_trace`.
+2. **`used + sum(excluded_by_reason) == retrieved`**, checked in production, raising
+   `InvariantError` → HTTP 500 with no chart. Never downgrade this to a warning.
+3. **Invariants are checked before presentation trimming**, not after — trimming
+   deliberately drops buckets.
+4. **A citation must both verify at its offsets and state the value it is cited for.** The
+   first without the second is the dangerous case: it is real text from the wrong place.
 
 ## README: cite the corpus evidence
 

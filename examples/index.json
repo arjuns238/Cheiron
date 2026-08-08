@@ -1,0 +1,72 @@
+[
+  {
+    "file": "01-time-trend.json",
+    "title": "Time trend",
+    "query": "How has the number of pembrolizumab trials changed per year since 2015?",
+    "shows": "temporal grouping, year granularity, line chart chosen from [line, bar] because the phrasing asks how something changed",
+    "response_type": "visualization",
+    "visualization": "line",
+    "trials_used": 2857,
+    "citations": 63
+  },
+  {
+    "file": "02-distribution.json",
+    "title": "Distribution across phases",
+    "query": "How are melanoma trials distributed across phases?",
+    "shows": "composite phase buckets (PHASE1|PHASE2 is its own bucket, never counted into both) and NOT_REPORTED as a first-class value",
+    "response_type": "visualization",
+    "visualization": "pie",
+    "trials_used": 3743,
+    "citations": 40
+  },
+  {
+    "file": "03-comparison.json",
+    "title": "Comparison between two drugs",
+    "query": "Compare phases for trials involving pembrolizumab vs nivolumab",
+    "shows": "two legs merged into a series dimension, with overlapping populations detected and reported rather than silently summed",
+    "response_type": "visualization",
+    "visualization": "grouped_bar",
+    "trials_used": 4938,
+    "citations": 76
+  },
+  {
+    "file": "04-geographic.json",
+    "title": "Geographic distribution",
+    "query": "Where are recruiting trials for non-small cell lung cancer running?",
+    "shows": "a nested site-level location filter, and a choropleth chosen over a bar because the question asks about place rather than ranking",
+    "response_type": "visualization",
+    "visualization": "choropleth",
+    "trials_used": 1295,
+    "citations": 28
+  },
+  {
+    "file": "05-drug-network.json",
+    "title": "Drug co-occurrence network",
+    "query": "Which drugs frequently co-occur in combination studies for multiple myeloma?",
+    "shows": "arm-scoped co-occurrence: an edge means two agents shared an arm group, not merely that a trial listed both",
+    "response_type": "visualization",
+    "visualization": "network",
+    "trials_used": 1392,
+    "citations": 92
+  },
+  {
+    "file": "06-adverse-events.json",
+    "title": "Posted results \u2014 safety volume",
+    "query": "What is the median number of participants with serious adverse events in melanoma phase 3 trials, by sponsor class?",
+    "shows": "posted results: adverse-event totals summed across arm groups, with their own safety-population denominator rather than enrolment",
+    "response_type": "visualization",
+    "visualization": "bar",
+    "trials_used": 79,
+    "citations": 17
+  },
+  {
+    "file": "07-unsupported.json",
+    "title": "A question the registry cannot answer",
+    "query": "Which drug works better for melanoma, pembrolizumab or nivolumab?",
+    "shows": "the refusal path: the specific obstruction, plus postable alternatives",
+    "response_type": "unsupported",
+    "visualization": "kpi",
+    "trials_used": 0,
+    "citations": 0
+  }
+]

@@ -343,6 +343,7 @@ def normalize_study(raw: dict[str, Any]) -> NormalizedRecord | Exclusion:
         "countries": _dedupe([loc.get("country") for loc in locations]),
         "site_count": len(locations),
         "has_results": raw.get("hasResults"),
+        **results_fields(raw),
         # --- MeSH -------------------------------------------------------------------
         "intervention_mesh": _dedupe(
             [m.get("term") for m in _items(derived, "interventionBrowseModule", "meshes")]
@@ -395,3 +396,170 @@ def normalize_studies(raws: list[dict[str, Any]]) -> NormalizationResult:
         else:
             result.records.append(outcome)
     return result
+
+
+# --------------------------------------------------------------------------------------
+# Posted results
+#
+# `resultsSection` is present on trials with `hasResults: true` — 789 of 3,743 melanoma
+# trials. It is genuinely rich, and the earlier claim that this system "cannot" read it
+# was a scope decision described as a data limitation.
+#
+# What is *not* extracted here, and why, matters as much as what is. Outcome measures
+# ("progression-free survival", "objective response rate") are deliberately left alone:
+# across 25 melanoma trials with results there were 157 outcome measures carrying 144
+# distinct titles and 34 distinct units, so they cannot be aggregated across trials without
+# an ontology this project does not have. Reducing them to a number would produce exactly
+# the plausible-but-wrong output the rest of the system refuses.
+#
+# Everything below is *structurally comparable* across trials: participant counts, event
+# counts, and demographic totals all mean the same thing in every record.
+# --------------------------------------------------------------------------------------
+
+#: Baseline and event tables report one column per arm plus a total column. Summing the
+#: arm columns would be right for counts and wrong for means, so the total column is used
+#: where the registry provides one — verified present on every sampled trial.
+_TOTAL_GROUP = "total"
+
+
+def _int(value: Any) -> int | None:
+    """Registry numerics arrive as strings, and occasionally as blanks."""
+    try:
+        return int(str(value).strip())
+    except (TypeError, ValueError):
+        return None
+
+
+def _float(value: Any) -> float | None:
+    try:
+        return float(str(value).strip())
+    except (TypeError, ValueError):
+        return None
+
+
+def adverse_event_totals(results: dict[str, Any]) -> dict[str, int | None]:
+    """Participants affected by serious events, deaths, and the population at risk.
+
+    Summed across arm groups, which *is* the trial total here: unlike baseline tables,
+    `eventGroups` carries no total row, and each participant belongs to exactly one arm.
+    """
+    groups = _items(results, "adverseEventsModule", "eventGroups")
+    if not groups:
+        return dict.fromkeys(
+            ("serious_ae_participants", "serious_ae_at_risk", "deaths", "deaths_at_risk")
+        )
+
+    def total(key: str) -> int | None:
+        values = [_int(g.get(key)) for g in groups]
+        present = [v for v in values if v is not None]
+        return sum(present) if present else None
+
+    # Deaths carry their own denominator. Reusing the serious-event one would silently
+    # compute a mortality rate against the wrong population, since the registry lets the
+    # two differ.
+    return {
+        "serious_ae_participants": total("seriousNumAffected"),
+        "serious_ae_at_risk": total("seriousNumAtRisk"),
+        "deaths": total("deathsNumAffected"),
+        "deaths_at_risk": total("deathsNumAtRisk"),
+    }
+
+
+def participant_flow(results: dict[str, Any]) -> dict[str, int | None]:
+    """How many participants started and completed, from the first reporting period.
+
+    Only the first period is read. Multi-period designs (crossover, extension phases)
+    report a milestone per period, and summing them would count the same participant more
+    than once — a number that looks like enrolment and is not.
+    """
+    periods = _items(results, "participantFlowModule", "periods")
+    if not periods:
+        return {"participants_started": None, "participants_completed": None}
+
+    counts: dict[str, int | None] = {"participants_started": None, "participants_completed": None}
+    for milestone in _items(periods[0], "milestones"):
+        label = (milestone.get("type") or "").strip().upper()
+        key = (
+            "participants_started"
+            if label == "STARTED"
+            else "participants_completed"
+            if label == "COMPLETED"
+            else None
+        )
+        if key is None:
+            continue
+        values = [_int(a.get("numSubjects")) for a in _items(milestone, "achievements")]
+        present = [v for v in values if v is not None]
+        counts[key] = sum(present) if present else None
+    return counts
+
+
+def baseline_demographics(results: dict[str, Any]) -> dict[str, Any]:
+    """Age and sex for the whole enrolled population.
+
+    Read from the registry's own `Total` column rather than combined across arms. Summing
+    is correct for participant counts and wrong for a mean age — an unweighted average of
+    arm means is not the population mean unless the arms are equal size — so rather than
+    apply one rule to both, the column the registry already computed is used.
+    """
+    module = results.get("baselineCharacteristicsModule") or {}
+    total_ids = {
+        g.get("id")
+        for g in _items(module, "groups")
+        if _TOTAL_GROUP in (g.get("title") or "").lower()
+    }
+
+    def measurement(measure: dict[str, Any], category: str | None) -> str | None:
+        for klass in _items(measure, "classes"):
+            for entry in _items(klass, "categories"):
+                title = (entry.get("title") or "").strip().lower()
+                if category is not None and title != category:
+                    continue
+                for point in _items(entry, "measurements"):
+                    if point.get("groupId") in total_ids:
+                        return point.get("value")
+        return None
+
+    demographics: dict[str, Any] = {
+        "baseline_age": None,
+        "baseline_age_type": None,
+        "female_participants": None,
+        "male_participants": None,
+    }
+    for measure in _items(module, "measures"):
+        title = (measure.get("title") or "").lower()
+        if title.startswith("age"):
+            demographics["baseline_age"] = _float(measurement(measure, None))
+            demographics["baseline_age_type"] = measure.get("paramType")
+        elif title.startswith("sex"):
+            demographics["female_participants"] = _int(measurement(measure, "female"))
+            demographics["male_participants"] = _int(measurement(measure, "male"))
+    return demographics
+
+
+def results_fields(raw: dict[str, Any]) -> dict[str, Any]:
+    """Every posted-results field, or all-None when the trial has posted nothing.
+
+    Absent results are `None` rather than zero. A trial with no posted deaths and a trial
+    that never reported are different populations, and folding them together would make
+    safety look better the less it was reported.
+    """
+    results = raw.get("resultsSection")
+    if not isinstance(results, dict):
+        return {
+            "serious_ae_participants": None,
+            "serious_ae_at_risk": None,
+            "deaths": None,
+            "deaths_at_risk": None,
+            "participants_started": None,
+            "participants_completed": None,
+            "baseline_age": None,
+            "baseline_age_type": None,
+            "female_participants": None,
+            "male_participants": None,
+        }
+    return {
+        **adverse_event_totals(results),
+        **participant_flow(results),
+        **baseline_demographics(results),
+    }

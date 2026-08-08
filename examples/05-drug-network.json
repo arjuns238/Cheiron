@@ -1,0 +1,1871 @@
+{
+  "request_id": "example-05-drug-network",
+  "response_type": "visualization",
+  "answer": "10 entities and 41 links across 1,392 trials; the strongest is Dexamethasone – Lenalidomide with 219 shared trials.",
+  "visualization": {
+    "type": "network",
+    "title": "Co-administered Intervention Network — Multiple myeloma combination studies",
+    "subtitle": "Trials are counted once per distinct intervention, so a trial with several contributes to several buckets and the column totals exceed the distinct trial count.",
+    "encoding": {
+      "x": {
+        "field": "id",
+        "label": "Entity",
+        "type": "nominal",
+        "unit": null
+      },
+      "y": {
+        "field": "weight",
+        "label": "Trials in common",
+        "type": "quantitative",
+        "unit": "trials"
+      },
+      "series": null
+    },
+    "data": {
+      "nodes": [
+        {
+          "id": "intervention_names:Dexamethasone",
+          "label": "Dexamethasone",
+          "kind": "intervention_names",
+          "weight": 498
+        },
+        {
+          "id": "intervention_names:Lenalidomide",
+          "label": "Lenalidomide",
+          "kind": "intervention_names",
+          "weight": 259
+        },
+        {
+          "id": "intervention_names:Bortezomib",
+          "label": "Bortezomib",
+          "kind": "intervention_names",
+          "weight": 189
+        },
+        {
+          "id": "intervention_names:Pomalidomide",
+          "label": "Pomalidomide",
+          "kind": "intervention_names",
+          "weight": 149
+        },
+        {
+          "id": "intervention_names:Cyclophosphamide",
+          "label": "Cyclophosphamide",
+          "kind": "intervention_names",
+          "weight": 146
+        },
+        {
+          "id": "intervention_names:Daratumumab",
+          "label": "Daratumumab",
+          "kind": "intervention_names",
+          "weight": 144
+        },
+        {
+          "id": "intervention_names:Carfilzomib",
+          "label": "Carfilzomib",
+          "kind": "intervention_names",
+          "weight": 127
+        },
+        {
+          "id": "intervention_names:Fludarabine",
+          "label": "Fludarabine",
+          "kind": "intervention_names",
+          "weight": 90
+        },
+        {
+          "id": "intervention_names:Melphalan",
+          "label": "Melphalan",
+          "kind": "intervention_names",
+          "weight": 77
+        },
+        {
+          "id": "intervention_names:dexamethasone",
+          "label": "dexamethasone",
+          "kind": "intervention_names",
+          "weight": 9
+        }
+      ],
+      "edges": [
+        {
+          "source": "intervention_names:Dexamethasone",
+          "target": "intervention_names:Lenalidomide",
+          "weight": 219,
+          "strength": 1.6687,
+          "nct_ids": [
+            "NCT01038388",
+            "NCT07297329",
+            "NCT02918331",
+            "NCT04065789",
+            "NCT02843074"
+          ],
+          "nct_id_total": 219
+        },
+        {
+          "source": "intervention_names:Bortezomib",
+          "target": "intervention_names:Dexamethasone",
+          "weight": 168,
+          "strength": 1.5831,
+          "nct_ids": [
+            "NCT01038388",
+            "NCT00814541",
+            "NCT07297329",
+            "NCT06868654",
+            "NCT06956170"
+          ],
+          "nct_id_total": 168
+        },
+        {
+          "source": "intervention_names:Dexamethasone",
+          "target": "intervention_names:Pomalidomide",
+          "weight": 142,
+          "strength": 1.9965,
+          "nct_ids": [
+            "NCT05020236",
+            "NCT04764942",
+            "NCT02406222",
+            "NCT06956170",
+            "NCT03287908"
+          ],
+          "nct_id_total": 142
+        },
+        {
+          "source": "intervention_names:Carfilzomib",
+          "target": "intervention_names:Dexamethasone",
+          "weight": 121,
+          "strength": 1.6879,
+          "nct_ids": [
+            "NCT04764942",
+            "NCT07728188",
+            "NCT04065789",
+            "NCT05438043",
+            "NCT06948084"
+          ],
+          "nct_id_total": 121
+        },
+        {
+          "source": "intervention_names:Daratumumab",
+          "target": "intervention_names:Dexamethasone",
+          "weight": 121,
+          "strength": 1.2572,
+          "nct_ids": [
+            "NCT05020236",
+            "NCT07728188",
+            "NCT06868654",
+            "NCT04065789",
+            "NCT05438043"
+          ],
+          "nct_id_total": 121
+        },
+        {
+          "source": "intervention_names:Bortezomib",
+          "target": "intervention_names:Lenalidomide",
+          "weight": 75,
+          "strength": 1.304,
+          "nct_ids": [
+            "NCT01038388",
+            "NCT07297329",
+            "NCT05147493",
+            "NCT04068597",
+            "NCT07652905"
+          ],
+          "nct_id_total": 75
+        },
+        {
+          "source": "intervention_names:Cyclophosphamide",
+          "target": "intervention_names:Fludarabine",
+          "weight": 75,
+          "strength": 7.6282,
+          "nct_ids": [
+            "NCT05032820",
+            "NCT04626752",
+            "NCT05950113",
+            "NCT00800839",
+            "NCT05182073"
+          ],
+          "nct_id_total": 75
+        },
+        {
+          "source": "intervention_names:Daratumumab",
+          "target": "intervention_names:Lenalidomide",
+          "weight": 66,
+          "strength": 1.2653,
+          "nct_ids": [
+            "NCT04065789",
+            "NCT05438043",
+            "NCT04068597",
+            "NCT03556332",
+            "NCT07665450"
+          ],
+          "nct_id_total": 66
+        },
+        {
+          "source": "intervention_names:Cyclophosphamide",
+          "target": "intervention_names:Dexamethasone",
+          "weight": 64,
+          "strength": 0.9332,
+          "nct_ids": [
+            "NCT02406222",
+            "NCT02206503",
+            "NCT05147493",
+            "NCT02176213",
+            "NCT02951819"
+          ],
+          "nct_id_total": 64
+        },
+        {
+          "source": "intervention_names:Bortezomib",
+          "target": "intervention_names:Daratumumab",
+          "weight": 49,
+          "strength": 1.1618,
+          "nct_ids": [
+            "NCT06868654",
+            "NCT04068597",
+            "NCT07665450",
+            "NCT02951819",
+            "NCT03591744"
+          ],
+          "nct_id_total": 49
+        },
+        {
+          "source": "intervention_names:Carfilzomib",
+          "target": "intervention_names:Lenalidomide",
+          "weight": 40,
+          "strength": 1.0295,
+          "nct_ids": [
+            "NCT04065789",
+            "NCT05438043",
+            "NCT03556332",
+            "NCT03815279",
+            "NCT06140966"
+          ],
+          "nct_id_total": 40
+        },
+        {
+          "source": "intervention_names:Daratumumab",
+          "target": "intervention_names:Pomalidomide",
+          "weight": 37,
+          "strength": 1.3089,
+          "nct_ids": [
+            "NCT05020236",
+            "NCT05438043",
+            "NCT04068597",
+            "NCT02343042",
+            "NCT04124497"
+          ],
+          "nct_id_total": 37
+        },
+        {
+          "source": "intervention_names:Carfilzomib",
+          "target": "intervention_names:Daratumumab",
+          "weight": 32,
+          "strength": 1.1231,
+          "nct_ids": [
+            "NCT07728188",
+            "NCT04065789",
+            "NCT05438043",
+            "NCT03556332",
+            "NCT06140966"
+          ],
+          "nct_id_total": 32
+        },
+        {
+          "source": "intervention_names:Carfilzomib",
+          "target": "intervention_names:Pomalidomide",
+          "weight": 29,
+          "strength": 1.3773,
+          "nct_ids": [
+            "NCT04764942",
+            "NCT05438043",
+            "NCT07555938",
+            "NCT04850599",
+            "NCT03756896"
+          ],
+          "nct_id_total": 29
+        },
+        {
+          "source": "intervention_names:Bortezomib",
+          "target": "intervention_names:Cyclophosphamide",
+          "weight": 25,
+          "strength": 0.8318,
+          "nct_ids": [
+            "NCT05147493",
+            "NCT02951819",
+            "NCT03004287",
+            "NCT06577025",
+            "NCT01539083"
+          ],
+          "nct_id_total": 25
+        },
+        {
+          "source": "intervention_names:Bortezomib",
+          "target": "intervention_names:Pomalidomide",
+          "weight": 23,
+          "strength": 0.7379,
+          "nct_ids": [
+            "NCT06956170",
+            "NCT04068597",
+            "NCT02343042",
+            "NCT05519085",
+            "NCT01734928"
+          ],
+          "nct_id_total": 23
+        },
+        {
+          "source": "intervention_names:Cyclophosphamide",
+          "target": "intervention_names:Lenalidomide",
+          "weight": 22,
+          "strength": 0.5919,
+          "nct_ids": [
+            "NCT02206503",
+            "NCT05147493",
+            "NCT05032820",
+            "NCT06140966",
+            "NCT01619761"
+          ],
+          "nct_id_total": 22
+        },
+        {
+          "source": "intervention_names:Cyclophosphamide",
+          "target": "intervention_names:Melphalan",
+          "weight": 21,
+          "strength": 2.2845,
+          "nct_ids": [
+            "NCT06140966",
+            "NCT02960646",
+            "NCT03004287",
+            "NCT01039025",
+            "NCT02581007"
+          ],
+          "nct_id_total": 21
+        },
+        {
+          "source": "intervention_names:Fludarabine",
+          "target": "intervention_names:Melphalan",
+          "weight": 20,
+          "strength": 4.2983,
+          "nct_ids": [
+            "NCT00948922",
+            "NCT01119066",
+            "NCT01518153",
+            "NCT00505895",
+            "NCT01500161"
+          ],
+          "nct_id_total": 20
+        },
+        {
+          "source": "intervention_names:Dexamethasone",
+          "target": "intervention_names:Melphalan",
+          "weight": 19,
+          "strength": 0.5854,
+          "nct_ids": [
+            "NCT06140966",
+            "NCT03742297",
+            "NCT03004287",
+            "NCT01807286",
+            "NCT02415413"
+          ],
+          "nct_id_total": 19
+        },
+        {
+          "source": "intervention_names:Lenalidomide",
+          "target": "intervention_names:Melphalan",
+          "weight": 19,
+          "strength": 1.0801,
+          "nct_ids": [
+            "NCT06207799",
+            "NCT06140966",
+            "NCT02728102",
+            "NCT01619761",
+            "NCT03004287"
+          ],
+          "nct_id_total": 19
+        },
+        {
+          "source": "intervention_names:Bortezomib",
+          "target": "intervention_names:Melphalan",
+          "weight": 18,
+          "strength": 1.2655,
+          "nct_ids": [
+            "NCT00948922",
+            "NCT00307086",
+            "NCT01818752",
+            "NCT03742297",
+            "NCT03004287"
+          ],
+          "nct_id_total": 18
+        },
+        {
+          "source": "intervention_names:Cyclophosphamide",
+          "target": "intervention_names:Daratumumab",
+          "weight": 17,
+          "strength": 0.6237,
+          "nct_ids": [
+            "NCT05182073",
+            "NCT02951819",
+            "NCT06140966",
+            "NCT03004287",
+            "NCT06577025"
+          ],
+          "nct_id_total": 17
+        },
+        {
+          "source": "intervention_names:Carfilzomib",
+          "target": "intervention_names:Cyclophosphamide",
+          "weight": 12,
+          "strength": 0.591,
+          "nct_ids": [
+            "NCT06140966",
+            "NCT01980589",
+            "NCT03004287",
+            "NCT02204241",
+            "NCT02597062"
+          ],
+          "nct_id_total": 12
+        },
+        {
+          "source": "intervention_names:Bortezomib",
+          "target": "intervention_names:Carfilzomib",
+          "weight": 10,
+          "strength": 0.3183,
+          "nct_ids": [
+            "NCT03004287",
+            "NCT06413498",
+            "NCT07391657",
+            "NCT06152575",
+            "NCT03651128"
+          ],
+          "nct_id_total": 10
+        },
+        {
+          "source": "intervention_names:Lenalidomide",
+          "target": "intervention_names:Pomalidomide",
+          "weight": 10,
+          "strength": 0.2594,
+          "nct_ids": [
+            "NCT05438043",
+            "NCT04068597",
+            "NCT01562405",
+            "NCT05669989",
+            "NCT05288062"
+          ],
+          "nct_id_total": 10
+        },
+        {
+          "source": "intervention_names:Daratumumab",
+          "target": "intervention_names:Melphalan",
+          "weight": 9,
+          "strength": 0.6977,
+          "nct_ids": [
+            "NCT06140966",
+            "NCT03004287",
+            "NCT01998971",
+            "NCT03217812",
+            "NCT03412565"
+          ],
+          "nct_id_total": 9
+        },
+        {
+          "source": "intervention_names:Carfilzomib",
+          "target": "intervention_names:Melphalan",
+          "weight": 8,
+          "strength": 0.8326,
+          "nct_ids": [
+            "NCT06140966",
+            "NCT01818752",
+            "NCT03004287",
+            "NCT01658904",
+            "NCT01690143"
+          ],
+          "nct_id_total": 8
+        },
+        {
+          "source": "intervention_names:Daratumumab",
+          "target": "intervention_names:Fludarabine",
+          "weight": 8,
+          "strength": 0.5798,
+          "nct_ids": [
+            "NCT05182073",
+            "NCT06577025",
+            "NCT06615479",
+            "NCT07045909",
+            "NCT06119685"
+          ],
+          "nct_id_total": 8
+        },
+        {
+          "source": "intervention_names:Fludarabine",
+          "target": "intervention_names:Lenalidomide",
+          "weight": 8,
+          "strength": 0.4252,
+          "nct_ids": [
+            "NCT05032820",
+            "NCT06577025",
+            "NCT04196491",
+            "NCT07735637",
+            "NCT07045909"
+          ],
+          "nct_id_total": 8
+        },
+        {
+          "source": "intervention_names:Cyclophosphamide",
+          "target": "intervention_names:Pomalidomide",
+          "weight": 7,
+          "strength": 0.3475,
+          "nct_ids": [
+            "NCT02406222",
+            "NCT02176213",
+            "NCT01432600",
+            "NCT03440411",
+            "NCT01537861"
+          ],
+          "nct_id_total": 7
+        },
+        {
+          "source": "intervention_names:Bortezomib",
+          "target": "intervention_names:Fludarabine",
+          "weight": 6,
+          "strength": 0.3944,
+          "nct_ids": [
+            "NCT00948922",
+            "NCT06577025",
+            "NCT02440464",
+            "NCT07045909",
+            "NCT05257083"
+          ],
+          "nct_id_total": 6
+        },
+        {
+          "source": "intervention_names:Lenalidomide",
+          "target": "intervention_names:dexamethasone",
+          "weight": 6,
+          "strength": 3.0174,
+          "nct_ids": [
+            "NCT00482261",
+            "NCT01698801",
+            "NCT00478777",
+            "NCT00687674",
+            "NCT00378105"
+          ],
+          "nct_id_total": 6
+        },
+        {
+          "source": "intervention_names:Dexamethasone",
+          "target": "intervention_names:Fludarabine",
+          "weight": 4,
+          "strength": 0.1152,
+          "nct_ids": [
+            "NCT06577025",
+            "NCT06615479",
+            "NCT05257083",
+            "NCT04923893"
+          ],
+          "nct_id_total": 4
+        },
+        {
+          "source": "intervention_names:Bortezomib",
+          "target": "intervention_names:dexamethasone",
+          "weight": 2,
+          "strength": 1.2439,
+          "nct_ids": [
+            "NCT00148317",
+            "NCT00378105"
+          ],
+          "nct_id_total": 2
+        },
+        {
+          "source": "intervention_names:Daratumumab",
+          "target": "intervention_names:dexamethasone",
+          "weight": 2,
+          "strength": 1.3715,
+          "nct_ids": [
+            "NCT01665794",
+            "NCT03710603"
+          ],
+          "nct_id_total": 2
+        },
+        {
+          "source": "intervention_names:Pomalidomide",
+          "target": "intervention_names:dexamethasone",
+          "weight": 2,
+          "strength": 1.8559,
+          "nct_ids": [
+            "NCT01665794",
+            "NCT01159574"
+          ],
+          "nct_id_total": 2
+        },
+        {
+          "source": "intervention_names:Carfilzomib",
+          "target": "intervention_names:Fludarabine",
+          "weight": 1,
+          "strength": 0.0973,
+          "nct_ids": [
+            "NCT06615479"
+          ],
+          "nct_id_total": 1
+        },
+        {
+          "source": "intervention_names:Carfilzomib",
+          "target": "intervention_names:dexamethasone",
+          "weight": 1,
+          "strength": 0.9207,
+          "nct_ids": [
+            "NCT01665794"
+          ],
+          "nct_id_total": 1
+        },
+        {
+          "source": "intervention_names:Fludarabine",
+          "target": "intervention_names:Pomalidomide",
+          "weight": 1,
+          "strength": 0.0981,
+          "nct_ids": [
+            "NCT06615479"
+          ],
+          "nct_id_total": 1
+        },
+        {
+          "source": "intervention_names:Melphalan",
+          "target": "intervention_names:Pomalidomide",
+          "weight": 1,
+          "strength": 0.1049,
+          "nct_ids": [
+            "NCT01807286"
+          ],
+          "nct_id_total": 1
+        }
+      ]
+    },
+    "config": {
+      "sort": "value_desc",
+      "granularity": null,
+      "top_n": 10,
+      "other_bucket": false,
+      "stacked": false,
+      "y_starts_at_zero": true,
+      "suggested_min_occurrences": 20,
+      "value_format": "integer"
+    }
+  },
+  "citations": {
+    "NCT06577025": {
+      "nct_id": "NCT06577025",
+      "url": "https://clinicaltrials.gov/study/NCT06577025",
+      "brief_title": "A Study of Different Sequences of Cilta-cel, Talquetamab in Combination With Daratumumab and Teclistamab in Combination With Daratumumab Following Induction With Daratumumab, Bortezomib, Lenalidomide and Dexamethasone in Participants With Standard-risk Newly Diagnosed Multiple Myeloma",
+      "field_path": "protocolSection.armsInterventionsModule.interventions[].armGroupLabels",
+      "field_value": "Dexamethasone || Fludarabine",
+      "excerpt": "{\"type\":\"DRUG\",\"name\":\"Dexamethasone\",\"armGroupLabels\":[\"Cohort A: DVRd Induction + Tal-D Consolidation + Cilta-cel\",\"Cohort B: DVRd Induction + Cilta-cel + Tal-D and Tec-D Consolidation\"]}",
+      "offset": [
+        1477,
+        1666
+      ]
+    },
+    "NCT06615479": {
+      "nct_id": "NCT06615479",
+      "url": "https://clinicaltrials.gov/study/NCT06615479",
+      "brief_title": "A Study to Compare the Efficacy and Safety of BMS-986393 Versus Standard Regimens in Adult Participants With Relapsed or Refractory and Lenalidomide-exposed Multiple Myeloma (QUINTESSENTIAL-2)",
+      "field_path": "protocolSection.armsInterventionsModule.interventions[].armGroupLabels",
+      "field_value": "Dexamethasone || Fludarabine",
+      "excerpt": "{\"type\":\"DRUG\",\"name\":\"Dexamethasone\",\"armGroupLabels\":[\"Arm A\",\"Arm B\"]}",
+      "offset": [
+        660,
+        733
+      ]
+    },
+    "NCT05257083": {
+      "nct_id": "NCT05257083",
+      "url": "https://clinicaltrials.gov/study/NCT05257083",
+      "brief_title": "A Study of Daratumumab, Bortezomib, Lenalidomide and Dexamethasone (DVRd) Followed by Ciltacabtagene Autoleucel Versus Daratumumab, Bortezomib, Lenalidomide and Dexamethasone (DVRd) Followed by Autologous Stem Cell Transplant (ASCT) in Participants With Newly Diagnosed Multiple Myeloma",
+      "field_path": "protocolSection.armsInterventionsModule.interventions[].armGroupLabels",
+      "field_value": "Dexamethasone || Fludarabine",
+      "excerpt": "{\"type\":\"DRUG\",\"name\":\"Dexamethasone\",\"armGroupLabels\":[\"Arm A: DVRd + ASCT+DVRd (Standard Therapy)\",\"Arm B: DVRd followed by Ciltacabtagene Autoleucel\"]}",
+      "offset": [
+        872,
+        1026
+      ]
+    },
+    "NCT04923893": {
+      "nct_id": "NCT04923893",
+      "url": "https://clinicaltrials.gov/study/NCT04923893",
+      "brief_title": "A Study of Bortezomib, Lenalidomide and Dexamethasone (VRd) Followed by Cilta-cel, a CAR-T Therapy Directed Against BCMA Versus VRd Followed by Lenalidomide and Dexamethasone (Rd) Therapy in Participants With Newly Diagnosed Multiple Myeloma for Whom ASCT is Not Planned as Initial Therapy",
+      "field_path": "protocolSection.armsInterventionsModule.interventions[].armGroupLabels",
+      "field_value": "Dexamethasone || Fludarabine",
+      "excerpt": "{\"type\":\"DRUG\",\"name\":\"Dexamethasone\",\"armGroupLabels\":[\"Arm A: VRd+Rd (Standard Therapy)\",\"Arm B: VRd+Ciltacabtagene Autoleucel (Cilta-cel)\"]}",
+      "offset": [
+        557,
+        700
+      ]
+    },
+    "NCT01038388": {
+      "nct_id": "NCT01038388",
+      "url": "https://clinicaltrials.gov/study/NCT01038388",
+      "brief_title": "A Study of the Combination Vorinostat With Lenalidomide, Bortezomib and Dexamethasone for Patients With Newly Diagnosed Multiple Myeloma",
+      "field_path": "protocolSection.armsInterventionsModule.interventions[].armGroupLabels",
+      "field_value": "Dexamethasone || Lenalidomide",
+      "excerpt": "{\"type\":\"DRUG\",\"name\":\"Dexamethasone\",\"armGroupLabels\":[\"Bortezomib, lenalidomide, dexamethasone, vorinostat\"]}",
+      "offset": [
+        483,
+        594
+      ]
+    },
+    "NCT07297329": {
+      "nct_id": "NCT07297329",
+      "url": "https://clinicaltrials.gov/study/NCT07297329",
+      "brief_title": "A Study to Evaluate the Safety and Efficacy of SCTC21C in Combination With Bortezomib, Lenalidomide and Dexamethasone in Patients With Newly Diagnosed Multiple Myeloma Not Eligible for Transplant",
+      "field_path": "protocolSection.armsInterventionsModule.interventions[].armGroupLabels",
+      "field_value": "Dexamethasone || Lenalidomide",
+      "excerpt": "\"interventions\":[{\"type\":\"DRUG\",\"name\":\"SCTC21C\",\"armGroupLabels\":[\"SCTC21C + VRd (S-VRd)\"]},{\"type\":\"DRUG\",\"name\":\"Bortezomib\",\"armGroupLabels\":[\"SCTC21C + VRd (S-VRd)\",\"VRd\"]},{\"type\":\"DRUG\",\"name\":\"Lenalidomide\",\"armGroupLabels\":[\"SCTC21C + VRd (S-VRd)\",\"VRd\"]},{\"type\":\"DRUG\",\"name\":\"Dexamethasone\",\"armGroupLabels\":[\"SCTC21C + VRd (S-VRd)\",\"VRd\"]}]",
+      "offset": [
+        305,
+        658
+      ]
+    },
+    "NCT02918331": {
+      "nct_id": "NCT02918331",
+      "url": "https://clinicaltrials.gov/study/NCT02918331",
+      "brief_title": "A Study of JNJ-54767414 (Daratumumab) in Combination With Lenalidomide and Dexamethasone in Japanese Participants With Previously Untreated Multiple Myeloma Who Are Ineligible for High-dose Therapy and Autologous Stem Cell Transplantation",
+      "field_path": "protocolSection.armsInterventionsModule.interventions[].armGroupLabels",
+      "field_value": "Dexamethasone || Lenalidomide",
+      "excerpt": "\"interventions\":[{\"type\":\"DRUG\",\"name\":\"Daratumumab (16 mg/kg)\",\"armGroupLabels\":[\"Daratumumab with Lenalidomide and dexamethasone\"]},{\"type\":\"DRUG\",\"name\":\"Lenalidomide\",\"armGroupLabels\":[\"Daratumumab with Lenalidomide and dexamethasone\"]},{\"type\":\"DRUG\",\"name\":\"Dexamethasone\",\"armGroupLabels\":[\"Daratumumab with Lenalidomide and dexamethasone\"]}]",
+      "offset": [
+        348,
+        697
+      ]
+    },
+    "NCT04065789": {
+      "nct_id": "NCT04065789",
+      "url": "https://clinicaltrials.gov/study/NCT04065789",
+      "brief_title": "Carfilzomib in Combination With Daratumumab, Lenalidomide and Dexamethasone in Transplant-ineligible NDMM Patients",
+      "field_path": "protocolSection.armsInterventionsModule.interventions[].armGroupLabels",
+      "field_value": "Dexamethasone || Lenalidomide",
+      "excerpt": "{\"type\":\"DRUG\",\"name\":\"Dexamethasone\",\"armGroupLabels\":[\"Carfilzomib,Daratumumab,revlimid and dexamethasone\"]}",
+      "offset": [
+        569,
+        679
+      ]
+    },
+    "NCT02843074": {
+      "nct_id": "NCT02843074",
+      "url": "https://clinicaltrials.gov/study/NCT02843074",
+      "brief_title": "Elotuzumab, Lenalidomide and Dexamethasone in Treatment of Transplant-Eligible Newly Diagnosed Multiple Myeloma Patients",
+      "field_path": "protocolSection.armsInterventionsModule.interventions[].armGroupLabels",
+      "field_value": "Dexamethasone || Lenalidomide",
+      "excerpt": "\"interventions\":[{\"type\":\"DRUG\",\"name\":\"elotuzumab\",\"armGroupLabels\":[\"ERd Therapy\"]},{\"type\":\"DRUG\",\"name\":\"Lenalidomide\",\"armGroupLabels\":[\"ERd Therapy\"]},{\"type\":\"DRUG\",\"name\":\"Dexamethasone\",\"armGroupLabels\":[\"ERd Therapy\"]},{\"type\":\"PROCEDURE\",\"name\":\"autologous stem cell transplantation\",\"armGroupLabels\":[\"ERd Therapy\"]}]",
+      "offset": [
+        230,
+        559
+      ]
+    },
+    "NCT06140966": {
+      "nct_id": "NCT06140966",
+      "url": "https://clinicaltrials.gov/study/NCT06140966",
+      "brief_title": "Study to Evaluate the Safety and Efficacy of Daratumumab and Carfilzomib-based Induction/Consolidation/Maintenance Therapy in Transplant-eligible, Ultra High-risk, Newly Diagnosed Multiple Myeloma",
+      "field_path": "protocolSection.armsInterventionsModule.interventions[].armGroupLabels",
+      "field_value": "Dexamethasone || Melphalan",
+      "excerpt": "{\"type\":\"DRUG\",\"name\":\"Dexamethasone\",\"armGroupLabels\":[\"Study Treatment\"]}",
+      "offset": [
+        546,
+        621
+      ]
+    },
+    "NCT03742297": {
+      "nct_id": "NCT03742297",
+      "url": "https://clinicaltrials.gov/study/NCT03742297",
+      "brief_title": "Treatment for Elderly Fit Newly Diagnosed Multiple Myeloma Patients Aged Between 65 and 80 Years",
+      "field_path": "protocolSection.armsInterventionsModule.interventions[].armGroupLabels",
+      "field_value": "Dexamethasone || Melphalan",
+      "excerpt": "{\"type\":\"DRUG\",\"name\":\"Dexamethasone\",\"armGroupLabels\":[\"Carfilzomib-lenalidomida-dexamethason with daratumumab\",\"Carfilzomib-lenalidomida-dexamethasone regimen\",\"VMP x 9 + Lenalidomida-dexamethasone x 9\"]}",
+      "offset": [
+        803,
+        1009
+      ]
+    },
+    "NCT03004287": {
+      "nct_id": "NCT03004287",
+      "url": "https://clinicaltrials.gov/study/NCT03004287",
+      "brief_title": "2015-12: A Study Exploring the Use of Early and Late Consolidation/Maintenance Therapy",
+      "field_path": "protocolSection.armsInterventionsModule.interventions[].armGroupLabels",
+      "field_value": "Dexamethasone || Melphalan",
+      "excerpt": "{\"type\":\"DRUG\",\"name\":\"Dexamethasone\",\"armGroupLabels\":[\"Study Treatment\"]}",
+      "offset": [
+        361,
+        436
+      ]
+    },
+    "NCT01807286": {
+      "nct_id": "NCT01807286",
+      "url": "https://clinicaltrials.gov/study/NCT01807286",
+      "brief_title": "Pomalidomide With Melphalan and Dexamethasone for Untreated Systemic AL Amyloidosis",
+      "field_path": "protocolSection.armsInterventionsModule.interventions[].armGroupLabels",
+      "field_value": "Dexamethasone || Melphalan",
+      "excerpt": "{\"type\":\"DRUG\",\"name\":\"Dexamethasone\",\"armGroupLabels\":[\"Pomalidomide + Melphalan + Dexamethasone\"]}",
+      "offset": [
+        407,
+        507
+      ]
+    },
+    "NCT02415413": {
+      "nct_id": "NCT02415413",
+      "url": "https://clinicaltrials.gov/study/NCT02415413",
+      "brief_title": "Carfilzomib in Treatment Patients Under 65 Years With High Risk Smoldering Multiple Myeloma",
+      "field_path": "protocolSection.armsInterventionsModule.interventions[].armGroupLabels",
+      "field_value": "Dexamethasone || Melphalan",
+      "excerpt": "{\"type\":\"DRUG\",\"name\":\"Dexamethasone\",\"armGroupLabels\":[\"Carlizomib lenalidomide and low dose dexamethasone\"]}",
+      "offset": [
+        437,
+        547
+      ]
+    },
+    "NCT05020236": {
+      "nct_id": "NCT05020236",
+      "url": "https://clinicaltrials.gov/study/NCT05020236",
+      "brief_title": "A Study to Learn About the Study Medicine Elranatamab Alone and With Daratumumab in People With Multiple Myeloma Who Have Received Other Treatments",
+      "field_path": "protocolSection.armsInterventionsModule.interventions[].armGroupLabels",
+      "field_value": "Dexamethasone || Pomalidomide",
+      "excerpt": "{\"type\":\"DRUG\",\"name\":\"Dexamethasone\",\"armGroupLabels\":[\"Part 2 Randomized Arm C: Daratumumab + Pomalidomide + Dexamethasone\"]}",
+      "offset": [
+        974,
+        1101
+      ]
+    },
+    "NCT04764942": {
+      "nct_id": "NCT04764942",
+      "url": "https://clinicaltrials.gov/study/NCT04764942",
+      "brief_title": "Selinexor, Pomalidomide, and Dexamethasone With or Without Carfilzomib for the Treatment of Patients With Relapsed Refractory Multiple Myeloma, The SCOPE Trial",
+      "field_path": "protocolSection.armsInterventionsModule.interventions[].armGroupLabels",
+      "field_value": "Dexamethasone || Pomalidomide",
+      "excerpt": "{\"type\":\"DRUG\",\"name\":\"Dexamethasone\",\"armGroupLabels\":[\"Arm A (selinexor, dexamethasone, carfilzomib, carfilzomib)\",\"Arm B (selinexor, dexamethasone, pomalidomide)\"]}",
+      "offset": [
+        403,
+        570
+      ]
+    },
+    "NCT02406222": {
+      "nct_id": "NCT02406222",
+      "url": "https://clinicaltrials.gov/study/NCT02406222",
+      "brief_title": "Pomalidomide in Relapsed and Refractory Multiple Myeloma (RRMM)",
+      "field_path": "protocolSection.armsInterventionsModule.interventions[].armGroupLabels",
+      "field_value": "Dexamethasone || Pomalidomide",
+      "excerpt": "\"interventions\":[{\"type\":\"DRUG\",\"name\":\"Pomalidomide\",\"armGroupLabels\":[\"Pomalidomide Dexamethasone Cyclophosphamide\",\"Pomalidomide and Dexamethasone\"]},{\"type\":\"DRUG\",\"name\":\"Dexamethasone\",\"armGroupLabels\":[\"Pomalidomide Dexamethasone Cyclophosphamide\",\"Pomalidomide and Dexamethasone\"]},{\"type\":\"DRUG\",\"name\":\"Cyclophosphamide\",\"armGroupLabels\":[\"Pomalidomide Dexamethasone Cyclophosphamide\"]}]",
+      "offset": [
+        173,
+        570
+      ]
+    },
+    "NCT06956170": {
+      "nct_id": "NCT06956170",
+      "url": "https://clinicaltrials.gov/study/NCT06956170",
+      "brief_title": "All Japanese Population: Belantamab Mafodotin Plus Pomalidomide and Dexamethasone (Pd) Versus Bortezomib Plus Pd in Relapsed/Refractory Multiple Myeloma",
+      "field_path": "protocolSection.armsInterventionsModule.interventions[].armGroupLabels",
+      "field_value": "Dexamethasone || Pomalidomide",
+      "excerpt": "{\"type\":\"DRUG\",\"name\":\"Dexamethasone\",\"armGroupLabels\":[\"Belantamab mafodotin plus Pomalidomide and Dexamethasone\",\"Bortezomib plus Pomalidomide and Dexamethasone\"]}",
+      "offset": [
+        568,
+        733
+      ]
+    },
+    "NCT03287908": {
+      "nct_id": "NCT03287908",
+      "url": "https://clinicaltrials.gov/study/NCT03287908",
+      "brief_title": "A Study to Assess AMG 701 Montherapy, or in Combination With Pomalidomide, With or Without, Dexamethasone in Subjects With Relapsed or Refractory Multiple Myeloma",
+      "field_path": "protocolSection.armsInterventionsModule.interventions[].armGroupLabels",
+      "field_value": "Dexamethasone || Pomalidomide",
+      "excerpt": "\"interventions\":[{\"type\":\"DRUG\",\"name\":\"AMG 701\",\"armGroupLabels\":[\"AMG 701\",\"AMG 701 + Pomalidomide\",\"AMG 701 + Pomalidomide + Dexamethasone\"]},{\"type\":\"DRUG\",\"name\":\"Pomalidomide\",\"armGroupLabels\":[\"AMG 701 + Pomalidomide\",\"AMG 701 + Pomalidomide + Dexamethasone\"]},{\"type\":\"DRUG\",\"name\":\"Dexamethasone\",\"armGroupLabels\":[\"AMG 701 + Pomalidomide + Dexamethasone\"]}]",
+      "offset": [
+        272,
+        639
+      ]
+    },
+    "NCT06413498": {
+      "nct_id": "NCT06413498",
+      "url": "https://clinicaltrials.gov/study/NCT06413498",
+      "brief_title": "A Study Comparing Anitocabtagene Autoleucel to Standard of Care Therapy in Participants With Relapsed/ Refractory Multiple Myeloma",
+      "field_path": "protocolSection.armsInterventionsModule.interventions[].armGroupLabels",
+      "field_value": "Bortezomib || Carfilzomib",
+      "excerpt": "{\"type\":\"DRUG\",\"name\":\"Bortezomib\",\"armGroupLabels\":[\"Standard of Care Therapy (SOCT)\"]}",
+      "offset": [
+        619,
+        707
+      ]
+    },
+    "NCT07391657": {
+      "nct_id": "NCT07391657",
+      "url": "https://clinicaltrials.gov/study/NCT07391657",
+      "brief_title": "A Study Comparing AZD0120, a Dual-targeted CAR-T Against B-cell Maturation Antigen (BCMA) and CD19, Versus Standard Regimens in Participants With Relapsed Refractory Multiple Myeloma (DURGA-4)",
+      "field_path": "protocolSection.armsInterventionsModule.interventions[].armGroupLabels",
+      "field_value": "Bortezomib || Carfilzomib",
+      "excerpt": "{\"type\":\"DRUG\",\"name\":\"Bortezomib\",\"armGroupLabels\":[\"Arm B\"]}",
+      "offset": [
+        579,
+        641
+      ]
+    },
+    "NCT06152575": {
+      "nct_id": "NCT06152575",
+      "url": "https://clinicaltrials.gov/study/NCT06152575",
+      "brief_title": "MagnetisMM-32: A Study to Learn About the Study Medicine Called Elranatamab in People With Multiple Myeloma (MM) That Has Come Back After Taking Other Treatments (Including Prior Treatment With an Anti-CD38 Antibody and Lenalidomide)",
+      "field_path": "protocolSection.armsInterventionsModule.interventions[].armGroupLabels",
+      "field_value": "Bortezomib || Carfilzomib",
+      "excerpt": "{\"type\":\"DRUG\",\"name\":\"Bortezomib\",\"armGroupLabels\":[\"Investigator's Choice\"]}",
+      "offset": [
+        672,
+        750
+      ]
+    },
+    "NCT03651128": {
+      "nct_id": "NCT03651128",
+      "url": "https://clinicaltrials.gov/study/NCT03651128",
+      "brief_title": "Efficacy and Safety Study of bb2121 Versus Standard Regimens in Subjects With Relapsed and Refractory Multiple Myeloma (RRMM)",
+      "field_path": "protocolSection.armsInterventionsModule.interventions[].armGroupLabels",
+      "field_value": "Bortezomib || Carfilzomib",
+      "excerpt": "{\"type\":\"DRUG\",\"name\":\"Bortezomib\",\"armGroupLabels\":[\"Arm B- standard regimens as per Investigator's discretion\"]}",
+      "offset": [
+        695,
+        809
+      ]
+    },
+    "NCT05147493": {
+      "nct_id": "NCT05147493",
+      "url": "https://clinicaltrials.gov/study/NCT05147493",
+      "brief_title": "A Phase 2 Study of Isatuximab in Combination With Bortezomib, Cyclophosphamide and Dexamethasone Followed by Isatuximab and Lenalidomide Maintenance in Newly Diagnosed Patients With Multiple Myeloma and Severe Renal Impairment",
+      "field_path": "protocolSection.armsInterventionsModule.interventions[].armGroupLabels",
+      "field_value": "Bortezomib || Cyclophosphamide",
+      "excerpt": "\"interventions\":[{\"type\":\"DRUG\",\"name\":\"Isatuximab\",\"armGroupLabels\":[\"Single-arm\"]},{\"type\":\"DRUG\",\"name\":\"Bortezomib\",\"armGroupLabels\":[\"Single-arm\"]},{\"type\":\"DRUG\",\"name\":\"Cyclophosphamide\",\"armGroupLabels\":[\"Single-arm\"]},{\"type\":\"DRUG\",\"name\":\"Dexamethasone\",\"armGroupLabels\":[\"Single-arm\"]},{\"type\":\"DRUG\",\"name\":\"Lenalidomide\",\"armGroupLabels\":[\"Single-arm\"]}]",
+      "offset": [
+        336,
+        704
+      ]
+    },
+    "NCT02951819": {
+      "nct_id": "NCT02951819",
+      "url": "https://clinicaltrials.gov/study/NCT02951819",
+      "brief_title": "A Study to Evaluate Dara-CyBorD in Previously Untreated and Relapsed Subjects With Multiple Myeloma",
+      "field_path": "protocolSection.armsInterventionsModule.interventions[].armGroupLabels",
+      "field_value": "Bortezomib || Cyclophosphamide",
+      "excerpt": "\"interventions\":[{\"type\":\"DRUG\",\"name\":\"Daratumumab\",\"armGroupLabels\":[\"Dara-CyBorD\"]},{\"type\":\"DRUG\",\"name\":\"Cyclophosphamide\",\"armGroupLabels\":[\"Dara-CyBorD\"]},{\"type\":\"DRUG\",\"name\":\"Bortezomib\",\"armGroupLabels\":[\"Dara-CyBorD\"]},{\"type\":\"DRUG\",\"name\":\"Dexamethasone\",\"armGroupLabels\":[\"Dara-CyBorD\"]}]",
+      "offset": [
+        209,
+        512
+      ]
+    },
+    "NCT01539083": {
+      "nct_id": "NCT01539083",
+      "url": "https://clinicaltrials.gov/study/NCT01539083",
+      "brief_title": "Velcade (Bortezomib) Consolidation After Transplant",
+      "field_path": "protocolSection.armsInterventionsModule.interventions[].armGroupLabels",
+      "field_value": "Bortezomib || Cyclophosphamide",
+      "excerpt": "{\"type\":\"DRUG\",\"name\":\"Bortezomib\",\"armGroupLabels\":[\"Bortezomib + Cyclophosphamide + Dexamethasone [VCD Induction]\",\"Bortezomib + Thalidomide + Prednisolone [VTP Consolidation]\"]}",
+      "offset": [
+        344,
+        524
+      ]
+    },
+    "NCT06868654": {
+      "nct_id": "NCT06868654",
+      "url": "https://clinicaltrials.gov/study/NCT06868654",
+      "brief_title": "China Subpopulation: Evaluation of Efficacy and Safety of Belantamab Mafodotin, Bortezomib and Dexamethasone Versus Daratumumab, Bortezomib and Dexamethasone in Participants With Relapsed/Refractory Multiple Myeloma",
+      "field_path": "protocolSection.armsInterventionsModule.interventions[].armGroupLabels",
+      "field_value": "Bortezomib || Daratumumab",
+      "excerpt": "{\"type\":\"DRUG\",\"name\":\"Bortezomib\",\"armGroupLabels\":[\"Belantamab mafodotin and Bortezomib plus Dexamethasone\",\"Daratumumab and Bortezomib plus Dexamethasone\"]}",
+      "offset": [
+        568,
+        727
+      ]
+    },
+    "NCT04068597": {
+      "nct_id": "NCT04068597",
+      "url": "https://clinicaltrials.gov/study/NCT04068597",
+      "brief_title": "Study to Evaluate CCS1477 (Inobrodib) in Haematological Malignancies",
+      "field_path": "protocolSection.armsInterventionsModule.interventions[].armGroupLabels",
+      "field_value": "Bortezomib || Daratumumab",
+      "excerpt": "{\"type\":\"DRUG\",\"name\":\"Bortezomib\",\"armGroupLabels\":[\"CCS1477 monotherapy expansion and combination dose finding and expansion - MM\"]}",
+      "offset": [
+        1300,
+        1434
+      ]
+    },
+    "NCT07665450": {
+      "nct_id": "NCT07665450",
+      "url": "https://clinicaltrials.gov/study/NCT07665450",
+      "brief_title": "A Study of Ramantamig Plus Daratumumab Versus Daratumumab, Bortezomib, Lenalidomide, and Dexamethasone (DVRd) or Daratumumab, Lenalidomide, and Dexamethasone (DRd) in Participants With NDMM For Whom Stem Cell Transplant is Not Planned",
+      "field_path": "protocolSection.armsInterventionsModule.interventions[].armGroupLabels",
+      "field_value": "Bortezomib || Daratumumab",
+      "excerpt": "{\"type\":\"DRUG\",\"name\":\"Bortezomib\",\"armGroupLabels\":[\"Arm B: Investigator's Choice (DVRd or DRd)\"]}",
+      "offset": [
+        723,
+        822
+      ]
+    },
+    "NCT03591744": {
+      "nct_id": "NCT03591744",
+      "url": "https://clinicaltrials.gov/study/NCT03591744",
+      "brief_title": "Daratumumab, Bortezomib, Dexamethasone, Pegylated Liposomal Doxorubicin Hydrochloride, and Lenalidomide in Treating Participants With Plasma Cell Leukemia",
+      "field_path": "protocolSection.armsInterventionsModule.interventions[].armGroupLabels",
+      "field_value": "Bortezomib || Daratumumab",
+      "excerpt": "{\"type\":\"DRUG\",\"name\":\"Bortezomib\",\"armGroupLabels\":[\"Treatment (daratumumab, bortezomib, chemotherapy)\"]}",
+      "offset": [
+        281,
+        387
+      ]
+    },
+    "NCT00814541": {
+      "nct_id": "NCT00814541",
+      "url": "https://clinicaltrials.gov/study/NCT00814541",
+      "brief_title": "PAD. ICORG 05-01, V11",
+      "field_path": "protocolSection.armsInterventionsModule.interventions[].armGroupLabels",
+      "field_value": "Bortezomib || Dexamethasone",
+      "excerpt": "\"interventions\":[{\"type\":\"DRUG\",\"name\":\"Bortezomib\",\"armGroupLabels\":[\"1\",\"2\",\"3\"]},{\"type\":\"DRUG\",\"name\":\"Doxorubicin\",\"armGroupLabels\":[\"1\",\"2\",\"3\"]},{\"type\":\"DRUG\",\"name\":\"Dexamethasone\",\"armGroupLabels\":[\"1\",\"2\",\"3\"]}]",
+      "offset": [
+        131,
+        353
+      ]
+    },
+    "NCT00948922": {
+      "nct_id": "NCT00948922",
+      "url": "https://clinicaltrials.gov/study/NCT00948922",
+      "brief_title": "Melphalan+Bortezomib as a Conditioning Regimen for Autologous and Allogeneic Stem Cell Transplants in Multiple Myeloma",
+      "field_path": "protocolSection.armsInterventionsModule.interventions[].armGroupLabels",
+      "field_value": "Bortezomib || Fludarabine",
+      "excerpt": "{\"type\":\"DRUG\",\"name\":\"Bortezomib\",\"armGroupLabels\":[\"A: Allogeneic Stem Cell Transplant\",\"B: Autologous Stem Cell Transplant\",\"BE: Group B Expansion\"]}",
+      "offset": [
+        245,
+        397
+      ]
+    },
+    "NCT02440464": {
+      "nct_id": "NCT02440464",
+      "url": "https://clinicaltrials.gov/study/NCT02440464",
+      "brief_title": "Allogeneic Hematopoietic Stem Cell Transplantation With Ixazomib for High Risk Multiple Myeloma (BMT CTN 1302)",
+      "field_path": "protocolSection.armsInterventionsModule.interventions[].armGroupLabels",
+      "field_value": "Bortezomib || Fludarabine",
+      "excerpt": "{\"type\":\"DRUG\",\"name\":\"Bortezomib\",\"armGroupLabels\":[\"Ixazomib Maintenance\",\"Placebo\"]}",
+      "offset": [
+        511,
+        598
+      ]
+    },
+    "NCT07045909": {
+      "nct_id": "NCT07045909",
+      "url": "https://clinicaltrials.gov/study/NCT07045909",
+      "brief_title": "Efficacy and Safety of Anitocabtagene Autoleucel in Participants With Newly Diagnosed Multiple Myeloma (GEM-AnitoFIRST)",
+      "field_path": "protocolSection.armsInterventionsModule.interventions[].armGroupLabels",
+      "field_value": "Bortezomib || Fludarabine",
+      "excerpt": "{\"type\":\"DRUG\",\"name\":\"Bortezomib\",\"armGroupLabels\":[\"Cohort A\",\"Cohort B\",\"Cohort C\"]}",
+      "offset": [
+        390,
+        477
+      ]
+    },
+    "NCT07652905": {
+      "nct_id": "NCT07652905",
+      "url": "https://clinicaltrials.gov/study/NCT07652905",
+      "brief_title": "CM336 Plus Isa-VR in Newly Diagnosed Primary Plasma Cell Leukemia",
+      "field_path": "protocolSection.armsInterventionsModule.interventions[].armGroupLabels",
+      "field_value": "Bortezomib || Lenalidomide",
+      "excerpt": "\"interventions\":[{\"type\":\"DRUG\",\"name\":\"CM336\",\"armGroupLabels\":[\"CM336 plus Isa-VR\"]},{\"type\":\"DRUG\",\"name\":\"Isatuximab\",\"armGroupLabels\":[\"CM336 plus Isa-VR\"]},{\"type\":\"DRUG\",\"name\":\"Bortezomib\",\"armGroupLabels\":[\"CM336 plus Isa-VR\"]},{\"type\":\"DRUG\",\"name\":\"Lenalidomide\",\"armGroupLabels\":[\"CM336 plus Isa-VR\"]}]",
+      "offset": [
+        175,
+        489
+      ]
+    },
+    "NCT00307086": {
+      "nct_id": "NCT00307086",
+      "url": "https://clinicaltrials.gov/study/NCT00307086",
+      "brief_title": "Bortezomib Followed by High-Dose Melphalan and Bortezomib as Conditioning Regimen for Tandem Stem Cell Transplants",
+      "field_path": "protocolSection.armsInterventionsModule.interventions[].armGroupLabels",
+      "field_value": "Bortezomib || Melphalan",
+      "excerpt": "\"interventions\":[{\"type\":\"DRUG\",\"name\":\"Bortezomib\",\"armGroupLabels\":[\"Autologous PBSCT\"]},{\"type\":\"DRUG\",\"name\":\"Melphalan\",\"armGroupLabels\":[\"Autologous PBSCT\"]},{\"type\":\"PROCEDURE\",\"name\":\"PBSCT\",\"armGroupLabels\":[\"Autologous PBSCT\"]}]",
+      "offset": [
+        224,
+        462
+      ]
+    },
+    "NCT01818752": {
+      "nct_id": "NCT01818752",
+      "url": "https://clinicaltrials.gov/study/NCT01818752",
+      "brief_title": "Phase 3 Study of Carfilzomib, Melphalan, Prednisone vs Bortezomib, Melphalan, Prednisone in Newly Diagnosed Multiple Myeloma",
+      "field_path": "protocolSection.armsInterventionsModule.interventions[].armGroupLabels",
+      "field_value": "Bortezomib || Melphalan",
+      "excerpt": "{\"type\":\"DRUG\",\"name\":\"Bortezomib\",\"armGroupLabels\":[\"Bortezomib, Melphalan, Prednisone\"]}",
+      "offset": [
+        344,
+        434
+      ]
+    },
+    "NCT02343042": {
+      "nct_id": "NCT02343042",
+      "url": "https://clinicaltrials.gov/study/NCT02343042",
+      "brief_title": "Selinexor and Backbone Treatments of Multiple Myeloma Patients",
+      "field_path": "protocolSection.armsInterventionsModule.interventions[].armGroupLabels",
+      "field_value": "Bortezomib || Pomalidomide",
+      "excerpt": "{\"type\":\"DRUG\",\"name\":\"Bortezomib\",\"armGroupLabels\":[\"2: Selinexor, Low-dose Dexamethasone and Bortezomib (SVd)\",\"4:Selinexor, Low-dose dexamethasone, Pomalidomide, Velcade (SPVd)\"]}",
+      "offset": [
+        2286,
+        2468
+      ]
+    },
+    "NCT05519085": {
+      "nct_id": "NCT05519085",
+      "url": "https://clinicaltrials.gov/study/NCT05519085",
+      "brief_title": "A Study to Evaluate Mezigdomide, Bortezomib and Dexamethasone (MEZIVd) Versus Pomalidomide, Bortezomib and Dexamethasone (PVd) in Participants With Relapsed or Refractory Multiple Myeloma (RRMM)",
+      "field_path": "protocolSection.armsInterventionsModule.interventions[].armGroupLabels",
+      "field_value": "Bortezomib || Pomalidomide",
+      "excerpt": "{\"type\":\"DRUG\",\"name\":\"Bortezomib\",\"armGroupLabels\":[\"MeziVd (mezigdomide, bortezomib and dexamethasone)\",\"PVd (pomalidomide, bortezomib and dexamethasone)\"]}",
+      "offset": [
+        538,
+        696
+      ]
+    },
+    "NCT01734928": {
+      "nct_id": "NCT01734928",
+      "url": "https://clinicaltrials.gov/study/NCT01734928",
+      "brief_title": "Safety and Efficacy of Pomalidomide, Bortezomib and Low-dose Dexamethasone in Subjects With Relapsed or Refractory Multiple Myeloma",
+      "field_path": "protocolSection.armsInterventionsModule.interventions[].armGroupLabels",
+      "field_value": "Bortezomib || Pomalidomide",
+      "excerpt": "{\"type\":\"DRUG\",\"name\":\"Bortezomib\",\"armGroupLabels\":[\"Bortezomib and Low Dose Dexamethasone\",\"Pomalidomide, Bortezomib and Low Dose Dexamethasone\"]}",
+      "offset": [
+        369,
+        517
+      ]
+    },
+    "NCT00148317": {
+      "nct_id": "NCT00148317",
+      "url": "https://clinicaltrials.gov/study/NCT00148317",
+      "brief_title": "Phase II Study of Velcade, Decadron, and Doxil Followed by Cyclophosphamide in Multiple Myeloma",
+      "field_path": "protocolSection.armsInterventionsModule.interventions[].armGroupLabels",
+      "field_value": "Bortezomib || dexamethasone",
+      "excerpt": "\"interventions\":[{\"type\":\"DRUG\",\"name\":\"Bortezomib\",\"armGroupLabels\":[\"Treatment Arm\"]},{\"type\":\"DRUG\",\"name\":\"dexamethasone\",\"armGroupLabels\":[\"Treatment Arm\"]},{\"type\":\"DRUG\",\"name\":\"liposomal doxorubicin\",\"armGroupLabels\":[\"Treatment Arm\"]},{\"type\":\"DRUG\",\"name\":\"cyclophoshamide\",\"armGroupLabels\":[\"Treatment Arm\"]},{\"type\":\"DRUG\",\"name\":\"filgrastim\",\"armGroupLabels\":[\"Treatment Arm\"]}]",
+      "offset": [
+        205,
+        596
+      ]
+    },
+    "NCT00378105": {
+      "nct_id": "NCT00378105",
+      "url": "https://clinicaltrials.gov/study/NCT00378105",
+      "brief_title": "Bortezomib, Lenalidomide and Dexamethasone Combination Therapy in Patients With Newly Diagnosed Multiple Myeloma",
+      "field_path": "protocolSection.armsInterventionsModule.interventions[].armGroupLabels",
+      "field_value": "Bortezomib || dexamethasone",
+      "excerpt": "\"interventions\":[{\"type\":\"DRUG\",\"name\":\"Bortezomib\",\"armGroupLabels\":[\"lenalidomide, dexamethasone, bortezomib combination\"]},{\"type\":\"DRUG\",\"name\":\"Lenalidomide\",\"armGroupLabels\":[\"lenalidomide, dexamethasone, bortezomib combination\"]},{\"type\":\"DRUG\",\"name\":\"dexamethasone\",\"armGroupLabels\":[\"lenalidomide, dexamethasone, bortezomib combination\"]}]",
+      "offset": [
+        222,
+        571
+      ]
+    },
+    "NCT01980589": {
+      "nct_id": "NCT01980589",
+      "url": "https://clinicaltrials.gov/study/NCT01980589",
+      "brief_title": "A Multicenter, Open-label, Phase 1b Study of Carfilzomib, Cyclophosphamide and Dexamethasone in Newly Diagnosed Multiple Myeloma Subjects",
+      "field_path": "protocolSection.armsInterventionsModule.interventions[].armGroupLabels",
+      "field_value": "Carfilzomib || Cyclophosphamide",
+      "excerpt": "\"interventions\":[{\"type\":\"DRUG\",\"name\":\"Carfilzomib\",\"armGroupLabels\":[\"Carfilzomib, Cyclophosphamide and Dexamethasone (CCd)\"]},{\"type\":\"DRUG\",\"name\":\"Cyclophosphamide\",\"armGroupLabels\":[\"Carfilzomib, Cyclophosphamide and Dexamethasone (CCd)\"]},{\"type\":\"DRUG\",\"name\":\"Dexamethasone\",\"armGroupLabels\":[\"Carfilzomib, Cyclophosphamide and Dexamethasone (CCd)\"]}]",
+      "offset": [
+        247,
+        607
+      ]
+    },
+    "NCT02204241": {
+      "nct_id": "NCT02204241",
+      "url": "https://clinicaltrials.gov/study/NCT02204241",
+      "brief_title": "Study of Carfilzomib, Cyclophosphamide and Dexamethasone in Newly Diagnosed Multiple Myeloma Patients",
+      "field_path": "protocolSection.armsInterventionsModule.interventions[].armGroupLabels",
+      "field_value": "Carfilzomib || Cyclophosphamide",
+      "excerpt": "\"interventions\":[{\"type\":\"DRUG\",\"name\":\"Carfilzomib\",\"armGroupLabels\":[\"CCyd\"]},{\"type\":\"DRUG\",\"name\":\"Cyclophosphamide\",\"armGroupLabels\":[\"CCyd\"]},{\"type\":\"DRUG\",\"name\":\"Dexamethasone\",\"armGroupLabels\":[\"CCyd\"]}]",
+      "offset": [
+        211,
+        424
+      ]
+    },
+    "NCT02597062": {
+      "nct_id": "NCT02597062",
+      "url": "https://clinicaltrials.gov/study/NCT02597062",
+      "brief_title": "High-Dose Weekly Carfilzomib Plus Cyclophosphamide and Dexamethasone in the Treatment of Relapsed Multiple Myeloma",
+      "field_path": "protocolSection.armsInterventionsModule.interventions[].armGroupLabels",
+      "field_value": "Carfilzomib || Cyclophosphamide",
+      "excerpt": "\"interventions\":[{\"type\":\"DRUG\",\"name\":\"Carfilzomib\",\"armGroupLabels\":[\"Carfilzomib plus cyclophosphamide plus dexamethasone\"]},{\"type\":\"DRUG\",\"name\":\"Cyclophosphamide\",\"armGroupLabels\":[\"Carfilzomib plus cyclophosphamide plus dexamethasone\"]},{\"type\":\"DRUG\",\"name\":\"Dexamethasone\",\"armGroupLabels\":[\"Carfilzomib plus cyclophosphamide plus dexamethasone\"]}]",
+      "offset": [
+        224,
+        581
+      ]
+    },
+    "NCT07728188": {
+      "nct_id": "NCT07728188",
+      "url": "https://clinicaltrials.gov/study/NCT07728188",
+      "brief_title": "A Study to Evaluate Adverse Events and Change in Disease Activity With Injected Etentamig Plus Oral Pomalidomide Versus Standard Therapies in Adults With Relapsed or Refractory Multiple Myeloma",
+      "field_path": "protocolSection.armsInterventionsModule.interventions[].armGroupLabels",
+      "field_value": "Carfilzomib || Daratumumab",
+      "excerpt": "{\"type\":\"DRUG\",\"name\":\"Carfilzomib\",\"armGroupLabels\":[\"Randomized Portion: Standard Available Therapy (SAT)\"]}",
+      "offset": [
+        845,
+        955
+      ]
+    },
+    "NCT05438043": {
+      "nct_id": "NCT05438043",
+      "url": "https://clinicaltrials.gov/study/NCT05438043",
+      "brief_title": "A Study of Daratumumab",
+      "field_path": "protocolSection.armsInterventionsModule.interventions[].armGroupLabels",
+      "field_value": "Carfilzomib || Daratumumab",
+      "excerpt": "{\"type\":\"DRUG\",\"name\":\"Carfilzomib\",\"armGroupLabels\":[\"Daratumumab\"]}",
+      "offset": [
+        219,
+        288
+      ]
+    },
+    "NCT03556332": {
+      "nct_id": "NCT03556332",
+      "url": "https://clinicaltrials.gov/study/NCT03556332",
+      "brief_title": "A Study of Carfilzomib, Lenalidomide, Dexamethasone and Daratumumab for Patients With Relapsed/Refractory Myeloma With Salvage Autologous Hematopoietic Cell Transplantation",
+      "field_path": "protocolSection.armsInterventionsModule.interventions[].armGroupLabels",
+      "field_value": "Carfilzomib || Daratumumab",
+      "excerpt": "{\"type\":\"DRUG\",\"name\":\"Carfilzomib\",\"armGroupLabels\":[\"Carfilzomib, Lenalidomide, Dexamethasone and Daratumumab & HCT\"]}",
+      "offset": [
+        299,
+        419
+      ]
+    },
+    "NCT06948084": {
+      "nct_id": "NCT06948084",
+      "url": "https://clinicaltrials.gov/study/NCT06948084",
+      "brief_title": "Testing the Investigational Medication Combination of Daratumumab and Teclistamab Compared to the Usual Treatment (Daratumumab, Pomalidomide, Dexamethasone or Daratumumab, Carfilzomib, Dexamethasone) for Patients With High-risk Multiple Myeloma Refractory or in First Relapse",
+      "field_path": "protocolSection.armsInterventionsModule.interventions[].armGroupLabels",
+      "field_value": "Carfilzomib || Dexamethasone",
+      "excerpt": "{\"type\":\"DRUG\",\"name\":\"Carfilzomib\",\"armGroupLabels\":[\"Arm A Treatment II Option 1 (DKd)\",\"Arm A Treatment II Option 2 (DKd)\"]}",
+      "offset": [
+        808,
+        935
+      ]
+    },
+    "NCT03815279": {
+      "nct_id": "NCT03815279",
+      "url": "https://clinicaltrials.gov/study/NCT03815279",
+      "brief_title": "A Nationwide Phase 2 Trial of Patients With Smoldering and Active Multiple Myeloma (MM)",
+      "field_path": "protocolSection.armsInterventionsModule.interventions[].armGroupLabels",
+      "field_value": "Carfilzomib || Lenalidomide",
+      "excerpt": "\"interventions\":[{\"type\":\"DRUG\",\"name\":\"Carfilzomib\",\"armGroupLabels\":[\"High-risk SMM and MM\"]},{\"type\":\"DRUG\",\"name\":\"Lenalidomide\",\"armGroupLabels\":[\"High-risk SMM and MM\",\"Intermediate-risk SMM\"]},{\"type\":\"DRUG\",\"name\":\"Dexamethasone\",\"armGroupLabels\":[\"High-risk SMM and MM\",\"Intermediate-risk SMM\"]}]",
+      "offset": [
+        197,
+        502
+      ]
+    },
+    "NCT01658904": {
+      "nct_id": "NCT01658904",
+      "url": "https://clinicaltrials.gov/study/NCT01658904",
+      "brief_title": "Carfilzomib and Stem Cell Transplant for Plasma Cell Myeloma",
+      "field_path": "protocolSection.armsInterventionsModule.interventions[].armGroupLabels",
+      "field_value": "Carfilzomib || Melphalan",
+      "excerpt": "{\"type\":\"DRUG\",\"name\":\"Carfilzomib\",\"armGroupLabels\":[\"Cohort 1- CFZ 20 mg/m^2 (Day 1,2)\",\"Cohort 2- CFZ 20 mg/m^2 (Day 1,2,8,9)\",\"Cohort 3-CFZ 20 mg/m^2 (Day1,2,8,9/AHCT)\"]}",
+      "offset": [
+        187,
+        361
+      ]
+    },
+    "NCT01690143": {
+      "nct_id": "NCT01690143",
+      "url": "https://clinicaltrials.gov/study/NCT01690143",
+      "brief_title": "Carfilzomib + High Dose Melphalan as Preparative Regimen for Autologous Hematopoietic Stem Cell Transplantation",
+      "field_path": "protocolSection.armsInterventionsModule.interventions[].armGroupLabels",
+      "field_value": "Carfilzomib || Melphalan",
+      "excerpt": "\"interventions\":[{\"type\":\"DRUG\",\"name\":\"Carfilzomib\",\"armGroupLabels\":[\"Carfilzomib + high dose melphalan\"]},{\"type\":\"DRUG\",\"name\":\"Melphalan\",\"armGroupLabels\":[\"Carfilzomib + high dose melphalan\"]}]",
+      "offset": [
+        221,
+        420
+      ]
+    },
+    "NCT07555938": {
+      "nct_id": "NCT07555938",
+      "url": "https://clinicaltrials.gov/study/NCT07555938",
+      "brief_title": "Cevostamab in Combination With Pomalidomide and Dexamethasone Versus Standard of Care in Participants With Previously Treated Multiple Myeloma",
+      "field_path": "protocolSection.armsInterventionsModule.interventions[].armGroupLabels",
+      "field_value": "Carfilzomib || Pomalidomide",
+      "excerpt": "{\"type\":\"DRUG\",\"name\":\"Carfilzomib\",\"armGroupLabels\":[\"Standard of Care (SOC)\"]}",
+      "offset": [
+        782,
+        862
+      ]
+    },
+    "NCT04850599": {
+      "nct_id": "NCT04850599",
+      "url": "https://clinicaltrials.gov/study/NCT04850599",
+      "brief_title": "Isatuximab, Carfilzomib, and Pomalidomide for the Treatment of Relapsed or Refractory Multiple Myeloma",
+      "field_path": "protocolSection.armsInterventionsModule.interventions[].armGroupLabels",
+      "field_value": "Carfilzomib || Pomalidomide",
+      "excerpt": "\"interventions\":[{\"type\":\"DRUG\",\"name\":\"Carfilzomib\",\"armGroupLabels\":[\"Treatment (isatuximab, carfilzomib, pomalidomide)\"]},{\"type\":\"BIOLOGICAL\",\"name\":\"Isatuximab\",\"armGroupLabels\":[\"Treatment (isatuximab, carfilzomib, pomalidomide)\"]},{\"type\":\"DRUG\",\"name\":\"Pomalidomide\",\"armGroupLabels\":[\"Treatment (isatuximab, carfilzomib, pomalidomide)\"]}]",
+      "offset": [
+        212,
+        559
+      ]
+    },
+    "NCT03756896": {
+      "nct_id": "NCT03756896",
+      "url": "https://clinicaltrials.gov/study/NCT03756896",
+      "brief_title": "Carfilzomib, Pomalidomide, and Dexamethasone in Treating Patients With High-Risk Multiple Myeloma",
+      "field_path": "protocolSection.armsInterventionsModule.interventions[].armGroupLabels",
+      "field_value": "Carfilzomib || Pomalidomide",
+      "excerpt": "\"interventions\":[{\"type\":\"DRUG\",\"name\":\"Carfilzomib\",\"armGroupLabels\":[\"Carfilzomib, pomalidomide, dexamethasone\"]},{\"type\":\"DRUG\",\"name\":\"Dexamethasone\",\"armGroupLabels\":[\"Carfilzomib, pomalidomide, dexamethasone\"]},{\"type\":\"DRUG\",\"name\":\"Pomalidomide\",\"armGroupLabels\":[\"Carfilzomib, pomalidomide, dexamethasone\"]}]",
+      "offset": [
+        207,
+        524
+      ]
+    },
+    "NCT01665794": {
+      "nct_id": "NCT01665794",
+      "url": "https://clinicaltrials.gov/study/NCT01665794",
+      "brief_title": "Carfilzomib, Pomalidomide, and Dexamethasone in Treating Patients With Relapsed or Refractory Multiple Myeloma",
+      "field_path": "protocolSection.armsInterventionsModule.interventions[].armGroupLabels",
+      "field_value": "Carfilzomib || dexamethasone",
+      "excerpt": "\"interventions\":[{\"type\":\"DRUG\",\"name\":\"Pomalidomide\",\"armGroupLabels\":[\"PdC + Dara Group\",\"PdC Group\"]},{\"type\":\"DRUG\",\"name\":\"Carfilzomib\",\"armGroupLabels\":[\"PdC + Dara Group\",\"PdC Group\"]},{\"type\":\"DRUG\",\"name\":\"dexamethasone\",\"armGroupLabels\":[\"PdC + Dara Group\",\"PdC Group\"]},{\"type\":\"DRUG\",\"name\":\"Daratumumab\",\"armGroupLabels\":[\"PdC + Dara Group\"]}]",
+      "offset": [
+        220,
+        576
+      ]
+    },
+    "NCT05182073": {
+      "nct_id": "NCT05182073",
+      "url": "https://clinicaltrials.gov/study/NCT05182073",
+      "brief_title": "FT576 in Subjects With Multiple Myeloma",
+      "field_path": "protocolSection.armsInterventionsModule.interventions[].armGroupLabels",
+      "field_value": "Daratumumab || Fludarabine",
+      "excerpt": "{\"type\":\"DRUG\",\"name\":\"Daratumumab\",\"armGroupLabels\":[\"Regimen B1\",\"Regimens B-B4\"]}",
+      "offset": [
+        553,
+        637
+      ]
+    },
+    "NCT06119685": {
+      "nct_id": "NCT06119685",
+      "url": "https://clinicaltrials.gov/study/NCT06119685",
+      "brief_title": "IDP-023 as a Single Agent and in Combination With Antibody Therapies in Patients With Advanced Hematologic Cancers",
+      "field_path": "protocolSection.armsInterventionsModule.interventions[].armGroupLabels",
+      "field_value": "Daratumumab || Fludarabine",
+      "excerpt": "{\"type\":\"DRUG\",\"name\":\"Daratumumab\",\"armGroupLabels\":[\"Phase 2: Combination IDP-023 plus daratumumab\"]}",
+      "offset": [
+        688,
+        791
+      ]
+    },
+    "NCT01998971": {
+      "nct_id": "NCT01998971",
+      "url": "https://clinicaltrials.gov/study/NCT01998971",
+      "brief_title": "A Study of JNJ-54767414 (HuMax CD38) (Anti-CD38 Monoclonal Antibody) in Combination With Backbone Treatments for the Treatment of Patients With Multiple Myeloma",
+      "field_path": "protocolSection.armsInterventionsModule.interventions[].armGroupLabels",
+      "field_value": "Daratumumab || Melphalan",
+      "excerpt": "{\"type\":\"DRUG\",\"name\":\"Daratumumab\",\"armGroupLabels\":[\"Daratumumab + CFZ-dex\",\"Daratumumab + KRd\",\"Daratumumab + Pom-dex\",\"Daratumumab + VD\",\"Daratumumab + VMP\",\"Daratumumab + VTD\"]}",
+      "offset": [
+        287,
+        469
+      ]
+    },
+    "NCT03217812": {
+      "nct_id": "NCT03217812",
+      "url": "https://clinicaltrials.gov/study/NCT03217812",
+      "brief_title": "A Study of VELCADE (Bortezomib) Melphalan-Prednisone (VMP) Compared to Daratumumab in Combination With VMP (D-VMP), in Participants With Previously Untreated Multiple Myeloma Who Are Ineligible for High-Dose Therapy (Asia Pacific Region)",
+      "field_path": "protocolSection.armsInterventionsModule.interventions[].armGroupLabels",
+      "field_value": "Daratumumab || Melphalan",
+      "excerpt": "\"interventions\":[{\"type\":\"DRUG\",\"name\":\"Velcade\",\"armGroupLabels\":[\"Treatment A: VMP Alone\",\"Treatment B: D-VMP\"]},{\"type\":\"DRUG\",\"name\":\"Melphalan\",\"armGroupLabels\":[\"Treatment A: VMP Alone\",\"Treatment B: D-VMP\"]},{\"type\":\"DRUG\",\"name\":\"Prednisone\",\"armGroupLabels\":[\"Treatment A: VMP Alone\",\"Treatment B: D-VMP\"]},{\"type\":\"DRUG\",\"name\":\"Daratumumab\",\"armGroupLabels\":[\"Treatment B: D-VMP\"]}]",
+      "offset": [
+        347,
+        740
+      ]
+    },
+    "NCT03412565": {
+      "nct_id": "NCT03412565",
+      "url": "https://clinicaltrials.gov/study/NCT03412565",
+      "brief_title": "A Study to Evaluate Subcutaneous Daratumumab in Combination With Standard Multiple Myeloma Treatment Regimens",
+      "field_path": "protocolSection.armsInterventionsModule.interventions[].armGroupLabels",
+      "field_value": "Daratumumab || Melphalan",
+      "excerpt": "{\"type\":\"DRUG\",\"name\":\"Daratumumab\",\"armGroupLabels\":[\"D + Bortezomib + Melphalan + Prednisone (D-VMP)\",\"Daratumumab + Carfilzomib + Dexamethasone (D-Kd)\",\"Daratumumab + Lenalidomide + Dexamethasone (D-Rd)\",\"Daratumumab(D)+Bortezomib+Lenalidomide+Dexamethasone (D-VRd)\"]}",
+      "offset": [
+        236,
+        507
+      ]
+    },
+    "NCT04124497": {
+      "nct_id": "NCT04124497",
+      "url": "https://clinicaltrials.gov/study/NCT04124497",
+      "brief_title": "A Trial for Relapsed and Relapsed/Refractory Multiple Myeloma Patients",
+      "field_path": "protocolSection.armsInterventionsModule.interventions[].armGroupLabels",
+      "field_value": "Daratumumab || Pomalidomide",
+      "excerpt": "\"interventions\":[{\"type\":\"DRUG\",\"name\":\"Daratumumab\",\"armGroupLabels\":[\"Daratumumab Pomalidomide dexamethasone\"]},{\"type\":\"DRUG\",\"name\":\"Pomalidomide\",\"armGroupLabels\":[\"Daratumumab Pomalidomide dexamethasone\"]},{\"type\":\"DRUG\",\"name\":\"Dexamethasone\",\"armGroupLabels\":[\"Daratumumab Pomalidomide dexamethasone\"]}]",
+      "offset": [
+        180,
+        491
+      ]
+    },
+    "NCT03710603": {
+      "nct_id": "NCT03710603",
+      "url": "https://clinicaltrials.gov/study/NCT03710603",
+      "brief_title": "Daratumumab, VELCADE (Bortezomib), Lenalidomide and Dexamethasone Compared to VELCADE, Lenalidomide and Dexamethasone in Subjects With Previously Untreated Multiple Myeloma",
+      "field_path": "protocolSection.armsInterventionsModule.interventions[].armGroupLabels",
+      "field_value": "Daratumumab || dexamethasone",
+      "excerpt": "{\"type\":\"DRUG\",\"name\":\"Daratumumab\",\"armGroupLabels\":[\"Daratumumab + VRd (D-VRd)\"]}",
+      "offset": [
+        299,
+        382
+      ]
+    },
+    "NCT02206503": {
+      "nct_id": "NCT02206503",
+      "url": "https://clinicaltrials.gov/study/NCT02206503",
+      "brief_title": "Cyclophosphamide With Biochemical Progression During Lenalidomide-Dexamethasone Treatment for Relapsed/Refractory Multiple Myeloma (MM)",
+      "field_path": "protocolSection.armsInterventionsModule.interventions[].armGroupLabels",
+      "field_value": "Cyclophosphamide || Dexamethasone",
+      "excerpt": "\"interventions\":[{\"type\":\"DRUG\",\"name\":\"Cyclophosphamide\",\"armGroupLabels\":[\"Cyclophosphamide; Lenalidomide; Dexamethasone\"]},{\"type\":\"DRUG\",\"name\":\"Lenalidomide\",\"armGroupLabels\":[\"Cyclophosphamide; Lenalidomide; Dexamethasone\"]},{\"type\":\"DRUG\",\"name\":\"Dexamethasone\",\"armGroupLabels\":[\"Cyclophosphamide; Lenalidomide; Dexamethasone\"]}]",
+      "offset": [
+        245,
+        582
+      ]
+    },
+    "NCT02176213": {
+      "nct_id": "NCT02176213",
+      "url": "https://clinicaltrials.gov/study/NCT02176213",
+      "brief_title": "Study of Pomalidomide, Cyclophosphamide, Dexamethasone in Relapsed/Refractory Multiple Myeloma",
+      "field_path": "protocolSection.armsInterventionsModule.interventions[].armGroupLabels",
+      "field_value": "Cyclophosphamide || Dexamethasone",
+      "excerpt": "\"interventions\":[{\"type\":\"DRUG\",\"name\":\"Pomalidomide\",\"armGroupLabels\":[\"Pomalidomide, Cyclophosphamide, Dexamethasone\"]},{\"type\":\"DRUG\",\"name\":\"Cyclophosphamide\",\"armGroupLabels\":[\"Pomalidomide, Cyclophosphamide, Dexamethasone\"]},{\"type\":\"DRUG\",\"name\":\"Dexamethasone\",\"armGroupLabels\":[\"Pomalidomide, Cyclophosphamide, Dexamethasone\"]}]",
+      "offset": [
+        204,
+        541
+      ]
+    },
+    "NCT05032820": {
+      "nct_id": "NCT05032820",
+      "url": "https://clinicaltrials.gov/study/NCT05032820",
+      "brief_title": "Upfront Chimeric Antigen Receptor T-Cell to Upgrade Response in Multiple Myeloma",
+      "field_path": "protocolSection.armsInterventionsModule.interventions[].armGroupLabels",
+      "field_value": "Cyclophosphamide || Fludarabine",
+      "excerpt": "{\"type\":\"DRUG\",\"name\":\"Cyclophosphamide\",\"armGroupLabels\":[\"Lenalidomide and bb2121\"]}",
+      "offset": [
+        373,
+        459
+      ]
+    },
+    "NCT04626752": {
+      "nct_id": "NCT04626752",
+      "url": "https://clinicaltrials.gov/study/NCT04626752",
+      "brief_title": "CAR-T Cells in Treating Patients With Relapsed or Refractory Multiple Myeloma",
+      "field_path": "protocolSection.armsInterventionsModule.interventions[].armGroupLabels",
+      "field_value": "Cyclophosphamide || Fludarabine",
+      "excerpt": "\"interventions\":[{\"type\":\"DRUG\",\"name\":\"BCMA CAR-T\",\"armGroupLabels\":[\"volunteers\"]},{\"type\":\"DRUG\",\"name\":\"Fludarabine\",\"armGroupLabels\":[\"volunteers\"]},{\"type\":\"DRUG\",\"name\":\"Cyclophosphamide\",\"armGroupLabels\":[\"volunteers\"]}]",
+      "offset": [
+        187,
+        415
+      ]
+    },
+    "NCT05950113": {
+      "nct_id": "NCT05950113",
+      "url": "https://clinicaltrials.gov/study/NCT05950113",
+      "brief_title": "CART-BCMA/CS1 in Treating Patients With Relapsed or Refractory Multiple Myeloma",
+      "field_path": "protocolSection.armsInterventionsModule.interventions[].armGroupLabels",
+      "field_value": "Cyclophosphamide || Fludarabine",
+      "excerpt": "{\"type\":\"DRUG\",\"name\":\"Cyclophosphamide\",\"armGroupLabels\":[\"Treatment (CART-BCMA/CS1)\"]}",
+      "offset": [
+        499,
+        587
+      ]
+    },
+    "NCT00800839": {
+      "nct_id": "NCT00800839",
+      "url": "https://clinicaltrials.gov/study/NCT00800839",
+      "brief_title": "Busulfan and Fludarabine Followed by Post-transplant Cyclophosphamide",
+      "field_path": "protocolSection.armsInterventionsModule.interventions[].armGroupLabels",
+      "field_value": "Cyclophosphamide || Fludarabine",
+      "excerpt": "\"interventions\":[{\"type\":\"DRUG\",\"name\":\"Busulfan\",\"armGroupLabels\":[\"Busulfan + Fludarabine + Cyclophosphamide\"]},{\"type\":\"DRUG\",\"name\":\"Fludarabine\",\"armGroupLabels\":[\"Busulfan + Fludarabine + Cyclophosphamide\"]},{\"type\":\"DRUG\",\"name\":\"Cyclophosphamide\",\"armGroupLabels\":[\"Busulfan + Fludarabine + Cyclophosphamide\"]}]",
+      "offset": [
+        179,
+        498
+      ]
+    },
+    "NCT01619761": {
+      "nct_id": "NCT01619761",
+      "url": "https://clinicaltrials.gov/study/NCT01619761",
+      "brief_title": "NK Cells in Cord Blood Transplantation",
+      "field_path": "protocolSection.armsInterventionsModule.interventions[].armGroupLabels",
+      "field_value": "Cyclophosphamide || Lenalidomide",
+      "excerpt": "{\"type\":\"DRUG\",\"name\":\"Cyclophosphamide\",\"armGroupLabels\":[\"Treatment Plan 2 (NK cells, umbilical cord blood transplant)\"]}",
+      "offset": [
+        391,
+        514
+      ]
+    },
+    "NCT02960646": {
+      "nct_id": "NCT02960646",
+      "url": "https://clinicaltrials.gov/study/NCT02960646",
+      "brief_title": "Engineered Donor Stem Cell Transplant in Treating Patients With Hematologic Malignancies",
+      "field_path": "protocolSection.armsInterventionsModule.interventions[].armGroupLabels",
+      "field_value": "Cyclophosphamide || Melphalan",
+      "excerpt": "{\"type\":\"DRUG\",\"name\":\"Cyclophosphamide\",\"armGroupLabels\":[\"Treatment (peripheral blood stem cell transplantation)\"]}",
+      "offset": [
+        215,
+        332
+      ]
+    },
+    "NCT01039025": {
+      "nct_id": "NCT01039025",
+      "url": "https://clinicaltrials.gov/study/NCT01039025",
+      "brief_title": "TMC (Topotecan, Cyclophosphamide and Melphalan) for Multiple Myeloma",
+      "field_path": "protocolSection.armsInterventionsModule.interventions[].armGroupLabels",
+      "field_value": "Cyclophosphamide || Melphalan",
+      "excerpt": "\"interventions\":[{\"type\":\"DRUG\",\"name\":\"Topotecan\",\"armGroupLabels\":[\"TMC\"]},{\"type\":\"DRUG\",\"name\":\"Cyclophosphamide\",\"armGroupLabels\":[\"TMC\"]},{\"type\":\"DRUG\",\"name\":\"Melphalan\",\"armGroupLabels\":[\"TMC\"]},{\"type\":\"OTHER\",\"name\":\"Peripheral Blood Stem Cells\",\"armGroupLabels\":[\"TMC\"]}]",
+      "offset": [
+        178,
+        461
+      ]
+    },
+    "NCT02581007": {
+      "nct_id": "NCT02581007",
+      "url": "https://clinicaltrials.gov/study/NCT02581007",
+      "brief_title": "Reduced Intensity Conditioning Transplant Using Haploidentical Donors",
+      "field_path": "protocolSection.armsInterventionsModule.interventions[].armGroupLabels",
+      "field_value": "Cyclophosphamide || Melphalan",
+      "excerpt": "{\"type\":\"DRUG\",\"name\":\"Cyclophosphamide\",\"armGroupLabels\":[\"Reduced-Intensity Mismatched Transplant\"]}",
+      "offset": [
+        390,
+        492
+      ]
+    },
+    "NCT01432600": {
+      "nct_id": "NCT01432600",
+      "url": "https://clinicaltrials.gov/study/NCT01432600",
+      "brief_title": "Pomalidomide in Combination With High Dose Dexamethasone and Oral Cyclophosphamide",
+      "field_path": "protocolSection.armsInterventionsModule.interventions[].armGroupLabels",
+      "field_value": "Cyclophosphamide || Pomalidomide",
+      "excerpt": "{\"type\":\"DRUG\",\"name\":\"Cyclophosphamide\",\"armGroupLabels\":[\"A: Dose Escalation of Cyclophosphamide\",\"C: Pomalidomide/Dexamethasone/Cyclophosphamide\",\"D: Crossover\"]}",
+      "offset": [
+        606,
+        771
+      ]
+    },
+    "NCT03440411": {
+      "nct_id": "NCT03440411",
+      "url": "https://clinicaltrials.gov/study/NCT03440411",
+      "brief_title": "Pom-dex Versus Pom-Cyclo-dex in MM Patients With Biochemical or Clinical Relapse, During Lena Maintenance Treatment",
+      "field_path": "protocolSection.armsInterventionsModule.interventions[].armGroupLabels",
+      "field_value": "Cyclophosphamide || Pomalidomide",
+      "excerpt": "{\"type\":\"DRUG\",\"name\":\"Cyclophosphamide\",\"armGroupLabels\":[\"ARM pom-cyclo-dex Early(B-I)\",\"ARM pom-cyclo-dex Late (B-II)\"]}",
+      "offset": [
+        414,
+        537
+      ]
+    },
+    "NCT01537861": {
+      "nct_id": "NCT01537861",
+      "url": "https://clinicaltrials.gov/study/NCT01537861",
+      "brief_title": "Filgrastim in Treating Patients With Bortezomib-, Carfilzomib-, or IMID-Refractory Multiple Myeloma",
+      "field_path": "protocolSection.armsInterventionsModule.interventions[].armGroupLabels",
+      "field_value": "Cyclophosphamide || Pomalidomide",
+      "excerpt": "{\"type\":\"DRUG\",\"name\":\"Cyclophosphamide\",\"armGroupLabels\":[\"Arm 1\"]}",
+      "offset": [
+        482,
+        550
+      ]
+    },
+    "NCT06207799": {
+      "nct_id": "NCT06207799",
+      "url": "https://clinicaltrials.gov/study/NCT06207799",
+      "brief_title": "Pre-transplant Purging and Post-transplant MRD-guided Maintenance Therapy With Elranatamab in Patients With High-risk Multiple Myeloma",
+      "field_path": "protocolSection.armsInterventionsModule.interventions[].armGroupLabels",
+      "field_value": "Lenalidomide || Melphalan",
+      "excerpt": "{\"type\":\"DRUG\",\"name\":\"Lenalidomide\",\"armGroupLabels\":[\"Elranatamab\"]}",
+      "offset": [
+        331,
+        401
+      ]
+    },
+    "NCT02728102": {
+      "nct_id": "NCT02728102",
+      "url": "https://clinicaltrials.gov/study/NCT02728102",
+      "brief_title": "Dendritic Cell/Myeloma Fusion Vaccine for Multiple Myeloma (BMT CTN 1401)",
+      "field_path": "protocolSection.armsInterventionsModule.interventions[].armGroupLabels",
+      "field_value": "Lenalidomide || Melphalan",
+      "excerpt": "{\"type\":\"DRUG\",\"name\":\"Lenalidomide\",\"armGroupLabels\":[\"Lenalidomide and GM-CSF\",\"Lenalidomide, vaccine, and GM-CSF\",\"Maintenance Lenalidomide\"]}",
+      "offset": [
+        987,
+        1132
+      ]
+    },
+    "NCT01562405": {
+      "nct_id": "NCT01562405",
+      "url": "https://clinicaltrials.gov/study/NCT01562405",
+      "brief_title": "Sotatercept (ACE-011) With Lenalidomide or Pomalidomide and Dexamethasone in Relapsed/Refractory Multiple Myeloma",
+      "field_path": "protocolSection.armsInterventionsModule.interventions[].armGroupLabels",
+      "field_value": "Lenalidomide || Pomalidomide",
+      "excerpt": "\"interventions\":[{\"type\":\"DRUG\",\"name\":\"ACE-011\",\"armGroupLabels\":[\"ACE-011 (sotatercept)\"]},{\"type\":\"DRUG\",\"name\":\"Lenalidomide\",\"armGroupLabels\":[\"ACE-011 (sotatercept)\"]},{\"type\":\"DRUG\",\"name\":\"Dexamethasone\",\"armGroupLabels\":[\"ACE-011 (sotatercept)\"]},{\"type\":\"DRUG\",\"name\":\"Pomalidomide\",\"armGroupLabels\":[\"ACE-011 (sotatercept)\"]}]",
+      "offset": [
+        223,
+        560
+      ]
+    },
+    "NCT05669989": {
+      "nct_id": "NCT05669989",
+      "url": "https://clinicaltrials.gov/study/NCT05669989",
+      "brief_title": "International Treatment-extension Study in Adult Participants With Multiple Myeloma and Who Have Derived Clinical Benefit From Isatuximab",
+      "field_path": "protocolSection.armsInterventionsModule.interventions[].armGroupLabels",
+      "field_value": "Lenalidomide || Pomalidomide",
+      "excerpt": "{\"type\":\"DRUG\",\"name\":\"Lenalidomide\",\"armGroupLabels\":[\"Isatuximab\"]}",
+      "offset": [
+        500,
+        569
+      ]
+    },
+    "NCT05288062": {
+      "nct_id": "NCT05288062",
+      "url": "https://clinicaltrials.gov/study/NCT05288062",
+      "brief_title": "Immunomodulatory Drugs (Lenalidomide With or Without Pomalidomide) in Combination With a Corticosteroid Drug (Dexamethasone) for the Treatment of Multiple Myeloma",
+      "field_path": "protocolSection.armsInterventionsModule.interventions[].armGroupLabels",
+      "field_value": "Lenalidomide || Pomalidomide",
+      "excerpt": "{\"type\":\"DRUG\",\"name\":\"Lenalidomide\",\"armGroupLabels\":[\"Cohort A (lenalidomide, dexamethasone)\",\"Cohort B (lenalidomide, dexamethasone)\",\"Cohort C (lenalidomide, dexamethasone, pomalidomide)\",\"Cohort D (lenalidomide, dexamethasone, pomalidomide)\"]}",
+      "offset": [
+        799,
+        1047
+      ]
+    },
+    "NCT00482261": {
+      "nct_id": "NCT00482261",
+      "url": "https://clinicaltrials.gov/study/NCT00482261",
+      "brief_title": "A Study of Low Dose Lenalidomide and Dexamethasone in Relapsed/Refractory Myeloma in Patients at High Risk for Myelosuppression",
+      "field_path": "protocolSection.armsInterventionsModule.interventions[].armGroupLabels",
+      "field_value": "Lenalidomide || dexamethasone",
+      "excerpt": "\"interventions\":[{\"type\":\"DRUG\",\"name\":\"Lenalidomide\",\"armGroupLabels\":[\"len-dex\"]},{\"type\":\"DRUG\",\"name\":\"dexamethasone\",\"armGroupLabels\":[\"len-dex\"]},{\"type\":\"DRUG\",\"name\":\"aspirin\",\"armGroupLabels\":[\"len-dex\"]}]",
+      "offset": [
+        237,
+        451
+      ]
+    },
+    "NCT01698801": {
+      "nct_id": "NCT01698801",
+      "url": "https://clinicaltrials.gov/study/NCT01698801",
+      "brief_title": "A Phase 2 Study of Lenalidomide to Evaluate the Efficacy in Japanese Patients With Newly Diagnosed Multiple Myeloma",
+      "field_path": "protocolSection.armsInterventionsModule.interventions[].armGroupLabels",
+      "field_value": "Lenalidomide || dexamethasone",
+      "excerpt": "\"interventions\":[{\"type\":\"DRUG\",\"name\":\"Lenalidomide\",\"armGroupLabels\":[\"Lenalidomide plus dexamethasone\"]},{\"type\":\"DRUG\",\"name\":\"dexamethasone\",\"armGroupLabels\":[\"Lenalidomide plus dexamethasone\"]}]",
+      "offset": [
+        225,
+        425
+      ]
+    },
+    "NCT00478777": {
+      "nct_id": "NCT00478777",
+      "url": "https://clinicaltrials.gov/study/NCT00478777",
+      "brief_title": "A Multicenter, Single-Arm, Open-Label Expanded Access Program for Lenalidomide Plus Dexamethasone in Previously Treated Subjects With Multiple Myeloma",
+      "field_path": "protocolSection.armsInterventionsModule.interventions[].armGroupLabels",
+      "field_value": "Lenalidomide || dexamethasone",
+      "excerpt": "\"interventions\":[{\"type\":\"DRUG\",\"name\":\"Lenalidomide\",\"armGroupLabels\":[\"lenalidomide plus dexamethasone\"]},{\"type\":\"DRUG\",\"name\":\"dexamethasone\",\"armGroupLabels\":[\"lenalidomide plus dexamethasone\"]}]",
+      "offset": [
+        260,
+        460
+      ]
+    },
+    "NCT00687674": {
+      "nct_id": "NCT00687674",
+      "url": "https://clinicaltrials.gov/study/NCT00687674",
+      "brief_title": "Sorafenib, Lenalidomide, and Dexamethasone in Treating Patients With Relapsed or Refractory Multiple Myeloma",
+      "field_path": "protocolSection.armsInterventionsModule.interventions[].armGroupLabels",
+      "field_value": "Lenalidomide || dexamethasone",
+      "excerpt": "\"interventions\":[{\"type\":\"DRUG\",\"name\":\"dexamethasone\",\"armGroupLabels\":[\"Sorafenib + Lenalidomide + Dexamethasone\"]},{\"type\":\"DRUG\",\"name\":\"sorafenib tosylate\",\"armGroupLabels\":[\"Sorafenib + Lenalidomide + Dexamethasone\"]},{\"type\":\"DRUG\",\"name\":\"Lenalidomide\",\"armGroupLabels\":[\"Sorafenib + Lenalidomide + Dexamethasone\"]}]",
+      "offset": [
+        218,
+        542
+      ]
+    },
+    "NCT04196491": {
+      "nct_id": "NCT04196491",
+      "url": "https://clinicaltrials.gov/study/NCT04196491",
+      "brief_title": "A Study to Evaluate the Safety of bb2121 in Subjects With High Risk, Newly Diagnosed Multiple Myeloma (NDMM)",
+      "field_path": "protocolSection.armsInterventionsModule.interventions[].armGroupLabels",
+      "field_value": "Fludarabine || Lenalidomide",
+      "excerpt": "\"interventions\":[{\"type\":\"BIOLOGICAL\",\"name\":\"bb2121\",\"armGroupLabels\":[\"Dose Escalation\"]},{\"type\":\"DRUG\",\"name\":\"Fludarabine\",\"armGroupLabels\":[\"Dose Escalation\"]},{\"type\":\"DRUG\",\"name\":\"Cyclophosphamide\",\"armGroupLabels\":[\"Dose Escalation\"]},{\"type\":\"DRUG\",\"name\":\"Lenalidomide\",\"armGroupLabels\":[\"Dose Escalation\"]}]",
+      "offset": [
+        218,
+        538
+      ]
+    },
+    "NCT07735637": {
+      "nct_id": "NCT07735637",
+      "url": "https://clinicaltrials.gov/study/NCT07735637",
+      "brief_title": "A Phase III, Multicentre Study to Evaluate Consolidation Treatment With AZD0120 Compared With ASCT, in Participants With Newly Diagnosed Multiple Myeloma Who Are Transplant Eligible (DURGA-6).",
+      "field_path": "protocolSection.armsInterventionsModule.interventions[].armGroupLabels",
+      "field_value": "Fludarabine || Lenalidomide",
+      "excerpt": "{\"type\":\"DRUG\",\"name\":\"Fludarabine\",\"armGroupLabels\":[\"Arm A: AZD0120\"]}",
+      "offset": [
+        472,
+        544
+      ]
+    },
+    "NCT01119066": {
+      "nct_id": "NCT01119066",
+      "url": "https://clinicaltrials.gov/study/NCT01119066",
+      "brief_title": "HLA-Compatible Related or Unrelated Donors With CD34+ Enriched, T-cell Depleted Peripheral Blood Stem Cells Isolated by the CliniMACS System in the Treatment of Patients With Hematologic Malignancies",
+      "field_path": "protocolSection.armsInterventionsModule.interventions[].armGroupLabels",
+      "field_value": "Fludarabine || Melphalan",
+      "excerpt": "{\"type\":\"DRUG\",\"name\":\"Fludarabine\",\"armGroupLabels\":[\"Busulfan, Melphalan and Fludarabine\"]}",
+      "offset": [
+        1015,
+        1108
+      ]
+    },
+    "NCT01518153": {
+      "nct_id": "NCT01518153",
+      "url": "https://clinicaltrials.gov/study/NCT01518153",
+      "brief_title": "Planned Donor Lymphocyte Infusion (DLI) After Allogeneic Stem Cell Transplantation (SCT)",
+      "field_path": "protocolSection.armsInterventionsModule.interventions[].armGroupLabels",
+      "field_value": "Fludarabine || Melphalan",
+      "excerpt": "{\"type\":\"DRUG\",\"name\":\"Fludarabine\",\"armGroupLabels\":[\"High Dose Donor T-Cells\",\"Low Dose Donor T-Cells\"]}",
+      "offset": [
+        215,
+        321
+      ]
+    },
+    "NCT00505895": {
+      "nct_id": "NCT00505895",
+      "url": "https://clinicaltrials.gov/study/NCT00505895",
+      "brief_title": "FM 140 vs FM100 Study in Patients With Multiple Myeloma",
+      "field_path": "protocolSection.armsInterventionsModule.interventions[].armGroupLabels",
+      "field_value": "Fludarabine || Melphalan",
+      "excerpt": "{\"type\":\"DRUG\",\"name\":\"Fludarabine\",\"armGroupLabels\":[\"Fludarabine + Lower-Dose Melphalan + Stem Cell Infusion\",\"Fludarabine + Melphalan + Stem Cell Infusion\"]}",
+      "offset": [
+        341,
+        501
+      ]
+    },
+    "NCT01500161": {
+      "nct_id": "NCT01500161",
+      "url": "https://clinicaltrials.gov/study/NCT01500161",
+      "brief_title": "Pooled Unrelated Donor Umbilical Cord Blood Transplant For Hematologic Malignancy Needing Allogeneic Stem Cell Transplant Without Related HLA-Match",
+      "field_path": "protocolSection.armsInterventionsModule.interventions[].armGroupLabels",
+      "field_value": "Fludarabine || Melphalan",
+      "excerpt": "{\"type\":\"DRUG\",\"name\":\"Fludarabine\",\"armGroupLabels\":[\"Single Arm\"]}",
+      "offset": [
+        409,
+        477
+      ]
+    },
+    "NCT01159574": {
+      "nct_id": "NCT01159574",
+      "url": "https://clinicaltrials.gov/study/NCT01159574",
+      "brief_title": "Study of Decadron, Biaxin, and Pomalidomide in Relapsed/Refractory Myeloma",
+      "field_path": "protocolSection.armsInterventionsModule.interventions[].armGroupLabels",
+      "field_value": "Pomalidomide || dexamethasone",
+      "excerpt": "\"interventions\":[{\"type\":\"DRUG\",\"name\":\"dexamethasone\",\"armGroupLabels\":[\"all patients\"]},{\"type\":\"DRUG\",\"name\":\"clarithromycin\",\"armGroupLabels\":[\"all patients\"]},{\"type\":\"DRUG\",\"name\":\"Pomalidomide\",\"armGroupLabels\":[\"all patients\"]}]",
+      "offset": [
+        184,
+        420
+      ]
+    }
+  },
+  "meta": {
+    "interpretation": "Which drugs frequently co-occur in combination studies for multiple myeloma?",
+    "plan": {
+      "legs": [
+        {
+          "label": "Multiple myeloma combination studies",
+          "filters": {
+            "condition": "multiple myeloma",
+            "intervention": null,
+            "sponsor": null,
+            "free_text": null,
+            "country": null,
+            "site_status": null,
+            "status": null,
+            "phase": null,
+            "start_year_min": null,
+            "start_year_max": null,
+            "study_type": "INTERVENTIONAL",
+            "sponsor_class": null,
+            "intervention_type": "DRUG",
+            "enrollment_min": null,
+            "enrollment_max": null,
+            "has_results": null,
+            "date_certainty": "any"
+          }
+        }
+      ],
+      "group_by": "intervention_names",
+      "series_by": null,
+      "metric": "count",
+      "metric_field": null,
+      "distinct_of": null,
+      "granularity": null,
+      "layout": "cooccurrence",
+      "bins": null,
+      "bin_scale": "linear",
+      "top_n": 10,
+      "sort": "value_desc",
+      "viz_hint": "Drug-drug co-occurrence network using interventions that appear together within the same trial; size/weight edges by trial count.",
+      "assumptions": [
+        "Interpreted 'multiple myeloma' as the Condition filter rather than free text.",
+        "Interpreted 'drugs' as Intervention Type = DRUG, excluding non-drug interventions from the co-occurrence network.",
+        "Interpreted 'combination studies' as interventional trials in which multiple drug intervention names co-occur within the same trial, rather than relying on the non-groupable combination_groups field.",
+        "Using a co-occurrence layout over intervention_names so each edge represents trials containing both drug interventions.",
+        "Limiting display to the top co-occurring pairs via top_n for readability."
+      ]
+    },
+    "filters_applied": {
+      "Multiple myeloma combination studies": {
+        "condition": "multiple myeloma",
+        "study_type": "INTERVENTIONAL",
+        "intervention_type": "DRUG"
+      },
+      "overrides": {}
+    },
+    "counting_semantics": "Trials are counted once per distinct intervention, so a trial with several contributes to several buckets and the column totals exceed the distinct trial count.",
+    "record_counts": {
+      "matched": 2711,
+      "retrieved": 2711,
+      "used": 1392,
+      "excluded_by_reason": {
+        "no_cooccurring_values": 1319
+      },
+      "truncated": false
+    },
+    "assumptions": [
+      "Interpreted 'multiple myeloma' as the Condition filter rather than free text.",
+      "Interpreted 'drugs' as Intervention Type = DRUG, excluding non-drug interventions from the co-occurrence network.",
+      "Interpreted 'combination studies' as interventional trials in which multiple drug intervention names co-occur within the same trial, rather than relying on the non-groupable combination_groups field.",
+      "Using a co-occurrence layout over intervention_names so each edge represents trials containing both drug interventions.",
+      "Limiting display to the top co-occurring pairs via top_n for readability."
+    ],
+    "warnings": [
+      "746 trial(s) fall outside the top 10 entities and are counted in the record totals but drawn in no node or edge, because 'Other' is a residue rather than an entity that can co-occur.",
+      "An edge means the two agents shared an arm group, which is the registry's own statement that they were given together. Agents merely listed in the same trial are excluded, because those are usually the two sides of a comparison rather than a combination.",
+      "Intervention is multi-valued: bucket totals sum to more than the number of distinct trials.",
+      "Free text: brand names, code names, and generics all appear. Prefer intervention_mesh for drug-network nodes.",
+      "1319 record(s) excluded: no cooccurring values.",
+      "1224 value(s) beyond the top 10 were collapsed into 'Other'."
+    ],
+    "planning_trace": [
+      {
+        "tool": "probe_count",
+        "args": {
+          "condition": "multiple myeloma",
+          "study_type": "INTERVENTIONAL"
+        },
+        "result": {
+          "total": 3425,
+          "exact": true,
+          "note": ""
+        }
+      },
+      {
+        "tool": "fill_rate",
+        "args": {
+          "condition": "multiple myeloma",
+          "study_type": "INTERVENTIONAL",
+          "field_name": "combination_groups"
+        },
+        "result": {
+          "error": "fill rate is not measurable for 'combination_groups'; measurable fields are: enrollment, start_date, completion_date, primary_completion_date, phases, sponsor_class, countries, intervention_types"
+        }
+      }
+    ],
+    "api_requests": [
+      "https://clinicaltrials.gov/api/v2/studies?format=json&pageSize=1000&countTotal=true&fields=NCTId%2CBriefTitle%2CInterventionName%2CInterventionType%2CInterventionArmGroupLabel&query.cond=multiple+myeloma&filter.advanced=AREA%5BStudyType%5DINTERVENTIONAL+AND+AREA%5BInterventionType%5DDRUG",
+      "https://clinicaltrials.gov/api/v2/studies?format=json&pageSize=1000&fields=NCTId%2CBriefTitle%2CInterventionName%2CInterventionType%2CInterventionArmGroupLabel&query.cond=multiple+myeloma&filter.advanced=AREA%5BStudyType%5DINTERVENTIONAL+AND+AREA%5BInterventionType%5DDRUG&pageToken=ZVdj7o2Elu8o3lp2Vcm44unumpOQJJxuYPel2vATkA",
+      "https://clinicaltrials.gov/api/v2/studies?format=json&pageSize=1000&fields=NCTId%2CBriefTitle%2CInterventionName%2CInterventionType%2CInterventionArmGroupLabel&query.cond=multiple+myeloma&filter.advanced=AREA%5BStudyType%5DINTERVENTIONAL+AND+AREA%5BInterventionType%5DDRUG&pageToken=ZVdj7o2Elu8o3lp2Vcm44unumpOQJJxsZfaj1fYakA"
+    ],
+    "suggested_requests": [],
+    "generated_at": "<captured>",
+    "cache_hit": true,
+    "llm_provider": "openai",
+    "elapsed_ms": null
+  }
+}

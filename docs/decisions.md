@@ -100,6 +100,18 @@ See `readme-notes.md` §13.
 | `.env` loading | In the app's lifespan | Left to the caller | `uvicorn` reads nothing; a `.env` beside the code would be silently ignored and read as a broken build |
 | Cold grammar compile | Retried in the client | Left to the planner's repair loop | Anthropic compiles and caches a grammar per schema: ~80s cold (can 400 with "Grammar compilation timed out") vs ~5s warm. Left to propagate it burned three planner revisions on an infrastructure hiccup, starving genuinely bad plans of repairs |
 
+## Posted results
+
+| Decision | Chosen | Rejected | Why |
+|---|---|---|---|
+| Read `resultsSection` | **Yes** — flow, adverse events, baseline demographics | Registration data only (`plan.md` "v2") | User's call. The data exists (789/3,743 melanoma trials); calling it a registry limitation was inaccurate |
+| Outcome measures | **Not** extracted | Extract and aggregate | 25 trials → 157 measures, 144 distinct titles, 34 units. Not comparable across trials without an ontology |
+| Adverse-event totals | Summed across arm groups | Use a total row | `eventGroups` has none, and each participant is in exactly one arm |
+| Baseline totals | The registry's own `Total` column | Sum or average the arms | Summing is right for counts and wrong for a mean age; the Total column was present on every trial sampled |
+| Death denominator | Separate `deaths_at_risk` | Reuse `serious_ae_at_risk` | The registry lets them differ; sharing one computes a rate against the wrong population |
+| Missing results | `None` | `0` | "Reported no deaths" and "never reported" are different populations |
+| Results fixture | Its own directory | Add to `raw_studies/` | The eleven there back hand-counted golden values that a twelfth silently shifted |
+
 ## Citations
 
 | Decision | Chosen | Rejected | Why |
@@ -132,3 +144,9 @@ Recorded because each one produced output that looked correct.
 6. **Anthropic's schema limits are undocumented until you hit them** — 16 unions, 24
    optional params, no `maxItems`, no `$ref` with siblings.
 7. **The registry returns 500s and 429s.** A full outage lasted ~20 seconds mid-build.
+8. **Field notes were emitted for `group_by` only, never `metric_field`.** So the caveat on
+   the field actually being charted disappeared. Found by capturing the adverse-events
+   example: it published a median of 184.5 participants with serious adverse events and
+   dropped the registry note saying to compare that against `serious_ae_at_risk` rather
+   than enrolment. The chart was right and read wrong. Fixed in `aggregator._warnings`,
+   which now emits notes for `metric_field` and `distinct_of` too.

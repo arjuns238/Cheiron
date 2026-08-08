@@ -127,6 +127,63 @@ alone returns `startDateStruct.date` with **no** `.type`. `StartDateType` and
 `EnrollmentType` must be requested explicitly or the ACTUAL/ESTIMATED distinction silently
 vanishes.
 
+## resultsSection — present, and its piece names are not guessable
+
+`resultsSection` exists on trials with `hasResults: true` — **789 of 3,743** melanoma
+trials. It carries `participantFlowModule`, `baselineCharacteristicsModule`,
+`outcomeMeasuresModule` and `adverseEventsModule`.
+
+**Piece names are prefixed by their module and cannot be inferred from the JSON path.**
+Guessing `SeriousNumAffected` from `adverseEventsModule.eventGroups[].seriousNumAffected`
+returns a 400. The working names, all verified:
+
+```
+EventGroupSeriousNumAffected   EventGroupSeriousNumAtRisk
+EventGroupDeathsNumAffected    EventGroupDeathsNumAtRisk
+FlowMilestoneType              FlowAchievementNumSubjects
+BaselineMeasureTitle           BaselineMeasureParamType
+BaselineCategoryTitle          BaselineMeasurementValue
+BaselineMeasurementGroupId     BaselineGroupId            BaselineGroupTitle
+```
+
+Find any of them from `/studies/metadata`: walk the tree and read `altPieceName`/`piece`
+on the leaf. Do not derive them from the field path.
+
+### Payload cost
+
+Measured over 200 melanoma trials with results:
+
+| Projection | Size |
+|---|---|
+| `NCTId,BriefTitle,Phase` | 44 KB |
+| + adverse-event counts | 116 KB |
+| + participant flow | 172 KB |
+| + baseline (full results set) | 778 KB |
+
+Roughly **4–18× a registration-only fetch**, so a results plan is far heavier per record.
+The projection is narrowed per plan, so only queries that reference these fields pay it.
+
+### Shape facts that change the arithmetic
+
+- `adverseEventsModule.eventGroups[]` has **no total row**, and each participant belongs to
+  exactly one arm — so summing arms *is* the trial total.
+- `baselineCharacteristicsModule.groups[]` **does** carry an explicit `Total` group (present
+  on every trial sampled, e.g. `BG003`). Use it: summing is right for counts and wrong for a
+  mean age.
+- `deathsNumAtRisk` and `seriousNumAtRisk` are separate and may differ. Sharing one computes
+  a rate against the wrong population.
+- `participantFlowModule.periods[]` can hold several periods (crossover, extensions).
+  Milestones repeat per period, so summing across them double-counts participants.
+- Milestone `type` values are not a closed enum — observed `STARTED`, `COMPLETED`, and also
+  free text such as `Treated` and `NOT COMPLETED`.
+
+### Outcome measures are not comparable across trials
+
+Measured over 25 melanoma trials with results: **157 outcome measures, 144 distinct titles,
+34 distinct units.** Even `"Percentage of participants"` and `"Percentage of Participants"`
+are separate strings. There is no cross-trial aggregation without an ontology, which is why
+outcome measures are the one results module this system does not read.
+
 ## Filters — confirmed working
 
 | Purpose | Parameter | Verified count |
@@ -203,6 +260,13 @@ them is wrong by a wide margin. `phases` is absent entirely for observational an
 | `NCT05844436` | EXPANDED_ACCESS — no phases, **no dates at all**, no enrollment, status `AVAILABLE` |
 | `NCT06077760` | **33 countries, 229 sites** — choropleth and site-count exercise |
 | `NCT07725679` | **future ESTIMATED start (2027-02)**, NOT_YET_RECRUITING, 0 locations |
+
+One further record lives in `tests/fixtures/results_studies/`, kept separate because the
+eleven above back hand-counted golden assertions that a twelfth would silently shift:
+
+| NCT ID | Why it's here |
+|---|---|
+| `NCT01866319` | **full `resultsSection`** — three arms, participant flow, adverse events, baseline age and sex. 144 KB against ~17 KB for a registration-only record |
 
 Between them these cover every quirk in the plan's normalizer section plus the two
 corrections above: absent `phases`, absent dates, absent `type`, zero and million-scale

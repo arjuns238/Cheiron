@@ -848,6 +848,15 @@ def _warnings(plan: Plan, result: AggregationResult) -> list[str]:
         if field_spec.note:
             warnings.append(field_spec.note)
 
+    # The measured field carries its own caveats, and they are the ones that decide whether
+    # the number means what it looks like — a serious-adverse-event count is uninterpretable
+    # without its safety-population denominator. Emitting notes only for `group_by` silently
+    # dropped exactly the field whose value is being charted.
+    for key in (plan.metric_field, plan.distinct_of):
+        if key and key != plan.group_by and (note := FIELDS[key].note):
+            if note not in warnings:
+                warnings.append(note)
+
     for reason, count in sorted(result.excluded_by_reason.items()):
         warnings.append(f"{count} record(s) excluded: {reason.replace('_', ' ')}.")
 

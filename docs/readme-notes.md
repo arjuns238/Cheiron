@@ -428,3 +428,97 @@ impression is simply wrong.
 timeout is retried automatically, and that a first slow call is expected rather than
 representative. Worth adding to "how to run": issue one warm-up query before demoing on
 Anthropic.
+
+---
+
+## 16. "Recruiting trials in a country" has two readings, and the planner picks one
+
+**The problem.** `04-geographic` answers "where are recruiting trials for NSCLC running?"
+by filtering trial-level status (`filter.overallStatus=RECRUITING`) and then grouping by
+the countries those trials list sites in. That shows countries where a *recruiting trial*
+has **any** site — including sites that are closed.
+
+The other reading is site-level: countries where recruitment is actually open, via
+`SEARCH[Location](AREA[LocationStatus]RECRUITING)`. The system supports it (`site_status`),
+and the planner did not choose it here.
+
+The two differ by a lot. Corpus-wide, France has 42,635 trials under the unnested reading
+and 9,347 under the nested one (`api-findings.md`). On this example the independent
+recount initially used the site-level form and disagreed by hundreds of trials per country.
+
+**Why silence is not acceptable.** A map captioned "recruiting trials" invites the reading
+"you can enrol here", which the trial-level filter does not support. Both readings are
+defensible; publishing one without naming it lets the reader assume the stronger claim.
+
+**What the README must say.** That both readings exist, which one a given response used —
+visible in `meta.plan` and `meta.api_requests` — and that `site_status` selects the nested
+one. Note that on Anthropic `site_status` is among the withheld fields (§1), so that
+provider cannot choose the nested reading from a natural-language query at all; a caller
+who needs it must set it structurally.
+
+---
+
+## 17. Posted results ARE available, and the earlier limitations list said otherwise
+
+**The problem.** An earlier version of this system listed "posted results" among the
+registry's limitations, alongside genuine ones like per-site enrolment. That was wrong.
+`resultsSection` is present and substantial — **789 of 3,743 melanoma trials carry one** —
+with participant flow, baseline characteristics, adverse events and outcome measures.
+Declining to read it was a scope decision (`plan.md` says "v2"), described as though the
+data did not exist.
+
+Two further items in that list were also miscategorised:
+
+- *"Patient-level questions"* was too broad. `baselineCharacteristicsModule` reports
+  aggregate `Age, Continuous` and `Sex: Female, Male` for the whole enrolled population, so
+  "what is the typical age of participants" is answerable. The system was refusing a
+  question it could answer.
+- *"Semantic search over eligibility criteria"* is a scope cut, not a data gap. The text is
+  in the API; it is simply not indexed here.
+
+Results are now read. Nine fields were added — serious adverse events and deaths with
+**their own separate denominators**, participant flow, baseline age with its statistic
+type, and sex counts. Live: median serious-AE participants by sponsor class over melanoma
+Phase 3 trials (industry 184.5, n=62), and baseline age 58 across 321 completed melanoma
+trials.
+
+**Outcome measures remain deliberately unread**, and that distinction is the point.
+Measured: 25 melanoma trials with results carried **157 outcome measures under 144 distinct
+titles in 34 distinct units** — even `"Percentage of participants"` and
+`"Percentage of Participants"` are separate. There is nothing to aggregate across trials
+without an ontology this project does not have, and reducing them to a number would be
+exactly the plausible-but-wrong output the rest of the system refuses.
+
+Two extraction rules that are easy to get wrong, and are load-bearing:
+
+- **Adverse events are summed across arms; baseline figures are not.** `eventGroups` has no
+  total row and each participant belongs to one arm, so summing is the trial total. Baseline
+  tables *do* have a `Total` column (present on every trial sampled), and an unweighted mean
+  of arm means is not the population mean unless the arms are equal size.
+- **Deaths keep their own denominator.** `deathsNumAtRisk` and `seriousNumAtRisk` are
+  allowed to differ; sharing one would compute a mortality rate against the wrong population.
+
+Absent results are `None`, never zero — a trial reporting no deaths and a trial that never
+reported are different populations, and folding them together makes safety look better the
+less it was reported. The captured example shows the scale of this: **219 melanoma Phase 3
+trials match, and 140 of them — 64% — have posted no results at all**. Those 140 appear in
+`excluded_by_reason`, so the chart's 79 trials reconcile against the 219 retrieved and the
+reader can see what the median was actually taken over.
+
+One bug this example caught, worth stating because it is the failure mode the whole system
+is built against. The chart published a median of 184.5 participants with serious adverse
+events, and dropped the field's own registry note — *compare against `serious_ae_at_risk`
+rather than enrolment* — because warnings were emitted for the grouped field only, never
+the measured one. Every number was correct; the one sentence that made them interpretable
+was missing. Notes are now emitted for `metric_field` and `distinct_of` as well.
+
+**Why silence is not acceptable.** A limitations list is a claim about the data source. One
+that misattributes a scope decision to the registry misleads the reader about what is
+possible, and in this case caused the router to refuse answerable questions with reasons
+that were untrue.
+
+**What the README must say.** Limitations split into two headed groups — *the registry does
+not hold it* (cross-trial efficacy with the 144-titles figure, per-person data, per-site
+enrolment, free-text name duplication) and *this version does not read it* (outcome
+measures, eligibility-text search). Never one list, because the reader cannot tell which is
+which, and the difference is exactly what "what I would do with more time" is made of.

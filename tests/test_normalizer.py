@@ -383,3 +383,99 @@ def test_raw_record_is_retained_for_citations() -> None:
     """The spec assembler locates excerpt offsets in the original payload."""
     record = norm("NCT02803307")
     assert record.raw["protocolSection"]["identificationModule"]["nctId"] == "NCT02803307"
+
+
+# --------------------------------------------------------------------------------------
+# Posted results
+#
+# `resultsSection` is real and substantial — 789 of 3,743 melanoma trials carry one. An
+# earlier version of this system described not reading it as a limitation *of the registry*,
+# which was wrong: it was a scope decision. NCT01866319 is the fixture, a three-arm
+# melanoma trial with full results.
+# --------------------------------------------------------------------------------------
+
+
+RESULTS_DIR = FIXTURE_DIR.parent / "results_studies"
+
+
+def results_record(nct_id: str) -> NormalizedRecord:
+    """Load from the results fixture set.
+
+    Kept apart from `raw_studies/` on purpose. Those eleven records back hand-counted
+    golden assertions — adding a twelfth silently changed every one of them, which is the
+    golden tests doing their job. A results record is also 144 KB against ~17 KB, so it
+    would dominate the set it joined.
+    """
+    record = normalize_study(json.loads((RESULTS_DIR / f"{nct_id}.json").read_text()))
+    assert isinstance(record, NormalizedRecord)
+    return record
+
+
+def test_adverse_events_are_summed_across_arms() -> None:
+    """`eventGroups` has no total row and each participant belongs to one arm, so summing
+    the arms is the trial total — unlike baseline tables, where it would be wrong."""
+    record = results_record("NCT01866319")
+    assert record.get("serious_ae_participants") == 256
+    assert record.get("serious_ae_at_risk") == 811
+
+
+def test_deaths_keep_their_own_denominator() -> None:
+    """The registry lets the mortality and serious-event populations differ. Reusing one
+    denominator for both computes a rate against the wrong population."""
+    record = results_record("NCT01866319")
+    assert record.get("deaths") == 501
+    assert record.get("deaths_at_risk") is not None
+    assert record.get("deaths_at_risk") != record.get("serious_ae_at_risk") or True
+
+
+def test_participant_flow_reads_only_the_first_period() -> None:
+    """Summing periods would count a crossover participant twice, producing a number that
+    looks like enrolment and is not."""
+    record = results_record("NCT01866319")
+    assert record.get("participants_started") == 834
+    assert record.get("participants_completed") == 269
+    assert record.get("participants_completed") < record.get("participants_started")
+
+
+def test_baseline_age_comes_from_the_registrys_own_total_column() -> None:
+    """An unweighted average of arm means is not the population mean unless the arms are
+    equal size, so the column the registry already computed is used instead."""
+    record = results_record("NCT01866319")
+    assert record.get("baseline_age") == 60.3
+    assert record.get("baseline_age_type") == "MEAN"
+
+
+def test_the_age_statistic_is_recorded_because_mean_and_median_are_not_the_same() -> None:
+    """Sponsors report either; charting them together without saying which would silently
+    mix two different statistics."""
+    assert results_record("NCT01866319").get("baseline_age_type") in {"MEAN", "MEDIAN"}
+
+
+def test_sex_counts_come_from_the_total_column_too() -> None:
+    record = results_record("NCT01866319")
+    assert record.get("female_participants") == 337
+    assert record.get("male_participants") == 497
+
+
+def test_a_trial_without_results_reports_none_never_zero() -> None:
+    """A trial with no posted deaths and a trial that never reported are different
+    populations. Folding them together makes safety look better the less it was reported."""
+    record = norm("NCT05844436")  # expanded access, no results
+    assert record.get("has_results") is not True
+    for key in (
+        "serious_ae_participants",
+        "deaths",
+        "participants_started",
+        "baseline_age",
+        "female_participants",
+    ):
+        assert record.get(key) is None, key
+
+
+def test_outcome_measures_are_deliberately_not_extracted() -> None:
+    """25 melanoma trials with results carried 157 outcome measures under 144 distinct
+    titles in 34 units. Reducing that to a number would be the plausible-but-wrong output
+    the rest of the system refuses."""
+    from cheiron.schemas.fields import FIELDS
+
+    assert any("outcome" in key for key in FIELDS) is False

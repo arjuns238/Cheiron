@@ -174,6 +174,26 @@ def test_multi_valued_dimension_overcounts_and_says_so(records: list[NormalizedR
     assert any("more than the number of distinct trials" in w for w in result.warnings)
 
 
+def test_the_measured_fields_note_is_warned_about_not_just_the_grouped_one(
+    records: list[NormalizedRecord],
+) -> None:
+    """The caveat that decides whether a value means what it looks like is on the metric.
+
+    Warnings were emitted only for `group_by`, so charting the median of a field whose
+    registry note says "compare against its own denominator" dropped exactly that note.
+    """
+    plan = Plan(
+        legs=[Leg(label="All trials")],
+        group_by="status",
+        metric=Metric.MEDIAN,
+        metric_field="enrollment",
+    )
+    result = aggregate(plan, one_leg(records))
+
+    assert any("right-skewed" in w for w in result.warnings)  # enrollment's own note
+    assert any("UNKNOWN is a real recorded value" in w for w in result.warnings)  # status'
+
+
 def test_trials_without_locations_are_excluded_and_counted(
     records: list[NormalizedRecord],
 ) -> None:

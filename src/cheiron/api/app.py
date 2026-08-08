@@ -48,17 +48,26 @@ VERSION = "0.1.0"
 
 #: Stated in `/capabilities` and the README. Copied from `plan.md` §4 — these are questions
 #: the registry cannot answer, not chart types the system lacks.
+#: Two different kinds of limit, kept apart on purpose. Conflating them once led this
+#: system to refuse questions it could answer, for reasons that were not true.
 LIMITATIONS = [
-    "Comparative efficacy ('which drug works better') — trials report outcome measures with "
-    "incommensurable endpoints, units and analysis types, so no field means 'worked better'.",
-    "Patient-level questions — the registry holds trial-level records, never individual "
-    "participants.",
+    # --- the registry does not hold it ---------------------------------------------
+    "Comparative efficacy ('which drug works better') — posted results exist, but each "
+    "sponsor defines its own endpoints, units and analysis windows. Measured: 25 melanoma "
+    "trials with results carried 157 outcome measures under 144 distinct titles in 34 "
+    "units. There is no comparable field meaning 'worked better'.",
+    "Individual participants — records are aggregate, at trial level and (with posted "
+    "results) arm level. Aggregate demographics are available; per-person data is not.",
     "Enrolment attributed to a place — enrolment is recorded once per trial, not per site, "
     "so a multi-country trial has no per-country figure.",
-    "Semantic search over eligibility criteria — those are free prose and are not indexed.",
-    "Posted results — only the registration record is read, never resultsSection.",
     "Sponsor and intervention names are free text and are not deduplicated; the same "
     "organisation or agent can appear under several spellings.",
+    # --- this version does not read it ---------------------------------------------
+    "Not implemented: outcome measures from resultsSection. Participant flow, adverse "
+    "events and baseline demographics ARE read; outcome measures are excluded because they "
+    "are not comparable across trials, not because they are unavailable.",
+    "Not implemented: semantic search over eligibility criteria. The text is in the API; "
+    "it is simply not indexed here.",
 ]
 
 

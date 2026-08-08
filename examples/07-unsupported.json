@@ -1,0 +1,61 @@
+{
+  "request_id": "example-07-unsupported",
+  "response_type": "unsupported",
+  "answer": "ClinicalTrials.gov records trial-level and arm-level results, but it does not provide a comparable registry field for \"works better\" across drugs. Sponsors define different endpoints, analysis windows, and units for melanoma studies, so efficacy cannot be aggregated into a fair head-to-head comparison from the registry alone.",
+  "visualization": {
+    "type": "kpi",
+    "title": "Not answerable from registration data",
+    "subtitle": null,
+    "encoding": {
+      "x": null,
+      "y": null,
+      "series": null
+    },
+    "data": [],
+    "config": {
+      "sort": null,
+      "granularity": null,
+      "top_n": null,
+      "other_bucket": false,
+      "stacked": false,
+      "y_starts_at_zero": true,
+      "suggested_min_occurrences": null,
+      "value_format": null
+    }
+  },
+  "citations": {},
+  "meta": {
+    "interpretation": "ClinicalTrials.gov records trial-level and arm-level results, but it does not provide a comparable registry field for \"works better\" across drugs. Sponsors define different endpoints, analysis windows, and units for melanoma studies, so efficacy cannot be aggregated into a fair head-to-head comparison from the registry alone.",
+    "plan": null,
+    "filters_applied": {},
+    "counting_semantics": null,
+    "record_counts": {
+      "matched": 0,
+      "retrieved": 0,
+      "used": 0,
+      "excluded_by_reason": {},
+      "truncated": false
+    },
+    "assumptions": [],
+    "warnings": [
+      "ClinicalTrials.gov records trial-level and arm-level results, but it does not provide a comparable registry field for \"works better\" across drugs. Sponsors define different endpoints, analysis windows, and units for melanoma studies, so efficacy cannot be aggregated into a fair head-to-head comparison from the registry alone."
+    ],
+    "planning_trace": [],
+    "api_requests": [],
+    "suggested_requests": [
+      {
+        "query": "How many ClinicalTrials.gov studies have evaluated pembrolizumab for melanoma, and how has that changed over time?"
+      },
+      {
+        "query": "How many ClinicalTrials.gov studies have evaluated nivolumab for melanoma, and how has that changed over time?"
+      },
+      {
+        "query": "Which sponsors and phases are most common in ClinicalTrials.gov melanoma studies of pembrolizumab and nivolumab?"
+      }
+    ],
+    "generated_at": "<captured>",
+    "cache_hit": false,
+    "llm_provider": "openai",
+    "elapsed_ms": null
+  }
+}

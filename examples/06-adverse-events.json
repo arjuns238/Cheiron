@@ -1,0 +1,394 @@
+{
+  "request_id": "example-06-adverse-events",
+  "response_type": "visualization",
+  "answer": "Across 79 trials, the highest sponsor class is INDUSTRY at 184.5 participants.",
+  "visualization": {
+    "type": "bar",
+    "title": "Median Participants With a Serious Adverse Event by Sponsor Class — Melanoma phase 3 trials",
+    "subtitle": "Each value is the median of participants with a serious adverse event over the trials in that bucket.",
+    "encoding": {
+      "x": {
+        "field": "sponsor_class",
+        "label": "Sponsor Class",
+        "type": "ordinal",
+        "unit": null
+      },
+      "y": {
+        "field": "value",
+        "label": "Median Participants With a Serious Adverse Event",
+        "type": "quantitative",
+        "unit": "participants"
+      },
+      "series": null
+    },
+    "data": [
+      {
+        "value": 184.5,
+        "nct_ids": [
+          "NCT01866319",
+          "NCT00671918",
+          "NCT02362594",
+          "NCT01368276",
+          "NCT02829775"
+        ],
+        "nct_id_total": 62,
+        "sponsor_class": "INDUSTRY"
+      },
+      {
+        "value": 175.5,
+        "nct_ids": [
+          "NCT00003641",
+          "NCT00006237"
+        ],
+        "nct_id_total": 2,
+        "sponsor_class": "NETWORK"
+      },
+      {
+        "value": 173.5,
+        "nct_ids": [
+          "NCT02224781",
+          "NCT01989572",
+          "NCT00019682",
+          "NCT00110019",
+          "NCT02506153"
+        ],
+        "nct_id_total": 6,
+        "sponsor_class": "NIH"
+      },
+      {
+        "value": 0.0,
+        "nct_ids": [
+          "NCT01748448",
+          "NCT03294330",
+          "NCT04588246",
+          "NCT03233828",
+          "NCT01259284"
+        ],
+        "nct_id_total": 9,
+        "sponsor_class": "OTHER"
+      }
+    ],
+    "config": {
+      "sort": "value_desc",
+      "granularity": null,
+      "top_n": null,
+      "other_bucket": false,
+      "stacked": false,
+      "y_starts_at_zero": false,
+      "suggested_min_occurrences": null,
+      "value_format": "decimal:1"
+    }
+  },
+  "citations": {
+    "NCT01866319": {
+      "nct_id": "NCT01866319",
+      "url": "https://clinicaltrials.gov/study/NCT01866319",
+      "brief_title": "Study to Evaluate the Safety and Efficacy of Two Different Dosing Schedules of Pembrolizumab (MK-3475) Compared to Ipilimumab in Participants With Advanced Melanoma (MK-3475-006/KEYNOTE-006)",
+      "field_path": "protocolSection.sponsorCollaboratorsModule.leadSponsor.class",
+      "field_value": "INDUSTRY",
+      "excerpt": "\"class\":\"INDUSTRY\"",
+      "offset": [
+        318,
+        336
+      ]
+    },
+    "NCT00671918": {
+      "nct_id": "NCT00671918",
+      "url": "https://clinicaltrials.gov/study/NCT00671918",
+      "brief_title": "Trial of Lymphoseek in Intraoperative Localization of Lymph Nodes in Breast Cancer and Melanoma",
+      "field_path": "protocolSection.sponsorCollaboratorsModule.leadSponsor.class",
+      "field_value": "INDUSTRY",
+      "excerpt": "\"class\":\"INDUSTRY\"",
+      "offset": [
+        223,
+        241
+      ]
+    },
+    "NCT02362594": {
+      "nct_id": "NCT02362594",
+      "url": "https://clinicaltrials.gov/study/NCT02362594",
+      "brief_title": "Study of Pembrolizumab (MK-3475) Versus Placebo After Complete Resection of High-Risk Stage III Melanoma (MK-3475-054/1325-MG/KEYNOTE-054)",
+      "field_path": "protocolSection.sponsorCollaboratorsModule.leadSponsor.class",
+      "field_value": "INDUSTRY",
+      "excerpt": "\"class\":\"INDUSTRY\"",
+      "offset": [
+        266,
+        284
+      ]
+    },
+    "NCT01368276": {
+      "nct_id": "NCT01368276",
+      "url": "https://clinicaltrials.gov/study/NCT01368276",
+      "brief_title": "An Extended Use Study of Safety and Efficacy of Talimogene Laherparepvec in Melanoma",
+      "field_path": "protocolSection.sponsorCollaboratorsModule.leadSponsor.class",
+      "field_value": "INDUSTRY",
+      "excerpt": "\"class\":\"INDUSTRY\"",
+      "offset": [
+        212,
+        230
+      ]
+    },
+    "NCT02829775": {
+      "nct_id": "NCT02829775",
+      "url": "https://clinicaltrials.gov/study/NCT02829775",
+      "brief_title": "A Study of Continued Treatment Among Participants Who Have Responded to Peginterferon Alfa-2a (Pegasys®) or Recombinant Interferon Alfa-2a (Roferon-A®) in Prior Clinical Studies",
+      "field_path": "protocolSection.sponsorCollaboratorsModule.leadSponsor.class",
+      "field_value": "INDUSTRY",
+      "excerpt": "\"class\":\"INDUSTRY\"",
+      "offset": [
+        305,
+        323
+      ]
+    },
+    "NCT00003641": {
+      "nct_id": "NCT00003641",
+      "url": "https://clinicaltrials.gov/study/NCT00003641",
+      "brief_title": "High-Dose Interferon Alfa in Treating Patients With Stage II or Stage III Melanoma",
+      "field_path": "protocolSection.sponsorCollaboratorsModule.leadSponsor.class",
+      "field_value": "NETWORK",
+      "excerpt": "\"class\":\"NETWORK\"",
+      "offset": [
+        210,
+        227
+      ]
+    },
+    "NCT00006237": {
+      "nct_id": "NCT00006237",
+      "url": "https://clinicaltrials.gov/study/NCT00006237",
+      "brief_title": "S0008: Chemotherapy Plus Biological Therapy in Treating Patients With Melanoma",
+      "field_path": "protocolSection.sponsorCollaboratorsModule.leadSponsor.class",
+      "field_value": "NETWORK",
+      "excerpt": "\"class\":\"NETWORK\"",
+      "offset": [
+        206,
+        223
+      ]
+    },
+    "NCT02224781": {
+      "nct_id": "NCT02224781",
+      "url": "https://clinicaltrials.gov/study/NCT02224781",
+      "brief_title": "Dabrafenib and Trametinib Followed by Ipilimumab and Nivolumab or Ipilimumab and Nivolumab Followed by Dabrafenib and Trametinib in Treating Patients With Stage III-IV BRAFV600 Melanoma",
+      "field_path": "protocolSection.sponsorCollaboratorsModule.leadSponsor.class",
+      "field_value": "NIH",
+      "excerpt": "\"class\":\"NIH\"",
+      "offset": [
+        313,
+        326
+      ]
+    },
+    "NCT01989572": {
+      "nct_id": "NCT01989572",
+      "url": "https://clinicaltrials.gov/study/NCT01989572",
+      "brief_title": "Sargramostim, Vaccine Therapy, or Sargramostim and Vaccine Therapy in Preventing Disease Recurrence in Patients With Melanoma That Has Been Removed By Surgery",
+      "field_path": "protocolSection.sponsorCollaboratorsModule.leadSponsor.class",
+      "field_value": "NIH",
+      "excerpt": "\"class\":\"NIH\"",
+      "offset": [
+        286,
+        299
+      ]
+    },
+    "NCT00019682": {
+      "nct_id": "NCT00019682",
+      "url": "https://clinicaltrials.gov/study/NCT00019682",
+      "brief_title": "Aldesleukin With or Without Vaccine Therapy in Treating Patients With Locally Advanced or Metastatic Melanoma",
+      "field_path": "protocolSection.sponsorCollaboratorsModule.leadSponsor.class",
+      "field_value": "NIH",
+      "excerpt": "\"class\":\"NIH\"",
+      "offset": [
+        237,
+        250
+      ]
+    },
+    "NCT00110019": {
+      "nct_id": "NCT00110019",
+      "url": "https://clinicaltrials.gov/study/NCT00110019",
+      "brief_title": "Carboplatin and Paclitaxel With or Without Sorafenib Tosylate in Treating Patients With Stage III or Stage IV Melanoma That Cannot Be Removed by Surgery",
+      "field_path": "protocolSection.sponsorCollaboratorsModule.leadSponsor.class",
+      "field_value": "NIH",
+      "excerpt": "\"class\":\"NIH\"",
+      "offset": [
+        280,
+        293
+      ]
+    },
+    "NCT02506153": {
+      "nct_id": "NCT02506153",
+      "url": "https://clinicaltrials.gov/study/NCT02506153",
+      "brief_title": "Physician/Patient Choice of Either High-Dose Recombinant Interferon Alfa-2B or Ipilimumab, Versus Pembrolizumab in Treating Patients With Stage III-IV High Risk Melanoma That Has Been Removed by Surgery",
+      "field_path": "protocolSection.sponsorCollaboratorsModule.leadSponsor.class",
+      "field_value": "NIH",
+      "excerpt": "\"class\":\"NIH\"",
+      "offset": [
+        330,
+        343
+      ]
+    },
+    "NCT01748448": {
+      "nct_id": "NCT01748448",
+      "url": "https://clinicaltrials.gov/study/NCT01748448",
+      "brief_title": "Vitamin D Supplementation in Cutaneous Malignant Melanoma Outcome",
+      "field_path": "protocolSection.sponsorCollaboratorsModule.leadSponsor.class",
+      "field_value": "OTHER",
+      "excerpt": "\"class\":\"OTHER\"",
+      "offset": [
+        193,
+        208
+      ]
+    },
+    "NCT03294330": {
+      "nct_id": "NCT03294330",
+      "url": "https://clinicaltrials.gov/study/NCT03294330",
+      "brief_title": "SPY-X: A Study to Assess the Feasibility of Using SPY Alone for Sentinel Node Localization for Melanoma or Breast Cancer",
+      "field_path": "protocolSection.sponsorCollaboratorsModule.leadSponsor.class",
+      "field_value": "OTHER",
+      "excerpt": "\"class\":\"OTHER\"",
+      "offset": [
+        248,
+        263
+      ]
+    },
+    "NCT04588246": {
+      "nct_id": "NCT04588246",
+      "url": "https://clinicaltrials.gov/study/NCT04588246",
+      "brief_title": "Comparing Whole Brain Radiotherapy Using a Technique That Avoids the Hippocampus to Stereotactic Radiosurgery in Patients With Cancer That Has Spread to the Brain and Come Back in Other Areas of the Brain After Earlier Stereotactic Radiosurgery",
+      "field_path": "protocolSection.sponsorCollaboratorsModule.leadSponsor.class",
+      "field_value": "OTHER",
+      "excerpt": "Comparing Whole Brain Radiotherapy Using a Technique That Avoids the Hippocampus to Stereot",
+      "offset": [
+        80,
+        171
+      ]
+    },
+    "NCT03233828": {
+      "nct_id": "NCT03233828",
+      "url": "https://clinicaltrials.gov/study/NCT03233828",
+      "brief_title": "Pre-Treatment of Highly Suspicious Pigmented Skin Lesions With Interleukin-2",
+      "field_path": "protocolSection.sponsorCollaboratorsModule.leadSponsor.class",
+      "field_value": "OTHER",
+      "excerpt": "\"class\":\"OTHER\"",
+      "offset": [
+        204,
+        219
+      ]
+    },
+    "NCT01259284": {
+      "nct_id": "NCT01259284",
+      "url": "https://clinicaltrials.gov/study/NCT01259284",
+      "brief_title": "Fish Oil Versus Statins Versus Placebos in Reducing Atrial Fibrillation in Patients Undergoing Thoracic Surgery for Lung Cancer",
+      "field_path": "protocolSection.sponsorCollaboratorsModule.leadSponsor.class",
+      "field_value": "OTHER",
+      "excerpt": "\"class\":\"OTHER\"",
+      "offset": [
+        255,
+        270
+      ]
+    }
+  },
+  "meta": {
+    "interpretation": "What is the median number of participants with serious adverse events in melanoma phase 3 trials, by sponsor class?",
+    "plan": {
+      "legs": [
+        {
+          "label": "Melanoma phase 3 trials",
+          "filters": {
+            "condition": "melanoma",
+            "intervention": null,
+            "sponsor": null,
+            "free_text": null,
+            "country": null,
+            "site_status": null,
+            "status": null,
+            "phase": [
+              "PHASE3"
+            ],
+            "start_year_min": null,
+            "start_year_max": null,
+            "study_type": null,
+            "sponsor_class": null,
+            "intervention_type": null,
+            "enrollment_min": null,
+            "enrollment_max": null,
+            "has_results": null,
+            "date_certainty": "any"
+          }
+        }
+      ],
+      "group_by": "sponsor_class",
+      "series_by": null,
+      "metric": "median",
+      "metric_field": "serious_ae_participants",
+      "distinct_of": null,
+      "granularity": null,
+      "layout": "aggregate",
+      "bins": null,
+      "bin_scale": "linear",
+      "top_n": null,
+      "sort": "value_desc",
+      "viz_hint": "bar",
+      "assumptions": [
+        "Interpreted 'melanoma' as the Condition filter rather than Condition MeSH or free-text.",
+        "Restricted to phase 3 trials using the phases field.",
+        "Computed the median of the trial-level field serious_ae_participants within each sponsor_class bucket.",
+        "Sponsor class is taken from the lead sponsor's sponsor_class field.",
+        "No overall-status filter was applied because the question did not specify recruitment or completion status.",
+        "Trials without a recorded serious_ae_participants value will be omitted from the median calculation by deterministic code."
+      ]
+    },
+    "filters_applied": {
+      "Melanoma phase 3 trials": {
+        "condition": "melanoma",
+        "phase": [
+          "PHASE3"
+        ]
+      },
+      "overrides": {}
+    },
+    "counting_semantics": "Each value is the median of participants with a serious adverse event over the trials in that bucket.",
+    "record_counts": {
+      "matched": 219,
+      "retrieved": 219,
+      "used": 79,
+      "excluded_by_reason": {
+        "missing_serious_ae_participants": 140
+      },
+      "truncated": false
+    },
+    "assumptions": [
+      "Interpreted 'melanoma' as the Condition filter rather than Condition MeSH or free-text.",
+      "Restricted to phase 3 trials using the phases field.",
+      "Computed the median of the trial-level field serious_ae_participants within each sponsor_class bucket.",
+      "Sponsor class is taken from the lead sponsor's sponsor_class field.",
+      "No overall-status filter was applied because the question did not specify recruitment or completion status.",
+      "Trials without a recorded serious_ae_participants value will be omitted from the median calculation by deterministic code."
+    ],
+    "warnings": [
+      "Summed across arm groups. Compare against serious_ae_at_risk rather than enrollment: the safety population is often smaller than the enrolled one.",
+      "140 record(s) excluded: missing serious ae participants.",
+      "Median is reported rather than mean because the underlying distribution is heavily right-skewed."
+    ],
+    "planning_trace": [
+      {
+        "tool": "fill_rate",
+        "args": {
+          "condition": "melanoma",
+          "phase": [
+            "PHASE3"
+          ],
+          "field_name": "serious_ae_participants"
+        },
+        "result": {
+          "error": "fill rate is not measurable for 'serious_ae_participants'; measurable fields are: enrollment, start_date, completion_date, primary_completion_date, phases, sponsor_class, countries, intervention_types"
+        }
+      }
+    ],
+    "api_requests": [
+      "https://clinicaltrials.gov/api/v2/studies?format=json&pageSize=1000&countTotal=true&fields=NCTId%2CBriefTitle%2CLeadSponsorClass%2CEventGroupSeriousNumAffected%2CEventGroupSeriousNumAtRisk%2CEventGroupDeathsNumAffected%2CEventGroupDeathsNumAtRisk&query.cond=melanoma&filter.advanced=AREA%5BPhase%5DPHASE3"
+    ],
+    "suggested_requests": [],
+    "generated_at": "<captured>",
+    "cache_hit": true,
+    "llm_provider": "openai",
+    "elapsed_ms": null
+  }
+}

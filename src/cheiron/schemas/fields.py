@@ -335,6 +335,172 @@ _FIELDS: tuple[FieldSpec, ...] = (
         projection=("HasResults",),
         label="Has Posted Results",
     ),
+    # --- posted results ------------------------------------------------------------
+    # Present only when `has_results` is true — 789 of 3,743 melanoma trials. Every field
+    # here is *structurally comparable* across trials: a participant count means the same
+    # thing in every record. Outcome measures deliberately are not represented, because
+    # they are not: 25 melanoma trials yielded 157 measures with 144 distinct titles and
+    # 34 distinct units. See `docs/readme-notes.md`.
+    #
+    # Absent results are None, never zero. A trial reporting no deaths and a trial that
+    # never reported are different populations, and folding them together would make
+    # safety look better the less it was reported.
+    FieldSpec(
+        key="serious_ae_participants",
+        kind=FieldKind.NUMERIC,
+        source="resultsSection.adverseEventsModule.eventGroups[].seriousNumAffected",
+        projection=(
+            "EventGroupSeriousNumAffected",
+            "EventGroupSeriousNumAtRisk",
+            "EventGroupDeathsNumAffected",
+            "EventGroupDeathsNumAtRisk",
+        ),
+        measurable=True,
+        groupable=False,
+        skewed=True,
+        label="Participants With a Serious Adverse Event",
+        note="Summed across arm groups. Compare against serious_ae_at_risk rather than "
+        "enrollment: the safety population is often smaller than the enrolled one.",
+    ),
+    FieldSpec(
+        key="serious_ae_at_risk",
+        kind=FieldKind.NUMERIC,
+        source="resultsSection.adverseEventsModule.eventGroups[].seriousNumAtRisk",
+        projection=(
+            "EventGroupSeriousNumAffected",
+            "EventGroupSeriousNumAtRisk",
+            "EventGroupDeathsNumAffected",
+            "EventGroupDeathsNumAtRisk",
+        ),
+        measurable=True,
+        groupable=False,
+        skewed=True,
+        label="Safety Population",
+    ),
+    FieldSpec(
+        key="deaths",
+        kind=FieldKind.NUMERIC,
+        source="resultsSection.adverseEventsModule.eventGroups[].deathsNumAffected",
+        projection=(
+            "EventGroupSeriousNumAffected",
+            "EventGroupSeriousNumAtRisk",
+            "EventGroupDeathsNumAffected",
+            "EventGroupDeathsNumAtRisk",
+        ),
+        measurable=True,
+        groupable=False,
+        skewed=True,
+        label="Deaths (All Cause)",
+        note="All-cause mortality over the reporting window, not deaths attributed to the "
+        "intervention. Has its own denominator, deaths_at_risk.",
+    ),
+    FieldSpec(
+        key="deaths_at_risk",
+        kind=FieldKind.NUMERIC,
+        source="resultsSection.adverseEventsModule.eventGroups[].deathsNumAtRisk",
+        projection=(
+            "EventGroupSeriousNumAffected",
+            "EventGroupSeriousNumAtRisk",
+            "EventGroupDeathsNumAffected",
+            "EventGroupDeathsNumAtRisk",
+        ),
+        measurable=True,
+        groupable=False,
+        skewed=True,
+        label="Mortality Denominator",
+    ),
+    FieldSpec(
+        key="participants_started",
+        kind=FieldKind.NUMERIC,
+        source="resultsSection.participantFlowModule.periods[0].milestones[STARTED]",
+        projection=("FlowMilestoneType", "FlowAchievementNumSubjects"),
+        measurable=True,
+        groupable=False,
+        skewed=True,
+        label="Participants Started",
+        note="First reporting period only. Summing periods would count a crossover "
+        "participant twice.",
+    ),
+    FieldSpec(
+        key="participants_completed",
+        kind=FieldKind.NUMERIC,
+        source="resultsSection.participantFlowModule.periods[0].milestones[COMPLETED]",
+        projection=("FlowMilestoneType", "FlowAchievementNumSubjects"),
+        measurable=True,
+        groupable=False,
+        skewed=True,
+        label="Participants Completed",
+    ),
+    FieldSpec(
+        key="baseline_age",
+        kind=FieldKind.NUMERIC,
+        source="resultsSection.baselineCharacteristicsModule.measures[Age]",
+        projection=(
+            "BaselineMeasureTitle",
+            "BaselineMeasureParamType",
+            "BaselineCategoryTitle",
+            "BaselineMeasurementValue",
+            "BaselineMeasurementGroupId",
+            "BaselineGroupId",
+            "BaselineGroupTitle",
+        ),
+        measurable=True,
+        groupable=False,
+        label="Baseline Age",
+        note="Read from the registry's own Total column. Sponsors report a mean or a "
+        "median and say which in baseline_age_type; the two are not interchangeable.",
+    ),
+    FieldSpec(
+        key="baseline_age_type",
+        kind=FieldKind.CATEGORICAL,
+        source="resultsSection.baselineCharacteristicsModule.measures[Age].paramType",
+        projection=(
+            "BaselineMeasureTitle",
+            "BaselineMeasureParamType",
+            "BaselineCategoryTitle",
+            "BaselineMeasurementValue",
+            "BaselineMeasurementGroupId",
+            "BaselineGroupId",
+            "BaselineGroupTitle",
+        ),
+        label="Baseline Age Statistic",
+    ),
+    FieldSpec(
+        key="female_participants",
+        kind=FieldKind.NUMERIC,
+        source="resultsSection.baselineCharacteristicsModule.measures[Sex].Female",
+        projection=(
+            "BaselineMeasureTitle",
+            "BaselineMeasureParamType",
+            "BaselineCategoryTitle",
+            "BaselineMeasurementValue",
+            "BaselineMeasurementGroupId",
+            "BaselineGroupId",
+            "BaselineGroupTitle",
+        ),
+        measurable=True,
+        groupable=False,
+        skewed=True,
+        label="Female Participants",
+    ),
+    FieldSpec(
+        key="male_participants",
+        kind=FieldKind.NUMERIC,
+        source="resultsSection.baselineCharacteristicsModule.measures[Sex].Male",
+        projection=(
+            "BaselineMeasureTitle",
+            "BaselineMeasureParamType",
+            "BaselineCategoryTitle",
+            "BaselineMeasurementValue",
+            "BaselineMeasurementGroupId",
+            "BaselineGroupId",
+            "BaselineGroupTitle",
+        ),
+        measurable=True,
+        groupable=False,
+        skewed=True,
+        label="Male Participants",
+    ),
     # --- stretch: MeSH normalization ----------------------------------------------
     # These are already in the payload and cost almost nothing, and they are what make a
     # drug-network graph credible: MeSH terms are a controlled vocabulary, raw

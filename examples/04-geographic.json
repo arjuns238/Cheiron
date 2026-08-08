@@ -1,0 +1,594 @@
+{
+  "request_id": "example-04-geographic",
+  "response_type": "visualization",
+  "answer": "Across 1,295 trials, the highest country is China at 569.",
+  "visualization": {
+    "type": "choropleth",
+    "title": "Distinct NCT ID by Country — Recruiting NSCLC trials",
+    "subtitle": "Each value is the number of distinct nct id values across the trials in that bucket, not a trial count.",
+    "encoding": {
+      "x": {
+        "field": "countries",
+        "label": "Country",
+        "type": "nominal",
+        "unit": null
+      },
+      "y": {
+        "field": "value",
+        "label": "Distinct NCT ID",
+        "type": "quantitative",
+        "unit": null
+      },
+      "series": null
+    },
+    "data": [
+      {
+        "value": 569.0,
+        "nct_ids": [
+          "NCT05613452",
+          "NCT05011487",
+          "NCT06109454",
+          "NCT06895031",
+          "NCT06388031"
+        ],
+        "nct_id_total": 569,
+        "countries": "China"
+      },
+      {
+        "value": 520.0,
+        "nct_ids": [
+          "NCT06983743",
+          "NCT04165070",
+          "NCT06116786",
+          "NCT06758401",
+          "NCT06545331"
+        ],
+        "nct_id_total": 520,
+        "countries": "United States"
+      },
+      {
+        "value": 168.0,
+        "nct_ids": [
+          "NCT04165070",
+          "NCT06116786",
+          "NCT06758401",
+          "NCT05208762",
+          "NCT05363280"
+        ],
+        "nct_id_total": 168,
+        "countries": "Spain"
+      },
+      {
+        "value": 164.0,
+        "nct_ids": [
+          "NCT06758401",
+          "NCT05706129",
+          "NCT05208762",
+          "NCT06793215",
+          "NCT05751798"
+        ],
+        "nct_id_total": 164,
+        "countries": "France"
+      },
+      {
+        "value": 150.0,
+        "nct_ids": [
+          "NCT04165070",
+          "NCT06758401",
+          "NCT05208762",
+          "NCT07637474",
+          "NCT06793215"
+        ],
+        "nct_id_total": 150,
+        "countries": "Italy"
+      },
+      {
+        "value": 119.0,
+        "nct_ids": [
+          "NCT04165070",
+          "NCT06116786",
+          "NCT06758401",
+          "NCT06793215",
+          "NCT07468071"
+        ],
+        "nct_id_total": 119,
+        "countries": "South Korea"
+      },
+      {
+        "value": 110.0,
+        "nct_ids": [
+          "NCT06758401",
+          "NCT05706129",
+          "NCT06793215",
+          "NCT06890598",
+          "NCT03093116"
+        ],
+        "nct_id_total": 110,
+        "countries": "Australia"
+      },
+      {
+        "value": 108.0,
+        "nct_ids": [
+          "NCT06758401",
+          "NCT05624996",
+          "NCT05208762",
+          "NCT06793215",
+          "NCT07090499"
+        ],
+        "nct_id_total": 108,
+        "countries": "Canada"
+      },
+      {
+        "value": 106.0,
+        "nct_ids": [
+          "NCT06116786",
+          "NCT06758401",
+          "NCT05208762",
+          "NCT06793215",
+          "NCT06890598"
+        ],
+        "nct_id_total": 106,
+        "countries": "Germany"
+      },
+      {
+        "value": 106.0,
+        "nct_ids": [
+          "NCT05100069",
+          "NCT06758401",
+          "NCT05208762",
+          "NCT06793215",
+          "NCT06266299"
+        ],
+        "nct_id_total": 106,
+        "countries": "Japan"
+      },
+      {
+        "value": 314.0,
+        "nct_ids": [
+          "NCT07633626",
+          "NCT06868277",
+          "NCT06623422",
+          "NCT04928846",
+          "NCT06561386"
+        ],
+        "nct_id_total": 314,
+        "countries": "Other"
+      }
+    ],
+    "config": {
+      "sort": "value_desc",
+      "granularity": null,
+      "top_n": 10,
+      "other_bucket": true,
+      "stacked": false,
+      "y_starts_at_zero": true,
+      "suggested_min_occurrences": null,
+      "value_format": "decimal:1"
+    }
+  },
+  "citations": {
+    "NCT05613452": {
+      "nct_id": "NCT05613452",
+      "url": "https://clinicaltrials.gov/study/NCT05613452",
+      "brief_title": "Carbon Ion Therapy for Peripheral Non-small Cell Lung Cancer",
+      "field_path": "protocolSection.contactsLocationsModule.locations[].country[0]",
+      "field_value": "China",
+      "excerpt": "\"country\":\"China\"",
+      "offset": [
+        184,
+        201
+      ]
+    },
+    "NCT05011487": {
+      "nct_id": "NCT05011487",
+      "url": "https://clinicaltrials.gov/study/NCT05011487",
+      "brief_title": "Neoadjuvant Osimertinib + Chemotherapy for EGFR-mutant Stage III NSCLC",
+      "field_path": "protocolSection.contactsLocationsModule.locations[].country[0]",
+      "field_value": "China",
+      "excerpt": "\"country\":\"China\"",
+      "offset": [
+        194,
+        211
+      ]
+    },
+    "NCT06109454": {
+      "nct_id": "NCT06109454",
+      "url": "https://clinicaltrials.gov/study/NCT06109454",
+      "brief_title": "Observation on the Therapeutic Effect of Huaier Granules in the Adjuvant Treatment of Non-small Cell Lung Cancer After Radical Surgery",
+      "field_path": "protocolSection.contactsLocationsModule.locations[].country[0]",
+      "field_value": "China",
+      "excerpt": "\"country\":\"China\"",
+      "offset": [
+        258,
+        275
+      ]
+    },
+    "NCT06895031": {
+      "nct_id": "NCT06895031",
+      "url": "https://clinicaltrials.gov/study/NCT06895031",
+      "brief_title": "Study of JYP0015 in Patients With Advanced Solid Tumors Harboring Specific Mutations in RAS",
+      "field_path": "protocolSection.contactsLocationsModule.locations[].country[0]",
+      "field_value": "China",
+      "excerpt": "\"country\":\"China\"",
+      "offset": [
+        215,
+        232
+      ]
+    },
+    "NCT06388031": {
+      "nct_id": "NCT06388031",
+      "url": "https://clinicaltrials.gov/study/NCT06388031",
+      "brief_title": "ICI Rechallenge for Advanced NSCLC With Long-Term Response to First-Line ICI",
+      "field_path": "protocolSection.contactsLocationsModule.locations[].country[0]",
+      "field_value": "China",
+      "excerpt": "\"country\":\"China\"",
+      "offset": [
+        200,
+        217
+      ]
+    },
+    "NCT06983743": {
+      "nct_id": "NCT06983743",
+      "url": "https://clinicaltrials.gov/study/NCT06983743",
+      "brief_title": "A Study of ERAS-0015 in Patients With Advanced or Metastatic Solid Tumors",
+      "field_path": "protocolSection.contactsLocationsModule.locations[].country[0]",
+      "field_value": "United States",
+      "excerpt": "\"country\":\"United States\"",
+      "offset": [
+        197,
+        222
+      ]
+    },
+    "NCT04165070": {
+      "nct_id": "NCT04165070",
+      "url": "https://clinicaltrials.gov/study/NCT04165070",
+      "brief_title": "KEYMAKER-U01 Substudy 01A: Efficacy and Safety Study of Pembrolizumab (MK-3475) With or Without Chemotherapy When Used With Investigational Agents in Treatment-naïve Participants With Stage IV Non-small Cell Lung Cancer (NSCLC) (MK-3475-01A/KEYMAKER-U01A)",
+      "field_path": "protocolSection.contactsLocationsModule.locations[].country[0]",
+      "field_value": "United States",
+      "excerpt": "\"country\":\"United States\"",
+      "offset": [
+        379,
+        404
+      ]
+    },
+    "NCT06116786": {
+      "nct_id": "NCT06116786",
+      "url": "https://clinicaltrials.gov/study/NCT06116786",
+      "brief_title": "A Study of JNJ-86974680 in Participants With Advanced Non-small Cell Lung Cancer",
+      "field_path": "protocolSection.contactsLocationsModule.locations[].country[0]",
+      "field_value": "United States",
+      "excerpt": "\"country\":\"United States\"",
+      "offset": [
+        204,
+        229
+      ]
+    },
+    "NCT06758401": {
+      "nct_id": "NCT06758401",
+      "url": "https://clinicaltrials.gov/study/NCT06758401",
+      "brief_title": "This is a Study to Learn About How the Combination of the Study Medicines Sigvotatug Vedotin Plus Pembrolizumab Works in People With Non-small Cell Lung Cancer With High Levels of PD-L1.",
+      "field_path": "protocolSection.contactsLocationsModule.locations[].country[0]",
+      "field_value": "United States",
+      "excerpt": "\"country\":\"United States\"",
+      "offset": [
+        310,
+        335
+      ]
+    },
+    "NCT06545331": {
+      "nct_id": "NCT06545331",
+      "url": "https://clinicaltrials.gov/study/NCT06545331",
+      "brief_title": "Study of XB010 in Subjects With Solid Tumors",
+      "field_path": "protocolSection.contactsLocationsModule.locations[].country[0]",
+      "field_value": "United States",
+      "excerpt": "\"country\":\"United States\"",
+      "offset": [
+        168,
+        193
+      ]
+    },
+    "NCT05208762": {
+      "nct_id": "NCT05208762",
+      "url": "https://clinicaltrials.gov/study/NCT05208762",
+      "brief_title": "A Study of PF-08046054/SGN-PDL1V in Advanced Solid Tumors",
+      "field_path": "protocolSection.contactsLocationsModule.locations[].country[9]",
+      "field_value": "Spain",
+      "excerpt": "\"country\":\"Spain\"",
+      "offset": [
+        1384,
+        1401
+      ]
+    },
+    "NCT05363280": {
+      "nct_id": "NCT05363280",
+      "url": "https://clinicaltrials.gov/study/NCT05363280",
+      "brief_title": "Phase 2 Study for the Patient, Who Has Diagnosed With Small Cell Lung Cancer (SCLC) or Non Small Cell Lung Cancer (NSCLC) or Renal Cell Carcinoma (RCC) and Finished the First Line Stand Treatment , Need More Treatment",
+      "field_path": "protocolSection.contactsLocationsModule.locations[].country[1]",
+      "field_value": "Spain",
+      "excerpt": "\"country\":\"Spain\"",
+      "offset": [
+        481,
+        498
+      ]
+    },
+    "NCT05706129": {
+      "nct_id": "NCT05706129",
+      "url": "https://clinicaltrials.gov/study/NCT05706129",
+      "brief_title": "A Study to Assess Safety, Tolerability and Imaging Characteristics of [68Ga]Ga-DPI-4452 and to Assess Safety, Tolerability, and Efficacy of [177Lu]Lu-DPI-4452 in Participants With Unresectable Locally Advanced or Metastatic Solid Tumors",
+      "field_path": "protocolSection.contactsLocationsModule.locations[].country[1]",
+      "field_value": "France",
+      "excerpt": "\"country\":\"France\"",
+      "offset": [
+        408,
+        426
+      ]
+    },
+    "NCT06793215": {
+      "nct_id": "NCT06793215",
+      "url": "https://clinicaltrials.gov/study/NCT06793215",
+      "brief_title": "A Study Evaluating the Efficacy and Safety of Divarasib and Pembrolizumab Versus Pembrolizumab and Pemetrexed and Carboplatin or Cisplatin in Participants With Previously Untreated, KRAS G12C-Mutated, Advanced or Metastatic Non-Squamous Non-Small Cell Lung Cancer",
+      "field_path": "protocolSection.contactsLocationsModule.locations[].country[8]",
+      "field_value": "France",
+      "excerpt": "\"country\":\"France\"",
+      "offset": [
+        3041,
+        3059
+      ]
+    },
+    "NCT05751798": {
+      "nct_id": "NCT05751798",
+      "url": "https://clinicaltrials.gov/study/NCT05751798",
+      "brief_title": "Dose-finding and Dose Expansion Study of OSE-279 in Subjects With Advanced Solid Tumors or Lymphomas",
+      "field_path": "protocolSection.contactsLocationsModule.locations[].country[1]",
+      "field_value": "France",
+      "excerpt": "\"country\":\"France\"",
+      "offset": [
+        268,
+        286
+      ]
+    },
+    "NCT07637474": {
+      "nct_id": "NCT07637474",
+      "url": "https://clinicaltrials.gov/study/NCT07637474",
+      "brief_title": "Immune Metabolism Dysregulation and Efficacy to Anti-PD-1 PD-L1 Agents in Non Small Cell Lung Cancer Patients",
+      "field_path": "protocolSection.contactsLocationsModule.locations[].country[0]",
+      "field_value": "Italy",
+      "excerpt": "\"country\":\"Italy\"",
+      "offset": [
+        233,
+        250
+      ]
+    },
+    "NCT07468071": {
+      "nct_id": "NCT07468071",
+      "url": "https://clinicaltrials.gov/study/NCT07468071",
+      "brief_title": "Rollover Study for Participants Who Have Been Treated With and Are Continuing to Benefit From Opnurasib as a Single Agent or in Combination With Other Study Treatments",
+      "field_path": "protocolSection.contactsLocationsModule.locations[].country[5]",
+      "field_value": "South Korea",
+      "excerpt": "\"country\":\"South Korea\"",
+      "offset": [
+        417,
+        440
+      ]
+    },
+    "NCT06890598": {
+      "nct_id": "NCT06890598",
+      "url": "https://clinicaltrials.gov/study/NCT06890598",
+      "brief_title": "Study of Olomorasib (LY3537982) in Combination With Standard of Care in Participants With Resected or Unresectable KRAS G12C-mutant Non-Small Cell Lung Cancer",
+      "field_path": "protocolSection.contactsLocationsModule.locations[].country[1]",
+      "field_value": "Australia",
+      "excerpt": "\"country\":\"Australia\"",
+      "offset": [
+        2858,
+        2879
+      ]
+    },
+    "NCT03093116": {
+      "nct_id": "NCT03093116",
+      "url": "https://clinicaltrials.gov/study/NCT03093116",
+      "brief_title": "A Study of Repotrectinib (TPX-0005) in Patients With Advanced Solid Tumors Harboring ALK, ROS1, or NTRK1-3 Rearrangements",
+      "field_path": "protocolSection.contactsLocationsModule.locations[].country[1]",
+      "field_value": "Australia",
+      "excerpt": "\"country\":\"Australia\"",
+      "offset": [
+        1617,
+        1638
+      ]
+    },
+    "NCT05624996": {
+      "nct_id": "NCT05624996",
+      "url": "https://clinicaltrials.gov/study/NCT05624996",
+      "brief_title": "Testing the Addition of High Dose, Targeted Radiation to the Usual Treatment for Locally-Advanced Inoperable Non-Small Cell Lung Cancer",
+      "field_path": "protocolSection.contactsLocationsModule.locations[].country[1]",
+      "field_value": "Canada",
+      "excerpt": "\"country\":\"Canada\"",
+      "offset": [
+        13587,
+        13605
+      ]
+    },
+    "NCT07090499": {
+      "nct_id": "NCT07090499",
+      "url": "https://clinicaltrials.gov/study/NCT07090499",
+      "brief_title": "A Study to Learn About the Study Medicine Called PF-08046876 in People With Advanced Solid Tumors",
+      "field_path": "protocolSection.contactsLocationsModule.locations[].country[1]",
+      "field_value": "Canada",
+      "excerpt": "\"country\":\"Canada\"",
+      "offset": [
+        809,
+        827
+      ]
+    },
+    "NCT05100069": {
+      "nct_id": "NCT05100069",
+      "url": "https://clinicaltrials.gov/study/NCT05100069",
+      "brief_title": "Survey of Brigatinib Used To Treat People With Non-Small Cell Lung Cancer",
+      "field_path": "protocolSection.contactsLocationsModule.locations[].country[0]",
+      "field_value": "Japan",
+      "excerpt": "\"country\":\"Japan\"",
+      "offset": [
+        197,
+        214
+      ]
+    },
+    "NCT06266299": {
+      "nct_id": "NCT06266299",
+      "url": "https://clinicaltrials.gov/study/NCT06266299",
+      "brief_title": "A Study of KK2269 in Adult Participants With Solid Tumors",
+      "field_path": "protocolSection.contactsLocationsModule.locations[].country[1]",
+      "field_value": "Japan",
+      "excerpt": "\"country\":\"Japan\"",
+      "offset": [
+        377,
+        394
+      ]
+    },
+    "NCT07633626": {
+      "nct_id": "NCT07633626",
+      "url": "https://clinicaltrials.gov/study/NCT07633626",
+      "brief_title": "Vortioxetine for Cognitive Function in ALK-positive NSCLC Treated With Lorlatinib",
+      "field_path": "protocolSection.contactsLocationsModule.locations[].country[0]",
+      "field_value": "Colombia",
+      "excerpt": "\"country\":\"Colombia\"",
+      "offset": [
+        205,
+        225
+      ]
+    },
+    "NCT06868277": {
+      "nct_id": "NCT06868277",
+      "url": "https://clinicaltrials.gov/study/NCT06868277",
+      "brief_title": "A Global Phase III Study of Rilvegostomig or Pembrolizumab Monotherapy for First-Line Treatment of PD-L1-high Metastatic Non-small Cell Lung Cancer",
+      "field_path": "protocolSection.contactsLocationsModule.locations[].country[9]",
+      "field_value": "Colombia",
+      "excerpt": "\"country\":\"Colombia\"",
+      "offset": [
+        3207,
+        3227
+      ]
+    },
+    "NCT06623422": {
+      "nct_id": "NCT06623422",
+      "url": "https://clinicaltrials.gov/study/NCT06623422",
+      "brief_title": "A Study of Pembrolizumab (MK-3475) With or Without Intismeran Autogene (V940) in Participants With Non-small Cell Lung Cancer (V940-009/INTerpath-009)",
+      "field_path": "protocolSection.contactsLocationsModule.locations[].country[8]",
+      "field_value": "Colombia",
+      "excerpt": "\"country\":\"Colombia\"",
+      "offset": [
+        2583,
+        2603
+      ]
+    },
+    "NCT04928846": {
+      "nct_id": "NCT04928846",
+      "url": "https://clinicaltrials.gov/study/NCT04928846",
+      "brief_title": "A Study to Assess Disease Activity and Adverse Events of Intravenous (IV) Telisotuzumab Vedotin Compared to IV Docetaxel in Adult Participants With Previously Treated Non-Squamous Non-Small Cell Lung Cancer (NSCLC)",
+      "field_path": "protocolSection.contactsLocationsModule.locations[].country[10]",
+      "field_value": "Colombia",
+      "excerpt": "\"country\":\"Colombia\"",
+      "offset": [
+        3825,
+        3845
+      ]
+    },
+    "NCT06561386": {
+      "nct_id": "NCT06561386",
+      "url": "https://clinicaltrials.gov/study/NCT06561386",
+      "brief_title": "A Study to Compare the Efficacy of Nivolumab and Relatlimab Plus Chemotherapy vs Pembrolizumab Plus Chemotherapy for Stage IV/Recurrent Non-squamous Non-small Cell Lung Cancer With PD-L1 Expression ≥ 1%",
+      "field_path": "protocolSection.contactsLocationsModule.locations[].country[9]",
+      "field_value": "Colombia",
+      "excerpt": "\"country\":\"Colombia\"",
+      "offset": [
+        3448,
+        3468
+      ]
+    }
+  },
+  "meta": {
+    "interpretation": "Where are recruiting trials for non-small cell lung cancer running?",
+    "plan": {
+      "legs": [
+        {
+          "label": "Recruiting NSCLC trials",
+          "filters": {
+            "condition": "non-small cell lung cancer",
+            "intervention": null,
+            "sponsor": null,
+            "free_text": null,
+            "country": null,
+            "site_status": null,
+            "status": [
+              "RECRUITING"
+            ],
+            "phase": null,
+            "start_year_min": null,
+            "start_year_max": null,
+            "study_type": null,
+            "sponsor_class": null,
+            "intervention_type": null,
+            "enrollment_min": null,
+            "enrollment_max": null,
+            "has_results": null,
+            "date_certainty": "any"
+          }
+        }
+      ],
+      "group_by": "countries",
+      "series_by": null,
+      "metric": "distinct_count",
+      "metric_field": null,
+      "distinct_of": "nct_id",
+      "granularity": null,
+      "layout": "aggregate",
+      "bins": null,
+      "bin_scale": "linear",
+      "top_n": 10,
+      "sort": "value_desc",
+      "viz_hint": "choropleth or ranked bar chart by country",
+      "assumptions": [
+        "Interpreted 'non-small cell lung cancer' as the Condition filter rather than Condition MeSH or free text.",
+        "Interpreted 'recruiting trials' using overall trial status = RECRUITING.",
+        "Interpreted 'where are ... running' as countries listed on the trial record, counting distinct trials per country.",
+        "Used top countries because country is a multi-valued entity field and a ranked view is practical by default."
+      ]
+    },
+    "filters_applied": {
+      "Recruiting NSCLC trials": {
+        "condition": "non-small cell lung cancer",
+        "status": [
+          "RECRUITING"
+        ]
+      },
+      "overrides": {}
+    },
+    "counting_semantics": "Each value is the number of distinct nct id values across the trials in that bucket, not a trial count.",
+    "record_counts": {
+      "matched": 1295,
+      "retrieved": 1295,
+      "used": 1295,
+      "excluded_by_reason": {},
+      "truncated": false
+    },
+    "assumptions": [
+      "Interpreted 'non-small cell lung cancer' as the Condition filter rather than Condition MeSH or free text.",
+      "Interpreted 'recruiting trials' using overall trial status = RECRUITING.",
+      "Interpreted 'where are ... running' as countries listed on the trial record, counting distinct trials per country.",
+      "Used top countries because country is a multi-valued entity field and a ranked view is practical by default."
+    ],
+    "warnings": [
+      "Country is multi-valued: bucket totals sum to more than the number of distinct trials.",
+      "Deduplicated per trial. Location lists are frequently incomplete relative to the trial's prose, and trial-level status differs from site-level status.",
+      "60 value(s) beyond the top 10 were collapsed into 'Other'."
+    ],
+    "planning_trace": [],
+    "api_requests": [
+      "https://clinicaltrials.gov/api/v2/studies?format=json&pageSize=1000&countTotal=true&fields=NCTId%2CBriefTitle%2CLocationCountry&query.cond=non-small+cell+lung+cancer&filter.overallStatus=RECRUITING",
+      "https://clinicaltrials.gov/api/v2/studies?format=json&pageSize=1000&fields=NCTId%2CBriefTitle%2CLocationCountry&query.cond=non-small+cell+lung+cancer&filter.overallStatus=RECRUITING&pageToken=ZVdj7o2Elu8o3lp2Vcm44unumpOQJJxsZPKl3vMdkA"
+    ],
+    "suggested_requests": [],
+    "generated_at": "<captured>",
+    "cache_hit": true,
+    "llm_provider": "openai",
+    "elapsed_ms": null
+  }
+}

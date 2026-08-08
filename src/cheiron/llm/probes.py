@@ -33,14 +33,14 @@ import logging
 from dataclasses import dataclass, field
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
 from cheiron.ctgov.client import ApiError, CtGovClient
 from cheiron.ctgov.compiler import compile_leg
 from cheiron.ctgov.normalizer import PHASE_NOT_REPORTED, normalize_studies
 from cheiron.schemas.fields import FIELDS, FieldKind
 from cheiron.schemas.plan import Filters
-from cheiron.schemas.request import Phase, Status
+from cheiron.schemas.request import Phase, Status, StudyType
 
 log = logging.getLogger(__name__)
 
@@ -73,6 +73,12 @@ class ProbeFilters(BaseModel):
     status: list[Status] | None = Field(None, description="Restrict to these overall statuses")
     start_year_min: int | None = Field(None, description="Earliest start year, inclusive")
     start_year_max: int | None = Field(None, description="Latest start year, inclusive")
+    study_type: StudyType | None = Field(
+        None,
+        description="Restrict to interventional, observational, or expanded access. Worth "
+        "probing because it changes counts sharply — most registry records are not "
+        "interventional.",
+    )
 
     def to_filters(self) -> Filters:
         """Widen into the real filter model the query compiler consumes.
@@ -144,6 +150,22 @@ class ProbeRunner:
                     result = await self._fill_rate(FillRateArgs.model_validate(args))
                 case _:
                     return {"error": f"unknown probe {tool!r}"}
+        except ValidationError as exc:
+            # A probe accepts fewer filters than a Plan does, so a model that knows the
+            # Plan schema will reasonably guess at one that is not here. Returning the raw
+            # Pydantic dump wastes the call; naming the accepted filters lets it retry
+            # within budget.
+            unexpected = sorted(
+                str(err["loc"][0]) for err in exc.errors() if err["type"] == "extra_forbidden"
+            )
+            result = {
+                "error": (
+                    f"{', '.join(unexpected)} cannot be used in a probe."
+                    if unexpected
+                    else f"invalid probe arguments: {exc.errors()[0].get('msg', '')}"
+                ),
+                "accepted_filters": sorted(ProbeFilters.model_fields),
+            }
         except ApiError as exc:
             # The registry's own message is unusually good ("Unknown area name: ...") and
             # is more useful to the model than anything this layer would substitute.
