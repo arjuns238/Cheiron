@@ -1,5 +1,10 @@
 assignment-specs.md
-*.env*
+
+# Secrets stay local; the template ships, because CLAUDE.md and the README point at it as
+# the record of which variables the service needs.
+.env
+.env.*
+!.env.example
 
 __pycache__/
 *.pyc
