@@ -4,18 +4,62 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project state
 
-This repository currently contains only design documents — no source code, no build tooling, no
-tests exist yet. Implementation has not started.
+Implementation is **in progress**, following the build order in `plan.md` §6.
 
-- `assignment-specs.md` — the take-home assignment brief (verbatim). This is the spec being
-  satisfied; treat it as the source of truth for *requirements*.
-- `plan.md` — the design plan for the system. This is the source of truth for *architecture and
-  implementation approach*. Read it in full before writing code; the summary below is not a
-  substitute.
-- `docs/api-findings.md` — what the ClinicalTrials.gov API actually does, verified by curl. Two
-  items marked **CORRECTION** contradict `plan.md`; the findings win, because they were measured.
-- `docs/corpus-facts.md` — corpus-wide statistics, each with the exact query that produced it and
-  raw responses saved under `docs/corpus-evidence/`.
+**Done:** ①–⑩ — schemas, normalizer, aggregator + invariants, API client + cache, viz rules +
+spec assembler, planner + repair loop, probe tools, network graph + co-occurrence, deep
+citations with offset verification.
+
+**Next:** ⑪ judge + router (the remaining two LLM touchpoints), then `unsupported` /
+`no_results` / `conversational` paths, example runs, README.
+
+Nothing is wired into a FastAPI app yet — `src/cheiron/api/` is still empty. Every stage is
+importable and tested in isolation; assembling `POST /analyze` is the next integration step
+after ⑪.
+
+### Read these first
+
+- `assignment-specs.md` — the assignment brief (verbatim). Source of truth for *requirements*.
+- `plan.md` — the original design. Source of truth for *architecture*, **except** where
+  `docs/decisions.md` supersedes it.
+- `docs/decisions.md` — **read this before changing anything.** Every decision the user made
+  explicitly, every divergence from `plan.md`, and the traps that produced correct-looking
+  wrong output. It records what was *rejected* as well as chosen, so a decision does not get
+  silently reversed.
+- `docs/api-findings.md` — what the API actually does, verified by curl. Items marked
+  **CORRECTION** contradict `plan.md`; the findings win, because they were measured.
+- `docs/corpus-facts.md` — corpus statistics with the exact query that produced each.
+- `docs/readme-notes.md` — 12 disclosures the README must carry, each with the problem, why
+  silence is unacceptable, and what to write.
+
+### Commands
+
+```bash
+uv sync --all-extras          # install
+.venv/bin/pytest -q           # 385 tests, no network, no API key needed
+.venv/bin/ruff check src tests
+```
+
+The whole suite runs offline: the API client is tested against a mock transport, the planner
+against a fake LLM client, and the deterministic core against 11 real records saved in
+`tests/fixtures/raw_studies/`. Live calls are made by hand during development, never in tests.
+
+`.env` needs `LLM_PROVIDER` plus that provider's key; see `.env.example`. Model IDs there have
+been verified against both live APIs — **do not assume a model ID exists**, one set in the
+original config did not.
+
+### Layout
+
+```
+src/cheiron/
+  schemas/     fields.py (the field registry — four things derive from it), plan.py,
+               request.py, response.py
+  ctgov/       normalizer.py, compiler.py, client.py, cache.py, retrieval.py
+  agg/         aggregator.py  ← the heart; invariants live here
+  viz/         rules.py (chart legality), assembler.py (envelope), citations.py
+  llm/         client.py (both providers), planner.py, probes.py
+  api/         empty — not yet assembled
+```
 
 ## README: cite the corpus evidence
 
@@ -41,6 +85,16 @@ edge case the plan doesn't cover, a schema detail, error-handling behavior, etc.
 or pick a reasonable-looking default. Stop and ask the user.** This applies even when the choice
 seems small or obvious to you — surface it and let the user decide. Only proceed unprompted on
 something already explicitly decided in one of the two planning docs.
+
+**Check `docs/decisions.md` first.** Many such decisions have already been put to the user and
+answered; that file records the answer *and the rejected alternatives*. Re-asking a settled
+question wastes the user's time, and silently reversing one is worse. Add a row there whenever a
+new decision is made, so the next agent inherits it.
+
+**Measure before asking.** Several of these questions had a factual answer available from the
+live API or the corpus, and the measurement changed the recommendation — co-listing versus
+arm-sharing, prose versus JSON citation coverage, network payload size. Bring numbers to the
+question rather than options alone.
 
 ## Data source
 
