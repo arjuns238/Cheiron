@@ -446,6 +446,12 @@ def _axis_scale(field_key: str | None) -> str:
 
 
 def build_config(plan: Plan, result: AggregationResult, viz: VizType) -> VizConfig:
+    """Assemble the rendering hints that are not field bindings.
+
+    Axis scales are *derived* from the field registry's `skewed` flag rather than chosen by
+    a model, on the same evidence as the histogram's `bin_scale`: enrolment spans 0 to
+    ~3M with a median of 44, so a linear axis is arithmetically correct and unreadable.
+    """
     # Only a point layout binds a *field* to x; elsewhere x is a bucket label, which has no
     # distribution to be skewed.
     x_field = plan.group_by if plan.layout is Layout.POINT else None

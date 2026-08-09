@@ -226,6 +226,12 @@ def validate_plan(plan: Plan) -> list[str]:
     errors: list[str] = []
 
     def check_field(value: str | None, slot: str, *, allow: set[FieldKind] | None = None) -> None:
+        """Assert a plan slot names a real field, optionally of an allowed kind.
+
+        Errors are accumulated rather than raised, so the planner's repair loop sees every
+        problem at once — one round trip per plan, not one per mistake. The message names
+        the legal alternatives for the same reason.
+        """
         if value is None:
             return
         field = FIELDS.get(value)

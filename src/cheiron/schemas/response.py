@@ -372,6 +372,18 @@ class Review(BaseModel):
 
 
 class Meta(BaseModel):
+    """Everything a reader needs to audit the chart rather than trust it.
+
+    How the plan was reached (`plan`, `planning_trace`, `review`), what was actually asked
+    of the registry (`api_requests`, verbatim), what the numbers mean
+    (`counting_semantics`, `assumptions`, `warnings`) and what happened to every fetched
+    record (`record_counts`).
+
+    `api_requests` is the field that cannot lie about what was issued, which is what makes
+    `filters_applied` checkable: a filter reported as applied but compiled to nothing is
+    otherwise indistinguishable from one that worked.
+    """
+
     model_config = ConfigDict(extra="forbid")
 
     interpretation: str = Field(description="Plain-language restatement of what was computed.")

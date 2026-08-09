@@ -102,6 +102,13 @@ def index_spans(record: dict[str, Any]) -> tuple[str, dict[str, tuple[int, int]]
         position += len(text)
 
     def write(node: Any, path: str, key_prefix: str = "") -> None:
+        """Serialize one node, recording the [start, end) span of every dotted path.
+
+        This is a re-implementation of `json.dumps` rather than a search over its output,
+        because a search cannot tell two identical values apart — the offsets have to be
+        produced by the same walk that produces the text, or a citation can verify at a
+        position that supports a different claim.
+        """
         start = position
         emit(key_prefix)
         if isinstance(node, dict):

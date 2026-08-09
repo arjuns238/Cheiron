@@ -72,9 +72,11 @@ class ExclusionReason(StrEnum):
     free-text strings so that the counts are aggregatable and testable.
     """
 
+    # Deliberately only the reasons that are actually emitted. An unparseable date is *not*
+    # one of them: `parse_partial_date` returns None, and the record is then excluded (or
+    # not) by the grouping dimension's own missing-value rule, under `missing_<field>`.
     MISSING_NCT_ID = "missing_nct_id"
     MALFORMED_RECORD = "malformed_record"
-    UNPARSEABLE_DATE = "unparseable_date"
 
 
 @dataclass(frozen=True)

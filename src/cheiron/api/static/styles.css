@@ -375,7 +375,8 @@ button {
 }
 .verdict { margin: 0; font-size: .88rem; color: var(--ink-2); }
 .verdict.ok b { color: var(--good); }
-.verdict.concerns b, .verdict.contradiction b { color: var(--bad); }
+/* `Review.verdict` is "ok" or "concern"; the class is interpolated from it verbatim. */
+.verdict.concern b { color: var(--bad); }
 
 /* --- sources drawer ------------------------------------------------------------------- */
 

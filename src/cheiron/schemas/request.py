@@ -18,10 +18,18 @@ request is rejected with 422 rather than resolved. "melanoma trials" with
 `condition="glioblastoma"` is not a precedence question, it is a contradiction, and
 silently honouring one of the two would produce a chart the caller did not ask for.
 
-This is why the planner is *not* told the overrides. It reads the query alone, so its plan
-is an independent statement of what the query asked for, and disagreement is detectable.
-Telling it first — the earlier design — made it adopt the override and the conflict became
-invisible.
+Three stages touch a parameter, and the split is deliberate:
+
+* The **planner is told** it, so its probes run on the slice that will actually be fetched.
+  A planner ignorant of `drug_name` probes the whole corpus and calibrates granularity,
+  bin count and `top_n` to a population nobody asked about.
+* `apply_overrides` **applies** it, because telling is not enforcing. See that function.
+* The **judge** adjudicates contradiction (failure class 7, the one fatal verdict), because
+  it is the only stage that reads the question and the plan together.
+
+Withholding the parameters from the planner was tried and reverted: it made contradictions
+detectable without a judge, at the cost of planning against a slice nobody asked about.
+Recorded in `docs/decisions.md` under "Parameters in the planner prompt".
 
 Nothing here is required except `query`.
 """
@@ -52,6 +60,14 @@ class Phase(StrEnum):
 
 
 class Status(StrEnum):
+    """Trial-level overall status.
+
+    Distinct from *site*-level recruiting status, which is a different question and a
+    different clause: measured on NSCLC, `AREA[OverallStatus]RECRUITING` matches 1,295
+    trials where the nested site-level form matches 2,107. The gap is trials whose overall
+    status is not RECRUITING but which still carry a recruiting site.
+    """
+
     ACTIVE_NOT_RECRUITING = "ACTIVE_NOT_RECRUITING"
     COMPLETED = "COMPLETED"
     ENROLLING_BY_INVITATION = "ENROLLING_BY_INVITATION"
@@ -261,6 +277,12 @@ class AnalyzeRequest(BaseModel):
 
     @model_validator(mode="after")
     def _check_ranges(self) -> AnalyzeRequest:
+        """Reject range pairs and empty lists at the edge, before the planner sees them.
+
+        An inverted range or an empty `phase: []` would compile to a clause matching
+        nothing, and the response would report the filter as applied — a chart of zero
+        trials that looks like an answer rather than a bad request.
+        """
         if self.start_year is not None and self.end_year is not None:
             if self.start_year > self.end_year:
                 raise ValueError(

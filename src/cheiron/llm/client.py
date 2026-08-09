@@ -159,7 +159,14 @@ class LLMClient(Protocol):
         drop: frozenset[str] = frozenset(),
         tools: list[dict[str, Any]] | None = None,
         executor: ToolExecutor | None = None,
-    ) -> T: ...
+    ) -> T:
+        """Return an instance of `schema`, validated, or raise `LLMError`.
+
+        Structured output is a generation-time guarantee on both providers rather than a
+        prompt request, so a caller never parses free text. `drop` names schema fields to
+        withhold from this provider; `tools`/`executor` enable the planner's probe loop.
+        """
+        ...
 
 
 # --------------------------------------------------------------------------------------
@@ -385,6 +392,17 @@ class AnthropicClient:
         tools: list[dict[str, Any]] | None = None,
         executor: ToolExecutor | None = None,
     ) -> T:
+        """Anthropic implementation, including the tool loop and the cold-compile retry.
+
+        Optionality is expressed by *omitting* fields from `required`, which is the
+        opposite of the OpenAI idiom below — Anthropic caps a schema at 16 union-typed and
+        24 optional parameters, and `anyOf [T, null]` counts against the first of those.
+
+        Anthropic compiles and caches a grammar per distinct schema, so the first call
+        carrying a new one takes ~80s and can fail outright with a compilation timeout.
+        That is retried here rather than surfaced: left to propagate it looked like a
+        rejected plan and spent the planner's repair budget on an infrastructure hiccup.
+        """
         import anthropic
 
         model = self.settings.model_for(tier)
@@ -477,6 +495,13 @@ class OpenAIClient:
         tools: list[dict[str, Any]] | None = None,
         executor: ToolExecutor | None = None,
     ) -> T:
+        """OpenAI implementation, including the tool loop.
+
+        Optionality is expressed as `anyOf [T, null]` with every property in `required`,
+        because strict mode demands it — precisely the construct Anthropic's union cap
+        rejects. The two providers want opposite idioms for the same Pydantic model, which
+        is why schema translation is per-provider by necessity rather than preference.
+        """
         import openai
 
         model = self.settings.model_for(tier)

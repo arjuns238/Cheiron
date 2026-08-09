@@ -600,8 +600,6 @@ function Pipeline({ startedAt }) {
       </ol>
 
       <p className="hint footnote">
-        Stages advance on typical durations, not on streamed events — the service returns
-        one response at the end. The sequence is real; the timing is indicative.
       </p>
     </section>`;
 }

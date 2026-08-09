@@ -37,7 +37,7 @@ from datetime import UTC, datetime
 
 from cheiron.agg.aggregator import aggregate
 from cheiron.ctgov.client import CtGovClient
-from cheiron.ctgov.retrieval import Retrieval, retrieve
+from cheiron.ctgov.retrieval import retrieve
 from cheiron.llm.client import LLMClient
 from cheiron.llm.planner import PlanningError, plan_and_review
 from cheiron.llm.probes import ProbeRunner
@@ -95,6 +95,12 @@ def _meta(
     elapsed_ms: int | None = None,
     provider: str | None = None,
 ) -> Meta:
+    """Build the `meta` block for a response that never reached retrieval.
+
+    Conversational and unsupported answers carry the same envelope as any other, so the
+    frontend has one shape to render. `record_counts` is left null rather than zeroed: no
+    records were fetched, which is a different fact from having fetched none.
+    """
     return Meta(
         interpretation=interpretation,
         warnings=warnings or [],
@@ -208,14 +214,13 @@ async def analyze(deps: Deps, request: AnalyzeRequest) -> AnalyzeResponse:
         request_id=request_id,
         elapsed_ms=elapsed(),
     )
-    _attach_agent_trace(response, planned, retrieval, provider, request, override_notes)
+    _attach_agent_trace(response, planned, provider, request, override_notes)
     return response
 
 
 def _attach_agent_trace(
     response: AnalyzeResponse,
     planned: object,
-    retrieval: Retrieval,
     provider: str,
     request: AnalyzeRequest,
     override_notes: list[str],

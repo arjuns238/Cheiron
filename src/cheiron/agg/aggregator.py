@@ -553,7 +553,7 @@ def _measure(record: NormalizedRecord, plan: Plan) -> tuple[Any, str | None]:
     if plan.metric is Metric.DISTINCT_COUNT:
         # A multi-valued distinct_of contributes every one of its values; "how many
         # distinct countries" means the union across trials, not one country per trial.
-        values = [v for v in (raw or [])] if spec(field_key).multi else ([raw] if raw else [])
+        values = list(raw or []) if spec(field_key).multi else ([raw] if raw else [])
         if not values:
             return None, missing_reason(field_key)
         return values, None
@@ -573,6 +573,12 @@ def _measure(record: NormalizedRecord, plan: Plan) -> tuple[Any, str | None]:
 
 
 def _fold(metric: Metric, contributions: list[Contribution]) -> float:
+    """Reduce one bucket's contributions to the single number the chart draws.
+
+    This is the only function in the system that produces a charted value, which is what
+    makes the core invariant checkable: a model can choose *which* metric runs here, never
+    what it returns.
+    """
     match metric:
         case Metric.COUNT:
             # Distinct trials, not contributions. A trial that reached this bucket by two
@@ -711,7 +717,9 @@ def aggregate(
                 # One trial, one datum. The bucket still exists and still holds the
                 # contribution that justifies the point, so a scatter point is as
                 # traceable as a bar; it simply has an audience of one.
-                x_label, x_path, x_value, _ = dimension_values[0]
+                # The bucket key is the trial itself, so the dimension's *label* is unused
+                # here — only its path and value, which the citation needs.
+                _label, x_path, x_value, _ = dimension_values[0]
                 for series in series_labels:
                     bucket = buckets.setdefault(
                         (record.nct_id, series), Bucket(record.nct_id, series)
@@ -821,6 +829,12 @@ def _sort(result: AggregationResult, plan: Plan) -> None:
         totals[bucket.dimension] += bucket.value
 
     def sort_key(bucket: Bucket) -> tuple[Any, ...]:
+        """Order buckets as the plan asked, with 'Other' always last.
+
+        The leading `residue` term keeps the collapsed remainder at the end whatever the
+        requested sort: it is not a value competing with the others, and ranking it among
+        them reads as a real category outranking real ones.
+        """
         residue = bucket.dimension == OTHER
         if bucket.order is not None:
             # Histogram bins carry their own order because their labels do not: "100–999"
