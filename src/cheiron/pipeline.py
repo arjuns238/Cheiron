@@ -48,9 +48,11 @@ from cheiron.schemas.response import (
     AnalyzeResponse,
     Encoding,
     Meta,
+    NetworkData,
     ProbeCall,
     RecordCounts,
     ResponseType,
+    Review,
     Visualization,
     VizConfig,
     VizType,
@@ -239,6 +241,15 @@ def _attach_agent_trace(
         meta.warnings.extend(getattr(planned, "warnings", []))
 
     review = getattr(planned, "review", None)
+    if review is not None:
+        # Recorded whether or not it objected. An approval that leaves no trace is
+        # indistinguishable from a reviewer that never ran, which is the wrong default in
+        # a system whose case rests on its audit trail.
+        meta.review = Review(
+            verdict=review.verdict,
+            concerns=list(getattr(review, "concerns", []) or []),
+            revised=bool(getattr(planned, "revised_after_review", False)),
+        )
     if review is not None and getattr(review, "concerns", None):
         prefix = (
             "The plan was revised after review."
@@ -248,7 +259,16 @@ def _attach_agent_trace(
         meta.warnings.append(f"{prefix} {' '.join(review.concerns)}")
 
     if not request.include_citations:
-        response.citations = {}
+        # Citations live on each datum now, so switching them off means clearing them
+        # there. The datums themselves stay: the chart is unaffected by whether its
+        # evidence was requested.
+        data = response.visualization.data if response.visualization else None
+        if isinstance(data, NetworkData):
+            for edge in data.edges:
+                edge.citations = []
+        elif data:
+            for datum in data:
+                datum.citations = []
 
 
 __all__ = ["Deps", "analyze"]

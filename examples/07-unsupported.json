@@ -1,7 +1,7 @@
 {
   "request_id": "example-07-unsupported",
   "response_type": "unsupported",
-  "answer": "ClinicalTrials.gov records trial-level and arm-level results, but it does not provide a comparable registry field for \"works better\" across drugs. Sponsors define different endpoints, analysis windows, and units for melanoma studies, so efficacy cannot be aggregated into a fair head-to-head comparison from the registry alone.",
+  "answer": "ClinicalTrials.gov records trial registrations and posted results at the study level, but it does not provide a standardized field for comparative efficacy that would let me determine which drug 'works better' across trials. Sponsors define different endpoints, units, and analysis windows, so outcome values are not directly comparable across studies.",
   "visualization": {
     "type": "kpi",
     "title": "Not answerable from registration data",
@@ -23,9 +23,8 @@
       "value_format": null
     }
   },
-  "citations": {},
   "meta": {
-    "interpretation": "ClinicalTrials.gov records trial-level and arm-level results, but it does not provide a comparable registry field for \"works better\" across drugs. Sponsors define different endpoints, analysis windows, and units for melanoma studies, so efficacy cannot be aggregated into a fair head-to-head comparison from the registry alone.",
+    "interpretation": "ClinicalTrials.gov records trial registrations and posted results at the study level, but it does not provide a standardized field for comparative efficacy that would let me determine which drug 'works better' across trials. Sponsors define different endpoints, units, and analysis windows, so outcome values are not directly comparable across studies.",
     "plan": null,
     "filters_applied": {},
     "counting_semantics": null,
@@ -38,19 +37,20 @@
     },
     "assumptions": [],
     "warnings": [
-      "ClinicalTrials.gov records trial-level and arm-level results, but it does not provide a comparable registry field for \"works better\" across drugs. Sponsors define different endpoints, analysis windows, and units for melanoma studies, so efficacy cannot be aggregated into a fair head-to-head comparison from the registry alone."
+      "ClinicalTrials.gov records trial registrations and posted results at the study level, but it does not provide a standardized field for comparative efficacy that would let me determine which drug 'works better' across trials. Sponsors define different endpoints, units, and analysis windows, so outcome values are not directly comparable across studies."
     ],
     "planning_trace": [],
+    "review": null,
     "api_requests": [],
     "suggested_requests": [
       {
-        "query": "How many ClinicalTrials.gov studies have evaluated pembrolizumab for melanoma, and how has that changed over time?"
+        "query": "How many melanoma trials have studied pembrolizumab versus nivolumab?"
       },
       {
-        "query": "How many ClinicalTrials.gov studies have evaluated nivolumab for melanoma, and how has that changed over time?"
+        "query": "How has melanoma research activity for pembrolizumab and nivolumab changed over time?"
       },
       {
-        "query": "Which sponsors and phases are most common in ClinicalTrials.gov melanoma studies of pembrolizumab and nivolumab?"
+        "query": "Which sponsors and phases are most common for melanoma trials of pembrolizumab and nivolumab?"
       }
     ],
     "generated_at": "<captured>",

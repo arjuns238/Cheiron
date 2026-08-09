@@ -142,11 +142,14 @@ async def main() -> int:
             path.write_text(json.dumps(body, indent=2, ensure_ascii=False) + "\n")
 
             counts = response.meta.record_counts
+            data = response.visualization.data if response.visualization else None
+            units = getattr(data, "edges", data) or []
+            n_citations = sum(len(u.citations) for u in units)
             print(
                 f"   {response.response_type.value}"
                 f" · {response.visualization.type.value if response.visualization else '—'}"
                 f" · used={counts.used if counts else 0}"
-                f" · citations={len(response.citations)}"
+                f" · citations={n_citations}"
                 f" · {path.name} ({path.stat().st_size / 1024:.0f} KB)"
             )
             index.append(
@@ -160,7 +163,7 @@ async def main() -> int:
                         response.visualization.type.value if response.visualization else None
                     ),
                     "trials_used": counts.used if counts else 0,
-                    "citations": len(response.citations),
+                    "citations": n_citations,
                 }
             )
 

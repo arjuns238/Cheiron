@@ -77,6 +77,39 @@ class Encoding(BaseModel):
     series: Channel | None = None
 
 
+class Citation(BaseModel):
+    """A deep citation.
+
+    `excerpt` is a literal substring of the fetched API payload, taken at `offset`. The
+    spec assembler re-asserts the substring match at those offsets before emitting, and
+    drops the citation rather than emit an unverified one. Excerpts are never generated
+    by an LLM.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    nct_id: str
+    url: str
+    brief_title: str
+    field_path: str = Field(description="Dotted path in the source record, e.g. "
+                            "'protocolSection.designModule.phases[0]'.")
+    field_value: str = Field(
+        description="The value at that path that put this trial in the bucket."
+    )
+    excerpt: str = Field(description="Verbatim substring of the fetched payload.")
+    offset: tuple[int, int] = Field(
+        description="[start, end) offsets of `excerpt` within the payload."
+    )
+    supports: Literal["value", "series"] = Field(
+        "value",
+        description="Which half of the datum this excerpt evidences. A grouped datum has "
+        "two coordinates — the bucket and the series — and one excerpt rarely states "
+        "both, so they are cited separately. `series` citations are absent when the "
+        "record never states the leg's term: a leg is a search expression, and the "
+        "registry's search expands it in ways the record does not repeat.",
+    )
+
+
 class Datum(BaseModel):
     """One rendered mark: a bar, a point, a time bucket, or a KPI value.
 
@@ -89,11 +122,18 @@ class Datum(BaseModel):
     value: float | int = Field(description="The computed measure for this bucket.")
     nct_ids: list[str] = Field(
         default_factory=list,
-        description="Up to 5 contributing trial IDs, as a sample for inline attribution. "
-        "Full attribution is in the top-level `citations` map.",
+        description="Up to 5 contributing trial IDs, as a sample of `nct_id_total`.",
     )
     nct_id_total: int = Field(
         0, description="How many trials actually contributed, before the sample was taken."
+    )
+    citations: list[Citation] = Field(
+        default_factory=list,
+        description="Evidence for **this** datum, one entry per sampled trial. Held here "
+        "rather than in a response-level map keyed by NCT ID: on a multi-valued dimension "
+        "one trial belongs to several datums, so a per-trial map can only carry one of "
+        "its excerpts and every other datum silently reads a citation stating a different "
+        "datum's value.",
     )
 
 
@@ -134,6 +174,12 @@ class Edge(BaseModel):
     )
     nct_ids: list[str] = Field(default_factory=list)
     nct_id_total: int = 0
+    citations: list[Citation] = Field(
+        default_factory=list,
+        description="Evidence that both endpoints share an arm group in these trials. An "
+        "edge is the network's datum, so its citations belong to it — a trial commonly "
+        "lies on several edges.",
+    )
 
 
 class NetworkData(BaseModel):
@@ -181,31 +227,6 @@ class Visualization(BaseModel):
     config: VizConfig = Field(default_factory=VizConfig)
 
 
-class Citation(BaseModel):
-    """A deep citation.
-
-    `excerpt` is a literal substring of the fetched API payload, taken at `offset`. The
-    spec assembler re-asserts the substring match at those offsets before emitting, and
-    drops the citation rather than emit an unverified one. Excerpts are never generated
-    by an LLM.
-    """
-
-    model_config = ConfigDict(extra="forbid")
-
-    nct_id: str
-    url: str
-    brief_title: str
-    field_path: str = Field(description="Dotted path in the source record, e.g. "
-                            "'protocolSection.designModule.phases[0]'.")
-    field_value: str = Field(
-        description="The value at that path that put this trial in the bucket."
-    )
-    excerpt: str = Field(description="Verbatim substring of the fetched payload.")
-    offset: tuple[int, int] = Field(
-        description="[start, end) offsets of `excerpt` within the payload."
-    )
-
-
 class RecordCounts(BaseModel):
     """The transparency block, which is also the invariant check's own state.
 
@@ -246,6 +267,27 @@ class ProbeCall(BaseModel):
     result: Any
 
 
+class Review(BaseModel):
+    """What the plan reviewer decided, recorded whether or not it objected.
+
+    An approval used to leave no trace at all — only unactioned concerns produced a
+    warning — so "the judge approved this" and "the judge never ran" were
+    indistinguishable from the response. In a system whose case rests on its audit trail
+    that is the wrong default: a silent reviewer is not evidence of a reviewed plan.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    verdict: str = Field(description='"ok" or "concern". A malformed verdict is recorded '
+                                     "as given rather than normalised away.")
+    concerns: list[str] = Field(default_factory=list)
+    revised: bool = Field(
+        False, description="Whether the concerns produced a second plan. False with a "
+        "non-empty `concerns` means they were raised and not acted on — the reviewer is "
+        "advisory and gets one re-plan, not a veto."
+    )
+
+
 class Meta(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -261,6 +303,12 @@ class Meta(BaseModel):
     assumptions: list[str] = Field(default_factory=list)
     warnings: list[str] = Field(default_factory=list)
     planning_trace: list[ProbeCall] = Field(default_factory=list)
+    review: Review | None = Field(
+        None,
+        description="The plan reviewer's verdict, present whenever the reviewer ran. Null "
+        "means it did not run at all (a conversational or unsupported response, or a "
+        "provider outage), which is a different fact from an approval.",
+    )
     api_requests: list[str] = Field(default_factory=list)
     suggested_requests: list[dict[str, Any]] = Field(
         default_factory=list,
@@ -286,9 +334,6 @@ class AnalyzeResponse(BaseModel):
     )
     visualization: Visualization | None = Field(
         None, description="Null if and only if response_type is 'conversational'."
-    )
-    citations: dict[str, Citation] = Field(
-        default_factory=dict, description="Keyed by NCT ID, deduplicated across all datapoints."
     )
     meta: Meta
 

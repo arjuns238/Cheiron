@@ -25,7 +25,7 @@ from dotenv import load_dotenv
 
 from cheiron.llm.client import LLMSettings, build_client
 from cheiron.llm.judge import review
-from cheiron.schemas.plan import Filters, Granularity, Leg, Metric, Plan
+from cheiron.schemas.plan import Filters, Granularity, Layout, Leg, Metric, Plan
 from cheiron.schemas.request import Phase
 
 
@@ -145,6 +145,53 @@ CASES = [
             ],
             group_by="start_date",
             granularity=Granularity.YEAR,
+        ),
+        should_flag=False,
+    ),
+    Case(
+        name="unquantified superlative: 'frequently' with no top_n",
+        query="Which drugs frequently co-occur in combination studies for multiple myeloma?",
+        plan=Plan(
+            legs=[Leg(label="Multiple myeloma", filters=Filters(condition="multiple myeloma"))],
+            group_by="intervention_names",
+            layout=Layout.COOCCURRENCE,
+        ),
+        should_flag=True,
+        expected=(
+            "'frequently' asks for the common pairings; with top_n null the plan returns "
+            "every pair that occurs at all, including pairs seen once. Observed live: "
+            "5,215 edges over 1,234 nodes, 76% of which appear in a single trial."
+        ),
+    ),
+    Case(
+        name="unquantified superlative: 'most common' sponsors",
+        query="Who are the most common sponsors of melanoma trials?",
+        plan=Plan(
+            legs=[Leg(label="Melanoma", filters=Filters(condition="melanoma"))],
+            group_by="sponsor_name",
+        ),
+        should_flag=True,
+        expected=(
+            "'most common' asks for a ranked head; 51,497 distinct lead sponsors exist "
+            "corpus-wide, so an unrestricted plan is a list rather than an answer."
+        ),
+    ),
+    Case(
+        name="control: 'which' with no superlative is fine unrestricted",
+        query="Which phases are melanoma trials in?",
+        plan=Plan(
+            legs=[Leg(label="Melanoma", filters=Filters(condition="melanoma"))],
+            group_by="phases",
+        ),
+        should_flag=False,
+    ),
+    Case(
+        name="control: the superlative is already expressed by top_n",
+        query="What are the top 10 conditions studied in phase 3 trials?",
+        plan=Plan(
+            legs=[Leg(label="Phase 3", filters=Filters(phase=[Phase.PHASE3]))],
+            group_by="conditions",
+            top_n=10,
         ),
         should_flag=False,
     ),

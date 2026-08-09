@@ -7,10 +7,10 @@ changes rather than churn.
 | File | Query | Type | Chart | Trials | Citations |
 |---|---|---|---|---|---|
 | `01-time-trend.json` | pembrolizumab trials per year since 2015 | visualization | line | 2,857 | 63 |
-| `02-distribution.json` | melanoma trials across phases | visualization | pie | 3,743 | 40 |
-| `03-comparison.json` | pembrolizumab vs nivolumab by phase | visualization | grouped_bar | 4,938 | 76 |
-| `04-geographic.json` | where recruiting NSCLC trials run | visualization | choropleth | 1,295 | 28 |
-| `05-drug-network.json` | drugs co-occurring in myeloma combinations | visualization | network | 1,392 | 92 |
+| `02-distribution.json` | melanoma trials across phases | visualization | bar | 3,743 | 40 |
+| `03-comparison.json` | pembrolizumab vs nivolumab by phase | visualization | grouped_bar | 4,938 | 125 |
+| `04-geographic.json` | where recruiting NSCLC trials run | visualization | choropleth | 1,295 | 55 |
+| `05-drug-network.json` | drugs co-occurring in myeloma combinations | visualization | network | 1,392 | 179 |
 | `06-adverse-events.json` | median serious AEs by sponsor class | visualization | bar | 79 | 17 |
 | `07-unsupported.json` | which drug works better for melanoma | unsupported | kpi | 0 | 0 |
 

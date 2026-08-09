@@ -201,8 +201,8 @@ class AnalyzeRequest(BaseModel):
     )
     include_citations: bool = Field(
         True,
-        description="Emit the top-level citations map. Disabling it reduces payload size "
-        "but does not change any chart value.",
+        description="Emit each datum's `citations`. Disabling it reduces payload size but "
+        "does not change any chart value — the datums themselves are unaffected.",
     )
     include_planning_trace: bool = Field(
         True,

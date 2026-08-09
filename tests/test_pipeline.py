@@ -97,7 +97,7 @@ async def test_a_question_produces_a_visualization() -> None:
     assert response.response_type is ResponseType.VISUALIZATION
     assert response.visualization is not None
     assert response.visualization.data
-    assert response.citations
+    assert any(d.citations for d in response.visualization.data)
 
 
 async def test_chit_chat_costs_nothing_and_is_the_only_null_visualization() -> None:
@@ -223,8 +223,9 @@ async def test_citations_can_be_switched_off() -> None:
     response = await analyze(
         deps(), AnalyzeRequest(query="phases", include_citations=False)
     )
-    assert response.citations == {}
     assert response.visualization is not None, "the chart itself is unaffected"
+    assert response.visualization.data, "the datums stay; only their evidence is dropped"
+    assert not any(d.citations for d in response.visualization.data)
 
 
 async def test_the_planning_trace_can_be_switched_off() -> None:
@@ -309,3 +310,16 @@ def test_an_invariant_failure_returns_no_chart_at_all(client, monkeypatch) -> No
     response = client.post("/analyze", json={"query": "phases"})
     assert response.status_code == 500
     assert response.json()["error"] == "invariant_failure"
+
+
+async def test_an_approval_is_recorded_not_just_a_concern() -> None:
+    """A silent reviewer and an approving one must not look the same.
+
+    Only unactioned concerns used to leave a trace, so `meta` could not distinguish "the
+    judge approved this plan" from "the judge never ran" — which in a system whose case
+    rests on its audit trail is the wrong default.
+    """
+    response = await analyze(deps(), AnalyzeRequest(query="phases"))
+    assert response.meta.review is not None
+    assert response.meta.review.verdict
+    assert response.meta.review.revised is False

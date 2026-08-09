@@ -21,7 +21,8 @@ from collections import defaultdict
 from datetime import UTC, datetime
 from typing import Any
 
-from cheiron.agg.aggregator import OTHER, AggregationResult
+from cheiron.agg.aggregator import OTHER, AggregationResult, Bucket
+from cheiron.ctgov.normalizer import COMBINATION_SEPARATOR
 from cheiron.ctgov.retrieval import Retrieval
 from cheiron.schemas.fields import FIELDS, FieldKind
 from cheiron.schemas.plan import Layout, Metric, Plan
@@ -41,18 +42,15 @@ from cheiron.schemas.response import (
     VizConfig,
     VizType,
 )
-from cheiron.viz.citations import locate, verify
+from cheiron.viz.citations import locate, locate_endpoint, locate_term, verify
 from cheiron.viz.rules import Shape, choose, describe_shape
 
-#: How many contributing trials each datum names inline. The full attribution lives in the
-#: top-level citations map; this is a sample so a reader can spot-check a bar without
-#: cross-referencing.
+#: How many contributing trials each datum names and cites. A sample, not the whole
+#: population: a 2,900-trial bar does not need 2,900 excerpts in a JSON response, and the
+#: API request URLs in `meta.api_requests` are the complete, reproducible record. The cap
+#: is **per datum** rather than per response, so every bar carries its own evidence instead
+#: of the largest one consuming the budget.
 INLINE_CITATIONS = 5
-
-#: Cap on the citations map. Every datum is represented, but a 2,900-trial chart does not
-#: need 2,900 citation entries in a JSON response — the API request URLs in
-#: `meta.api_requests` are the complete, reproducible record.
-MAX_CITATIONS = 100
 
 STUDY_URL = "https://clinicaltrials.gov/study/{}"
 
@@ -198,14 +196,26 @@ def _format(value: float) -> str:
 # --------------------------------------------------------------------------------------
 
 
-def build_data(plan: Plan, result: AggregationResult, viz: VizType) -> list[Datum] | NetworkData:
-    """Turn buckets into the payload the chosen chart type renders."""
+def build_data(
+    plan: Plan,
+    result: AggregationResult,
+    viz: VizType,
+    records: dict[str, Any] | None = None,
+) -> tuple[list[Datum] | NetworkData, int, int]:
+    """Turn buckets into the payload the chosen chart type renders, evidence attached.
+
+    Citations are built here rather than in a separate pass because a citation belongs to
+    a datum, and building them together is what makes it impossible for the two to drift
+    apart. Returns the payload plus the unquotable and unverified tallies.
+    """
+    records = records or {}
     if viz is VizType.NETWORK:
-        return _build_network(plan, result)
+        return _build_network(plan, result, records)
 
     group_key = plan.group_by or DIMENSION_KEY
     series_key = plan.series_by or SERIES_KEY
     data: list[Datum] = []
+    unquotable = unverified = 0
 
     for bucket in result.buckets:
         extra: dict[str, object] = {}
@@ -219,18 +229,25 @@ def build_data(plan: Plan, result: AggregationResult, viz: VizType) -> list[Datu
         if bucket.series is not None:
             extra[series_key] = bucket.series
 
+        cites, missing, bad = bucket_citations(bucket, records, series_term=bucket.series)
+        unquotable += missing
+        unverified += bad
+
         data.append(
             Datum(
                 value=bucket.value,
                 nct_ids=bucket.nct_ids[:INLINE_CITATIONS],
                 nct_id_total=len(bucket.nct_ids),
+                citations=cites,
                 **extra,
             )
         )
-    return data
+    return data, unquotable, unverified
 
 
-def _build_network(plan: Plan, result: AggregationResult) -> NetworkData:
+def _build_network(
+    plan: Plan, result: AggregationResult, records: dict[str, Any]
+) -> tuple[NetworkData, int, int]:
     """Build a bipartite co-occurrence graph from crossed entity dimensions.
 
     An edge's weight is the number of trials in which both endpoints appear, which is
@@ -251,6 +268,7 @@ def _build_network(plan: Plan, result: AggregationResult) -> NetworkData:
 
     edges: list[Edge] = []
     node_trials: dict[tuple[str, str], set[str]] = {}
+    unquotable = unverified = 0
 
     for bucket in result.buckets:
         if bucket.series is None:
@@ -261,6 +279,13 @@ def _build_network(plan: Plan, result: AggregationResult) -> NetworkData:
             # `network_omissions`, which turns this into a warning rather than a gap.
             continue
         ids = bucket.nct_ids
+        # An edge asserts that both endpoints shared an arm group, and the contribution
+        # already carries that composite as its field value — so the edge's own citation
+        # states the pairing rather than either drug alone. Passing no `series_term` is
+        # deliberate: the second endpoint is inside that composite, not a separate leg.
+        cites, missing, bad = bucket_citations(bucket, records)
+        unquotable += missing
+        unverified += bad
         edges.append(
             Edge(
                 source=f"{source_kind}:{bucket.dimension}",
@@ -268,6 +293,7 @@ def _build_network(plan: Plan, result: AggregationResult) -> NetworkData:
                 weight=len(ids),
                 nct_ids=ids[:INLINE_CITATIONS],
                 nct_id_total=len(ids),
+                citations=cites,
             )
         )
         node_trials.setdefault((source_kind, bucket.dimension), set()).update(ids)
@@ -280,7 +306,7 @@ def _build_network(plan: Plan, result: AggregationResult) -> NetworkData:
     _add_association_strength(edges)
     nodes.sort(key=lambda n: (-n.weight, n.id))
     edges.sort(key=lambda e: (-e.weight, e.source, e.target))
-    return NetworkData(nodes=nodes, edges=edges)
+    return NetworkData(nodes=nodes, edges=edges), unquotable, unverified
 
 
 def _add_association_strength(edges: list[Edge]) -> None:
@@ -381,71 +407,130 @@ def build_config(plan: Plan, result: AggregationResult, viz: VizType) -> VizConf
 # --------------------------------------------------------------------------------------
 
 
-def build_citations(
-    result: AggregationResult,
+def bucket_citations(
+    bucket: Bucket,
     records: dict[str, Any],
-    limit: int = MAX_CITATIONS,
-) -> tuple[dict[str, Citation], int, int]:
-    """One citation per cited trial, deduplicated across datapoints.
+    *,
+    series_term: str | None = None,
+    limit: int = INLINE_CITATIONS,
+) -> tuple[list[Citation], int, int]:
+    """Evidence for one datum, attached to that datum.
 
-    Taken in bucket order so that the sample is spread across the chart rather than
-    concentrated in whichever bucket happens to be largest — a citation set that only
-    covers the tallest bar is not traceability.
+    Citations belong to the datum rather than to a response-level map keyed by NCT ID.
+    That is not a stylistic choice: on a multi-valued dimension one trial contributes to
+    several datums, so a per-trial map can hold only one of its excerpts, and every other
+    datum reading that map gets a citation stating a different datum's value. Measured on
+    the geographic example, 32 of 55 lookups were wrong that way — each excerpt verified
+    perfectly at its offsets while supporting the wrong bucket, which is the exact failure
+    this module exists to prevent.
 
-    Every excerpt is located in the record and then re-verified against it. A citation
-    that cannot be verified is **dropped**, and the count of dropped ones is returned so
-    the response can say so. Emitting an unverified excerpt would be worse than emitting
-    none, because it would look like evidence.
-
-    Args:
-        result: The aggregation, whose contributions carry the field that justified each
-            trial's bucket membership.
-        records: Normalized records by NCT ID, for their retained raw payloads.
-        limit: Cap on the citation map.
+    A grouped datum has two coordinates, and they are cited separately: `supports="value"`
+    for the bucket, `supports="series"` for the leg. The series citation is omitted when
+    the record does not state the leg's term anywhere quotable — a leg is a search
+    expression, and the registry expands it through synonyms the record never repeats.
 
     Returns:
-        The citations, and counts of the two distinct reasons one was not emitted.
+        The citations, plus counts of the two distinct reasons one was not emitted.
     """
-    citations: dict[str, Citation] = {}
+    citations: list[Citation] = []
     unquotable = 0
     unverified = 0
 
-    for bucket in result.buckets:
-        for contribution in bucket.contributions[:INLINE_CITATIONS]:
-            nct_id = contribution.nct_id
-            if nct_id in citations:
-                continue
-            if len(citations) >= limit:
-                return citations, unquotable, unverified
+    for contribution in bucket.contributions[:limit]:
+        record = records.get(contribution.nct_id)
+        if record is None or not record.raw:
+            unquotable += 1
+            continue
 
-            record = records.get(nct_id)
-            if record is None or not record.raw:
+        # Two different failures, kept apart because they mean opposite things. A value
+        # the record never states — "NOT_REPORTED" is our label for an absent `phases`
+        # key, not something the registry says — has nothing to quote, and no citation is
+        # possible or honest. A located excerpt that fails re-slicing is a defect in this
+        # code, and must be loud rather than folded in with the former.
+        endpoints = contribution.field_value.split(COMBINATION_SEPARATOR)
+        if len(endpoints) > 1:
+            # A co-occurrence edge claims two agents shared an arm group, and no single
+            # span shows that: the smallest one containing both drugs is usually the whole
+            # `interventions` array. So each endpoint is cited on its own intervention
+            # entry, and the shared `armGroupLabels` value is visible in both — which is
+            # the co-administration claim, readable side by side.
+            #
+            # Only `COMBINATION_SEPARATOR` splits. Phases are the other composite kind and
+            # must NOT: `"phases":["PHASE1","PHASE2"]` already states both in one span, so
+            # splitting them would replace one correct citation with two weaker ones.
+            found = 0
+            for endpoint in endpoints:
+                located = locate_endpoint(record.raw, endpoint)
+                if located is None:
+                    continue
+                payload, path, excerpt = located
+                if not verify(payload, excerpt):
+                    unverified += 1
+                    continue
+                found += 1
+                citations.append(
+                    Citation(
+                        nct_id=contribution.nct_id,
+                        url=STUDY_URL.format(contribution.nct_id),
+                        brief_title=record.get("brief_title") or "",
+                        field_path=path,
+                        field_value=endpoint,
+                        excerpt=excerpt.text,
+                        offset=(excerpt.start, excerpt.end),
+                        supports="value",
+                    )
+                )
+            # Half a pairing is not evidence of a pairing. If either endpoint could not be
+            # quoted, drop what was found rather than let one drug stand for two.
+            if found < len(endpoints):
+                del citations[len(citations) - found :]
                 unquotable += 1
-                continue
+            continue
 
-            # Two different failures, kept apart because they mean opposite things. A
-            # value the record never states — "NOT_REPORTED" is our label for an absent
-            # `phases` key, not something the registry says — has nothing to quote, and no
-            # citation is possible or honest. A located excerpt that fails re-slicing is a
-            # defect in this code, and must be loud rather than folded in with the former.
-            located = locate(record.raw, contribution.field_path, contribution.field_value)
-            if located is None:
-                unquotable += 1
-                continue
-            payload, excerpt = located
-            if not verify(payload, excerpt):
-                unverified += 1
-                continue
+        located = locate(record.raw, contribution.field_path, contribution.field_value)
+        if located is None:
+            unquotable += 1
+            continue
+        payload, excerpt = located
+        if not verify(payload, excerpt):
+            unverified += 1
+            continue
 
-            citations[nct_id] = Citation(
-                nct_id=nct_id,
-                url=STUDY_URL.format(nct_id),
+        citations.append(
+            Citation(
+                nct_id=contribution.nct_id,
+                url=STUDY_URL.format(contribution.nct_id),
                 brief_title=record.get("brief_title") or "",
                 field_path=contribution.field_path,
                 field_value=contribution.field_value,
                 excerpt=excerpt.text,
                 offset=(excerpt.start, excerpt.end),
+                supports="value",
             )
+        )
+
+        if series_term:
+            found = locate_term(record.raw, series_term)
+            if found is None:
+                unquotable += 1
+                continue
+            series_payload, path, series_excerpt = found
+            if not verify(series_payload, series_excerpt):
+                unverified += 1
+                continue
+            citations.append(
+                Citation(
+                    nct_id=contribution.nct_id,
+                    url=STUDY_URL.format(contribution.nct_id),
+                    brief_title=record.get("brief_title") or "",
+                    field_path=path,
+                    field_value=series_term,
+                    excerpt=series_excerpt.text,
+                    offset=(series_excerpt.start, series_excerpt.end),
+                    supports="series",
+                )
+            )
+
     return citations, unquotable, unverified
 
 
@@ -485,7 +570,7 @@ def assemble(
         for record in leg_records
     }
 
-    data = build_data(plan, result, viz)
+    data, unquotable, unverified = build_data(plan, result, viz, records)
 
     warnings = list(result.warnings)
     if plan.layout is Layout.COOCCURRENCE:
@@ -518,12 +603,13 @@ def assemble(
             f"trials were analysed, so this chart is a sample rather than the whole slice.",
         )
 
-    citations, unquotable, unverified = build_citations(result, records)
     if unquotable:
         warnings.append(
-            f"{unquotable} datum(s) carry no citation because the value labels something "
-            f"the registry does not state — an absent field reported as its own bucket "
-            f"has no text to quote."
+            f"{unquotable} contribution(s) carry no citation because the record does not "
+            f"state the value anywhere quotable — an absent field reported as its own "
+            f"bucket has nothing to quote, and a leg whose term the registry matched "
+            f"through a synonym is not repeated in the record. Nothing is cited that the "
+            f"record does not say."
         )
     if unverified:
         warnings.append(
@@ -550,7 +636,6 @@ def assemble(
             data=data,
             config=build_config(plan, result, viz),
         ),
-        citations=citations,
         meta=Meta(
             interpretation=query or build_title(plan),
             plan=plan,
@@ -578,10 +663,9 @@ def assemble(
 
 __all__ = [
     "INLINE_CITATIONS",
-    "MAX_CITATIONS",
     "assemble",
     "build_answer",
-    "build_citations",
+    "bucket_citations",
     "build_config",
     "build_data",
     "build_encoding",

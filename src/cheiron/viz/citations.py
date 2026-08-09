@@ -302,6 +302,117 @@ def locate(
     return (payload, found) if found else None
 
 
+#: The interventions array, whose entries carry the arm membership an edge asserts.
+_INTERVENTIONS_PATH = "protocolSection.armsInterventionsModule.interventions"
+
+#: Matches one intervention's own `name` leaf, capturing its index so the parent object —
+#: the entry carrying `armGroupLabels` — can be quoted instead of the bare name.
+_INTERVENTION_NAME = re.compile(
+    rf"{re.escape(_INTERVENTIONS_PATH)}\[(\d+)\]\.name$"
+)
+
+
+def locate_endpoint(record: dict[str, Any], name: str) -> tuple[str, str, Excerpt] | None:
+    """Quote the intervention entry whose own name is `name`, with its arm labels.
+
+    Used for one endpoint of a co-occurrence edge. An edge claims two agents shared an arm
+    group, and a single excerpt naming one drug cannot show that — so each endpoint is
+    cited separately and the shared `armGroupLabels` value is visible in both.
+
+    **Match on the intervention's own name, never on its subtree.** An arm label reads
+    `"Arm B: Daratumumab + Lenalidomide + Dexamethasone"`, so a subtree search for
+    "Dexamethasone" returns *Daratumumab's* entry — a citation whose `field_value` and
+    whose excerpt's `name` disagree. That is the wrong-value failure this module exists to
+    prevent, and it is what a naive implementation of this function produces.
+    """
+    payload, spans = index_spans(record)
+    encoded = json.dumps(name, ensure_ascii=False).casefold()
+
+    for path, (start, end) in spans.items():
+        match = _INTERVENTION_NAME.fullmatch(path)
+        if match is None:
+            continue
+        # The span covers `"name":"Dexamethasone"`; compare only the value after the key,
+        # so a drug whose name contains another's does not match by accident.
+        _, _, value = payload[start:end].partition(":")
+        if value.casefold() != encoded:
+            continue
+
+        parent = f"{_INTERVENTIONS_PATH}[{match.group(1)}]"
+        outer_start, outer_end = spans[parent]
+        if outer_end - outer_start <= MAX_EXCERPT_CHARS:
+            return payload, parent, Excerpt(
+                payload[outer_start:outer_end], outer_start, outer_end, "field"
+            )
+        # An entry with many arm labels can exceed the readable limit. The bare name leaf
+        # is weaker evidence — it proves the agent is in the trial, not what it was given
+        # with — but it is true, and quoting 2 KB of JSON is not evidence at all.
+        return payload, path, Excerpt(payload[start:end], start, end, "field")
+    return None
+
+
+#: Where a leg's term is worth quoting from, best first. The sponsor's own intervention
+#: name is the strongest evidence. The MeSH term is the registry's own indexer rather than
+#: the sponsor, which is weaker but still the registry saying so — and it is what rescues
+#: the trials whose only intervention name is "Immune checkpoint inhibitor". The title is
+#: last: prose mentioning a drug does not always mean the trial administers it.
+SERIES_PATHS = (
+    "protocolSection.armsInterventionsModule.interventions",
+    "derivedSection.interventionBrowseModule.meshes",
+    "protocolSection.identificationModule",
+)
+
+_INTERVENTIONS = "protocolSection.armsInterventionsModule.interventions"
+
+
+def _series_rank(path: str) -> int:
+    """Order candidate spans by how directly they state the term.
+
+    `"name":"Pembrolizumab"` is the sponsor naming the agent. An intervention
+    *description* merely containing the word is weaker — it may be listing physician's
+    choice alternatives — so it sorts below the registry's own MeSH concept, which at
+    least asserts the trial is indexed under that drug.
+    """
+    if path.startswith(_INTERVENTIONS) and path.endswith(".name"):
+        return 0
+    if path.startswith("derivedSection.interventionBrowseModule.meshes"):
+        return 1
+    if path.startswith(_INTERVENTIONS):
+        return 2
+    if path.startswith("protocolSection.identificationModule"):
+        return 3
+    return 4
+
+
+def locate_term(record: dict[str, Any], term: str) -> tuple[str, str, Excerpt] | None:
+    """Find a span stating `term`, to evidence why a trial sits in its series.
+
+    Unlike `locate`, there is no field path to start from: a leg is a *search expression*,
+    not a field, so the only honest question is whether the record states the term
+    anywhere quotable. Matching is case-insensitive because the MeSH index lower-cases
+    supplementary concepts ("pembrolizumab") while the leg label does not.
+
+    Returns the payload, the path quoted, and the excerpt — or None, which is a real
+    answer: the registry's search matched this trial through an expansion the record does
+    not state, and inventing a citation for it would be worse than having none.
+    """
+    payload, spans = index_spans(record)
+    needle = term.casefold()
+
+    candidates = [
+        (path, start, end)
+        for path, (start, end) in spans.items()
+        if end - start <= MAX_EXCERPT_CHARS and needle in payload[start:end].casefold()
+    ]
+    if not candidates:
+        return None
+    # Narrowest span from the most authoritative path: the bare `"name":"Pembrolizumab"`
+    # leaf, not the interventions array that happens to contain it.
+    candidates.sort(key=lambda c: (_series_rank(c[0]), c[2] - c[1]))
+    path, start, end = candidates[0]
+    return payload, path, Excerpt(payload[start:end], start, end, "field")
+
+
 def verify(payload: str, excerpt: Excerpt) -> bool:
     """Re-slice the payload and confirm the excerpt is what is there.
 
@@ -319,8 +430,11 @@ def verify(payload: str, excerpt: Excerpt) -> bool:
 __all__ = [
     "PROSE_WINDOW",
     "Excerpt",
+    "SERIES_PATHS",
     "index_spans",
     "locate",
+    "locate_endpoint",
+    "locate_term",
     "serialize",
     "verify",
 ]

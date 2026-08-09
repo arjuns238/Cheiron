@@ -257,3 +257,26 @@ def test_request_url_is_reproducible_by_hand() -> None:
     assert url.startswith("https://clinicaltrials.gov/api/v2/studies?")
     assert "query.cond=melanoma" in url
     assert "countTotal=true" in url
+
+
+def test_a_multi_leg_plan_projects_what_its_series_citation_needs() -> None:
+    """A drift guard, the same one `combination_groups` needed.
+
+    The leg's term must be somewhere in the fetched record to be quotable. A phases-by-drug
+    comparison otherwise projects `NCTId,BriefTitle,Phase`, leaving the title as the only
+    place a drug name can appear — which evidenced 56% of contributions against the ~92%
+    the records support. A projection that omits evidence does not fail, it cites less.
+    """
+    one_leg = Plan(legs=[Leg(label="All")], group_by="phases")
+    assert "InterventionName" not in projection(one_leg), "not paid for when there is no series"
+
+    two_legs = Plan(
+        legs=[
+            Leg(label="Pembrolizumab", filters=Filters(intervention="pembrolizumab")),
+            Leg(label="Nivolumab", filters=Filters(intervention="nivolumab")),
+        ],
+        group_by="phases",
+    )
+    pieces = projection(two_legs)
+    assert "InterventionName" in pieces
+    assert "InterventionMeshTerm" in pieces, "the registry's own synonym index"

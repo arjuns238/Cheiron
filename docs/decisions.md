@@ -81,6 +81,8 @@ answer but never an illegal one.
 | Judge authority | One re-plan, then commit regardless | Veto; unlimited revisions | A reviewer that can veto is a second planner with no repair loop; unlimited revisions turn one disagreement into a loop |
 | Malformed verdict | Treated as a concern | Treated as approval | A garbled token must not read as silent approval |
 | `concern` with no concerns | **Not** a concern | Block anyway | A re-plan with no feedback has nothing to act on |
+| Judge failure classes | **Six**, closed list — added UNQUANTIFIED SUPERLATIVE | Five; open-ended "assess quality" | A question saying *frequently*/*most common* asks for a ranked subset; with `top_n` null the plan answers "which values occur" instead. Caught live: the myeloma network returned all 5,215 edges. 12/12 on both providers after |
+| Judge verdict in `meta` | **Always recorded** (`meta.review`) | Only unactioned concerns produce a warning | An approval that leaves no trace is indistinguishable from a reviewer that never ran |
 | Selector failure | Fall back to `legal[0]` | Error | The model can only ever downgrade; membership is enforced, not trusted |
 
 The review prompt serializes the plan with `exclude_none=True`, **not** `exclude_defaults`.
@@ -120,6 +122,12 @@ See `readme-notes.md` §13.
 | Offset basis | `json.dumps(record, separators=(",",":"), ensure_ascii=False)` | Retain raw wire bytes | Reproducible and documented; per-record wire spans need incremental parsing |
 | Unverifiable citation | **Dropped**, and counted | Emit with a caveat | An unverified excerpt looks like evidence |
 | Absent values | No citation; counted separately from verification failures | Fabricate context | `NOT_REPORTED` is our label for an absent key — nothing to quote |
+| Where citations live | **On each datum** (`Datum.citations`, `Edge.citations`) | Response-level map keyed by NCT ID; both; map reduced to a trial index | A per-trial map holds one excerpt per trial, but on a multi-valued dimension a trial belongs to several datums — measured 32/55 wrong lookups on the geographic example. Also what the assignment's example shows |
+| Series (leg) evidence | Cited separately, `supports:"series"`, omitted when the record does not state the term | Bucket only; quote an adjacent term | A leg is a *search expression*: 86% of `query.intr=pembrolizumab` matches state it literally, 6% only as a MeSH concept, 8% nowhere. Quoting `"Immune checkpoint inhibitor"` as evidence of pembrolizumab is the failure this system exists to prevent |
+| Edge evidence | **One citation per endpoint**, each on its own intervention entry | One citation quoting the composite; splitting phases too | No single span shows a pairing — the smallest containing both drugs is usually the whole `interventions` array. Two entries make the shared `armGroupLabels` visible side by side. Measured 100% of edge contributions locatable; 0 of 13,780 name the wrong drug |
+| Deterministic `top_n` default for networks | **Not added** — the judge enforces it from the question instead | Default `top_n` when layout is cooccurrence | A blanket default is the "hard node cap" already rejected under Graph size. The restriction must come from the question asking for a frequent subset, not from policy — otherwise a genuine "which drugs co-occur" query is silently trimmed |
+| Citation payload cap | **None** — every datum carries its evidence | Cap ~100 cited datums; spread a global budget; scale per-datum count | User's call. On a complete 5,215-edge graph citations are 85% of an 8 MB response (554 KB gzipped). Completeness preferred over payload; `suggested_min_occurrences` remains the client-side lever |
+| Synonym source | ClinicalTrials.gov's own `derivedSection.interventionBrowseModule.meshes[]` | An external drug ontology; a hand-written synonym list | Already in the response, carries a MeSH id, and the `derivedSection` path tells the reader it is the registry's indexer rather than the sponsor. No outside data source introduced |
 
 ---
 
@@ -144,7 +152,26 @@ Recorded because each one produced output that looked correct.
 6. **Anthropic's schema limits are undocumented until you hit them** — 16 unions, 24
    optional params, no `maxItems`, no `$ref` with siblings.
 7. **The registry returns 500s and 429s.** A full outage lasted ~20 seconds mid-build.
-8. **Field notes were emitted for `group_by` only, never `metric_field`.** So the caveat on
+8. **A per-trial citation map cannot serve a multi-valued dimension.** Citations were
+   keyed by NCT ID with `if nct_id in citations: continue`, so the first bucket to claim a
+   trial won and every later bucket read a citation stating a different bucket's value.
+   Clicking Canada on the map showed `"country":"United States"` as its evidence. Each
+   excerpt verified perfectly at its offsets — the offsets were never the problem. Found
+   only by building the frontend and clicking. Measured 32/55 wrong on the geographic
+   example, 0 on every single-valued one. Fixed by moving citations onto the datum.
+9. **A narrow projection starves the citation locator.** Series citations worked, and
+   covered 56% of contributions instead of 86%, because the compiler projected
+   `NCTId,BriefTitle,Phase` — the drug name was never fetched, so the title was the only
+   quotable place. Fixed with `SERIES_EVIDENCE` in `compiler.projection`, guarded by a
+   drift test. Third instance of this shape after `combination_groups` and struct
+   sub-fields: **when adding anything that reads the raw record, check the projection.**
+10. **Guessing piece names silently returns an empty module, not an error.**
+   `InterventionBrowseLeafName` produced `interventionBrowseModule: {}` and the conclusion
+   "no MeSH data exists" — which was wrong, and would have cost a whole feature. The real
+   shape is `meshes[]`/`ancestors[]`, reachable as `InterventionMeshTerm`. Same trap as
+   `api-findings.md` CORRECTION 2; check an unprojected record before concluding a field
+   is absent.
+11. **Field notes were emitted for `group_by` only, never `metric_field`.** So the caveat on
    the field actually being charted disappeared. Found by capturing the adverse-events
    example: it published a median of 184.5 participants with serious adverse events and
    dropped the registry note saying to compare that against `serious_ae_at_risk` rather

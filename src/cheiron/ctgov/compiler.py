@@ -39,6 +39,11 @@ CITATION_PROJECTION = ("NCTId", "BriefTitle")
 #: cannot drift and leave the compiler under-projecting.
 ARM_SCOPED_SOURCES: dict[str, str] = {"intervention_names": "combination_groups"}
 
+#: Pieces that let a leg's term be quoted from the record, best evidence first. The
+#: sponsor's own intervention name, then ClinicalTrials.gov's MeSH concept — which is what
+#: covers the trials whose only intervention name is "Immune checkpoint inhibitor".
+SERIES_EVIDENCE: tuple[str, ...] = ("InterventionName", "InterventionMeshTerm")
+
 #: Essie treats bare whitespace as a token separator, so any value that contains a space
 #: (`United States`, `Novo Nordisk A/S`) is quoted. Both forms happened to return identical
 #: counts when tested, but relying on that would be relying on an unspecified tokenizer.
@@ -94,6 +99,18 @@ def projection(plan: Plan) -> tuple[str, ...]:
     for key in referenced:
         if key:
             pieces.extend(FIELDS[key].projection)
+
+    # A multi-leg plan has a second coordinate — which leg a trial fell in — and that is
+    # cited separately. The leg's term has to be *somewhere in the fetched record* to be
+    # quotable, and a narrow projection is exactly what removes it: a phases-by-drug
+    # comparison projects `NCTId,BriefTitle,Phase`, so the only place the drug can be
+    # found is the title. Measured, that evidenced 56% of contributions; with the
+    # intervention name and the registry's own MeSH concept in the projection it reaches
+    # what the records actually support. Same failure as ARM_SCOPED_SOURCES above — a
+    # projection that omits the evidence does not error, it just quietly cites less.
+    if len(plan.legs) > 1:
+        pieces.extend(SERIES_EVIDENCE)
+
     return tuple(dict.fromkeys(pieces))
 
 

@@ -16,15 +16,18 @@ rate limiter — whose whole job is to remember what it did a moment ago.
 
 from __future__ import annotations
 
+import json
 import logging
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
+from pathlib import Path
 from typing import Any
 
 import httpx
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException
-from fastapi.responses import JSONResponse
+from fastapi.responses import FileResponse, JSONResponse
+from fastapi.staticfiles import StaticFiles
 
 from cheiron.agg.aggregator import InvariantError
 from cheiron.ctgov.client import BASE_URL, MAX_PAGES, CtGovClient
@@ -45,6 +48,12 @@ from cheiron.schemas.response import (
 log = logging.getLogger(__name__)
 
 VERSION = "0.1.0"
+
+STATIC_DIR = Path(__file__).parent / "static"
+#: The captured runs live at the repo root, outside the package. Resolved rather than
+#: packaged because they are demo material, not something the service depends on: if the
+#: directory is absent the UI still works and simply offers no saved examples.
+EXAMPLES_DIR = Path(__file__).resolve().parents[3] / "examples"
 
 #: Stated in `/capabilities` and the README. Copied from `plan.md` §4 — these are questions
 #: the registry cannot answer, not chart types the system lacks.
@@ -216,6 +225,50 @@ async def schema() -> dict[str, Any]:
             "Rebuild that string to verify any excerpt by hand."
         ),
     }
+
+
+# --------------------------------------------------------------------------------------
+# Demo UI
+#
+# A mock frontend, and the assignment's stated bonus. It is deliberately a *client* of the
+# documented response envelope and nothing else: it reads `visualization.encoding` to learn
+# which key holds the dimension, `visualization.type` to pick a renderer, and `citations`
+# to show provenance. It never reaches into the pipeline, so if it can render a chart, a
+# real frontend engineer can too — which is the claim `/schema` is making.
+# --------------------------------------------------------------------------------------
+
+if STATIC_DIR.is_dir():
+    app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
+
+
+@app.get("/ui", include_in_schema=False)
+async def ui() -> FileResponse:
+    """Serve the demo frontend."""
+    index = STATIC_DIR / "index.html"
+    if not index.is_file():
+        raise HTTPException(status_code=404, detail="UI assets are not installed.")
+    return FileResponse(index)
+
+
+@app.get("/examples", include_in_schema=False)
+async def examples_index() -> list[dict[str, Any]]:
+    """List the captured runs, so the UI is demoable with no API key and no spend."""
+    index = EXAMPLES_DIR / "index.json"
+    if not index.is_file():
+        return []
+    return json.loads(index.read_text())
+
+
+@app.get("/examples/{slug}", include_in_schema=False)
+async def example(slug: str) -> dict[str, Any]:
+    """Return one captured run, verbatim as `/analyze` produced it."""
+    # `slug` indexes a fixed directory listing rather than being joined into a path, so a
+    # traversal attempt finds nothing to match rather than escaping the directory.
+    known = {p.stem: p for p in EXAMPLES_DIR.glob("*.json") if p.name != "index.json"}
+    path = known.get(slug)
+    if path is None:
+        raise HTTPException(status_code=404, detail=f"No captured example named {slug!r}.")
+    return json.loads(path.read_text())
 
 
 @app.get("/health", response_model=HealthResponse)

@@ -27,7 +27,7 @@
     "response_type": "visualization",
     "visualization": "grouped_bar",
     "trials_used": 4938,
-    "citations": 76
+    "citations": 149
   },
   {
     "file": "04-geographic.json",
@@ -37,7 +37,7 @@
     "response_type": "visualization",
     "visualization": "choropleth",
     "trials_used": 1295,
-    "citations": 28
+    "citations": 55
   },
   {
     "file": "05-drug-network.json",
@@ -47,7 +47,7 @@
     "response_type": "visualization",
     "visualization": "network",
     "trials_used": 1392,
-    "citations": 92
+    "citations": 358
   },
   {
     "file": "06-adverse-events.json",

@@ -481,7 +481,7 @@ def test_citations_are_spread_across_buckets_not_concentrated(
     plan = Plan(legs=[Leg(label="All")], group_by="phases")
     response = run(plan, records, retrieval)
 
-    cited = set(response.citations)
+    cited = {c.nct_id for d in response.visualization.data for c in d.citations}
     assert cited, "a chart with data must carry citations"
     for datum in response.visualization.data:  # type: ignore[union-attr]
         if datum.model_dump()["phases"] == PHASE_NOT_REPORTED:
@@ -491,7 +491,8 @@ def test_citations_are_spread_across_buckets_not_concentrated(
             continue
         assert set(datum.nct_ids) & cited, "every bar contributes at least one citation"
 
-    for nct_id, citation in response.citations.items():
+    for citation in [c for d in response.visualization.data for c in d.citations]:
+        nct_id = citation.nct_id
         assert citation.nct_id == nct_id
         assert citation.url == f"https://clinicaltrials.gov/study/{nct_id}"
         assert citation.field_path.endswith("phases")
@@ -505,7 +506,8 @@ def test_every_cited_trial_was_actually_fetched(
 ) -> None:
     plan = Plan(legs=[Leg(label="All")], group_by="sponsor_class")
     response = run(plan, records, retrieval)
-    assert set(response.citations) <= {r.nct_id for r in records}
+    cited = {c.nct_id for d in response.visualization.data for c in d.citations}
+    assert cited <= {r.nct_id for r in records}
 
 
 def test_meta_carries_the_reproducible_audit_trail(

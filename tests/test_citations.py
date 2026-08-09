@@ -23,10 +23,15 @@ from typing import Any
 import pytest
 
 from cheiron.agg.aggregator import aggregate
-from cheiron.ctgov.normalizer import PHASE_NOT_REPORTED, NormalizedRecord, normalize_study
+from cheiron.ctgov.normalizer import (
+    COMBINATION_SEPARATOR,
+    PHASE_NOT_REPORTED,
+    NormalizedRecord,
+    normalize_study,
+)
 from cheiron.ctgov.retrieval import Retrieval
 from cheiron.schemas.plan import Filters, Layout, Leg, Plan
-from cheiron.viz.assembler import build_citations
+from cheiron.viz.assembler import bucket_citations
 from cheiron.viz.citations import (
     MAX_EXCERPT_CHARS,
     PROSE_WINDOW,
@@ -284,17 +289,35 @@ def by_id(records: list[NormalizedRecord]) -> dict[str, NormalizedRecord]:
     return {r.nct_id: r for r in records}
 
 
+def all_citations(result, records, *, limit=5, series=False):
+    """Every citation the assembler would attach, flattened across datums.
+
+    Citations live on the datum now, so a test that wants "all of them" has to walk the
+    buckets. Totals are summed the same way the assembler sums them.
+    """
+    out, unquotable, unverified = [], 0, 0
+    for bucket in result.buckets:
+        cites, missing, bad = bucket_citations(
+            bucket, records, limit=limit,
+            series_term=bucket.series if series else None,
+        )
+        out.extend(cites)
+        unquotable += missing
+        unverified += bad
+    return out, unquotable, unverified
+
+
 def test_every_emitted_citation_re_verifies_independently(
     records: list[NormalizedRecord],
 ) -> None:
     """Re-derived from scratch here rather than trusting the assembler's own check."""
     plan = Plan(legs=[Leg(label="All", filters=Filters(condition="x"))], group_by="phases")
     result = aggregate(plan, {"All": records})
-    citations, _, _ = build_citations(result, by_id(records))
+    citations, _, _ = all_citations(result, by_id(records))
 
     assert citations
-    for nct_id, citation in citations.items():
-        payload = serialize(by_id(records)[nct_id].raw)
+    for citation in citations:
+        payload = serialize(by_id(records)[citation.nct_id].raw)
         start, end = citation.offset
         assert payload[start:end] == citation.excerpt
 
@@ -305,9 +328,9 @@ def test_an_emitted_excerpt_always_states_what_it_is_cited_for(
     """Verification proves the text is there; this proves it is the *supporting* text."""
     plan = Plan(legs=[Leg(label="All")], group_by="sponsor_class")
     result = aggregate(plan, {"All": records})
-    citations, _, _ = build_citations(result, by_id(records))
+    citations, _, _ = all_citations(result, by_id(records))
 
-    for citation in citations.values():
+    for citation in citations:
         assert citation.field_value.lower() in citation.excerpt.lower()
 
 
@@ -317,11 +340,11 @@ def test_an_unquotable_value_is_counted_separately_from_a_failed_verification(
     """Opposite meanings: one is honest absence, the other is a defect in this code."""
     plan = Plan(legs=[Leg(label="All")], group_by="phases")
     result = aggregate(plan, {"All": records})
-    citations, unquotable, unverified = build_citations(result, by_id(records))
+    citations, unquotable, unverified = all_citations(result, by_id(records))
 
     assert unquotable == 3, "the three trials with no phases key"
     assert unverified == 0
-    assert not any(c.field_value == PHASE_NOT_REPORTED for c in citations.values())
+    assert not any(c.field_value == PHASE_NOT_REPORTED for c in citations)
 
 
 def test_a_record_without_its_raw_payload_is_not_cited(
@@ -331,17 +354,20 @@ def test_a_record_without_its_raw_payload_is_not_cited(
     stripped = [NormalizedRecord(r.nct_id, r.values, raw={}) for r in records]
     plan = Plan(legs=[Leg(label="All")], group_by="phases")
     result = aggregate(plan, {"All": stripped})
-    citations, unquotable, _ = build_citations(result, by_id(stripped))
+    citations, unquotable, _ = all_citations(result, by_id(stripped))
 
-    assert citations == {}
+    assert citations == []
     assert unquotable > 0
 
 
 def test_citations_are_capped(records: list[NormalizedRecord]) -> None:
     plan = Plan(legs=[Leg(label="All")], group_by="phases")
     result = aggregate(plan, {"All": records})
-    citations, _, _ = build_citations(result, by_id(records), limit=2)
-    assert len(citations) == 2
+    # The cap is per datum now, not per response: five bars each cite their own
+    # contributors rather than the first bar consuming the whole budget.
+    for bucket in result.buckets:
+        cites, _, _ = bucket_citations(bucket, by_id(records), limit=2)
+        assert len(cites) <= 2
 
 
 def test_a_combination_citation_shows_the_arm_linkage(
@@ -360,9 +386,9 @@ def test_a_combination_citation_shows_the_arm_linkage(
         layout=Layout.COOCCURRENCE,
     )
     result = aggregate(plan, {"All": [combo]})
-    citations, _, _ = build_citations(result, {combo.nct_id: combo})
+    citations, _, _ = all_citations(result, {combo.nct_id: combo})
 
-    for citation in citations.values():
+    for citation in citations:
         assert len(citation.excerpt) <= MAX_EXCERPT_CHARS
 
 
@@ -375,4 +401,176 @@ def test_the_response_states_why_a_datum_carries_no_citation(
     result = aggregate(plan, {"All": records})
     response = assemble(plan, result, Retrieval(records_by_leg={"All": records}, matched=11))
 
-    assert any("no text to quote" in w for w in response.meta.warnings)
+    assert any("carry no citation" in w for w in response.meta.warnings)
+
+
+# --------------------------------------------------------------------------------------
+# The bug that made citations datum-scoped
+# --------------------------------------------------------------------------------------
+
+
+def test_a_multi_valued_dimension_cites_each_bucket_with_its_own_value(
+    records: list[NormalizedRecord],
+) -> None:
+    """The regression that moved citations out of a response-level per-trial map.
+
+    `countries` is multi-valued, so one trial lands in several buckets. When citations
+    were keyed by NCT ID the first bucket to claim a trial won, and every later bucket
+    read a citation stating a different country — text that verified perfectly at its
+    offsets while supporting the wrong datum. Measured on the geographic example, 32 of
+    55 lookups were wrong that way.
+
+    A trial genuinely in several buckets must therefore be cited several times, each with
+    the country that bucket is about.
+    """
+    plan = Plan(legs=[Leg(label="All")], group_by="countries")
+    result = aggregate(plan, {"All": records})
+    by_nct = by_id(records)
+
+    seen_per_trial: dict[str, set[str]] = {}
+    for bucket in result.buckets:
+        cites, _, _ = bucket_citations(bucket, by_nct)
+        for citation in cites:
+            assert citation.field_value == bucket.dimension, (
+                f"{citation.nct_id} cited under {bucket.dimension!r} "
+                f"states {citation.field_value!r}"
+            )
+            assert citation.field_value in citation.excerpt
+            seen_per_trial.setdefault(citation.nct_id, set()).add(bucket.dimension)
+
+    assert any(len(v) > 1 for v in seen_per_trial.values()), (
+        "no trial spanned two country buckets, so this fixture cannot prove the fix"
+    )
+
+
+def test_a_series_citation_is_omitted_rather_than_faked(
+    records: list[NormalizedRecord],
+) -> None:
+    """A leg is a search expression, not a field.
+
+    The registry matches a trial to `intervention: pembrolizumab` through synonym and
+    class expansion the record never repeats. Where the term is genuinely absent the
+    honest output is no series citation and a count, not an adjacent-looking excerpt.
+    """
+    plan = Plan(legs=[Leg(label="All")], group_by="phases")
+    result = aggregate(plan, {"All": records})
+    by_nct = by_id(records)
+
+    absent = 0
+    for bucket in result.buckets:
+        cites, unquotable, _ = bucket_citations(
+            bucket, by_nct, series_term="Zzyzx-never-appears"
+        )
+        absent += unquotable
+        assert not [c for c in cites if c.supports == "series"]
+    assert absent > 0, "an absent term must be counted, not silently ignored"
+
+    # And where it is present, it is quoted from the record rather than asserted.
+    target = next(r for r in records if r.get("intervention_names"))
+    term = target.get("intervention_names")[0]
+    plan = Plan(legs=[Leg(label="All")], group_by="phases")
+    result = aggregate(plan, {"All": [target]})
+    for bucket in result.buckets:
+        cites, _, _ = bucket_citations(bucket, {target.nct_id: target}, series_term=term)
+        for citation in (c for c in cites if c.supports == "series"):
+            assert term.lower() in citation.excerpt.lower()
+
+
+def test_an_edge_cites_both_of_its_endpoints(records: list[NormalizedRecord]) -> None:
+    """An edge claims two agents shared an arm group, so both must be quoted.
+
+    No single span shows a pairing — the smallest one containing both drugs is usually the
+    whole `interventions` array, which is a true substring and useless as evidence. Each
+    endpoint is therefore cited on its own intervention entry, and the shared
+    `armGroupLabels` value is visible in both.
+    """
+    combo = next((r for r in records if r.get("combination_groups")), None)
+    if combo is None:
+        pytest.skip("no fixture carries a combination")
+
+    plan = Plan(
+        legs=[Leg(label="All", filters=Filters(condition="x"))],
+        group_by="intervention_names",
+        layout=Layout.COOCCURRENCE,
+    )
+    result = aggregate(plan, {"All": [combo]})
+
+    checked = 0
+    for bucket in result.buckets:
+        # A co-occurrence bucket holds the two endpoints as dimension and series; the
+        # composite that names the pairing is on the contribution.
+        endpoints = bucket.contributions[0].field_value.split(COMBINATION_SEPARATOR)
+        if len(endpoints) < 2:
+            continue
+        cites, _, _ = bucket_citations(bucket, {combo.nct_id: combo})
+        if not cites:
+            continue
+        checked += 1
+        # Every endpoint is cited, and each excerpt names the drug it is cited for —
+        # never a neighbour that merely appears in an arm label.
+        assert {c.field_value for c in cites} == set(endpoints)
+        for citation in cites:
+            # Case-insensitive: an arm label may lower-case a name the intervention
+            # capitalises. What must never happen is naming a *different* drug, which is
+            # what a subtree search produces — measured 0 of 13,780 on the live network.
+            named = json.loads(citation.excerpt)["name"]
+            assert named.casefold() == citation.field_value.casefold()
+            assert len(citation.excerpt) <= MAX_EXCERPT_CHARS
+    assert checked, "no combination bucket was exercised"
+
+
+def test_a_composite_phase_is_cited_whole_and_never_split(
+    records: list[NormalizedRecord],
+) -> None:
+    """The other composite kind, which splitting would make strictly worse.
+
+    `"phases":["PHASE1","PHASE2"]` already states both members in one span, so a
+    `PHASE1|PHASE2` bucket gets one citation, not two. Only `COMBINATION_SEPARATOR`
+    splits.
+    """
+    plan = Plan(legs=[Leg(label="All")], group_by="phases")
+    result = aggregate(plan, {"All": records})
+
+    composite = [b for b in result.buckets if "|" in b.dimension]
+    assert composite, "the fixtures include multi-phase trials"
+
+    for bucket in composite:
+        cites, _, _ = bucket_citations(bucket, by_id(records))
+        by_trial: dict[str, int] = {}
+        for citation in cites:
+            assert citation.field_value == bucket.dimension, "cited whole, not per member"
+            by_trial[citation.nct_id] = by_trial.get(citation.nct_id, 0) + 1
+        assert all(n == 1 for n in by_trial.values()), "one citation per trial, not per member"
+
+
+def test_half_a_pairing_is_not_emitted_as_evidence_of_a_pairing(
+    records: list[NormalizedRecord],
+) -> None:
+    """If one endpoint cannot be quoted, the other must not stand in for the pair."""
+    combo = next((r for r in records if r.get("combination_groups")), None)
+    if combo is None:
+        pytest.skip("no fixture carries a combination")
+
+    # Strip one endpoint's intervention entry, leaving the other quotable.
+    plan = Plan(
+        legs=[Leg(label="All", filters=Filters(condition="x"))],
+        group_by="intervention_names",
+        layout=Layout.COOCCURRENCE,
+    )
+    result = aggregate(plan, {"All": [combo]})
+    bucket = next(
+        b for b in result.buckets
+        if COMBINATION_SEPARATOR in b.contributions[0].field_value
+    )
+    dropped = bucket.contributions[0].field_value.split(COMBINATION_SEPARATOR)[0]
+
+    raw = json.loads(json.dumps(combo.raw))
+    interventions = raw["protocolSection"]["armsInterventionsModule"]["interventions"]
+    raw["protocolSection"]["armsInterventionsModule"]["interventions"] = [
+        i for i in interventions if i.get("name") != dropped
+    ]
+    maimed = NormalizedRecord(combo.nct_id, combo.values, raw=raw)
+
+    cites, unquotable, _ = bucket_citations(bucket, {combo.nct_id: maimed})
+    assert not cites, "one endpoint alone does not evidence a pairing"
+    assert unquotable > 0, "and the omission is counted"

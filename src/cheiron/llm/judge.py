@@ -86,6 +86,14 @@ other grounds, and do not comment on style or completeness:
    completion date, or the reverse.
 5. SPARSE GROUPING — the probe results show the grouping field is mostly empty in this
    slice, so the chart would describe reporting practice rather than trials.
+6. UNQUANTIFIED SUPERLATIVE — the question restricts itself to a *frequent*, *common*,
+   *top*, *leading*, *main* or *most* subset, but `top_n` is null, so the plan describes
+   every value that occurs at all — including values occurring exactly once. That answers
+   "which values occur" and not "which occur frequently", which is a different question.
+   Judge this from the wording of the question alone: you do not know how many values
+   there will be, and you do not need to. A question that asks for a distribution, a
+   comparison, or simply "which X" is correct unrestricted — do not raise this merely
+   because `top_n` is null.
 
 If none applies, answer exactly {"verdict": "ok", "concerns": []}. Approving is a real
 decision and is frequently the right one — most plans are correct, and inventing a concern

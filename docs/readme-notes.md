@@ -522,3 +522,193 @@ not hold it* (cross-trial efficacy with the 144-titles figure, per-person data, 
 enrolment, free-text name duplication) and *this version does not read it* (outcome
 measures, eligibility-text search). Never one list, because the reader cannot tell which is
 which, and the difference is exactly what "what I would do with more time" is made of.
+
+---
+
+## 18. Citations belong to the datum, and a per-trial map cannot express that
+
+**The problem.** Citations were a response-level map keyed by NCT ID, deduplicated with
+`if nct_id in citations: continue`. That is correct for a single-valued dimension, where a
+trial belongs to exactly one bucket. It is wrong for a multi-valued one, where a trial
+belongs to several: the first bucket to claim a trial won, and every later bucket looked up
+the same key and got a citation stating a **different bucket's value**.
+
+In the geographic example, clicking Canada showed:
+
+```json
+{"nct_id": "NCT06758401", "field_value": "United States",
+ "excerpt": "\"country\":\"United States\"", "offset": [310, 335]}
+```
+
+Measured: **32 of 55 citation lookups stated another bucket's value.** Zero on the three
+single-valued examples (`phases`, `phases`×series, `sponsor_class`). Seven grouping fields
+are exposed to it: `countries`, `conditions`, `intervention_names`, `intervention_types`,
+`intervention_mesh`, `condition_mesh`, `collaborators`.
+
+**Why silence is not acceptable.** Every one of those excerpts verified at its offsets.
+Offset verification was working exactly as designed and could not have caught this, because
+the text really was in the record — at a position supporting a different claim. This is the
+distinction the project states as an invariant: *a citation must both verify at its offsets
+and state the value it is cited for.* It is the second half that failed, and the first half
+made it look trustworthy. A README that shows offset verification as the guarantee of
+citation correctness, without this, overstates what that check buys.
+
+Worth stating plainly: **the unit tests did not find this, and could not have.** They
+asserted that every emitted citation verifies and that its `field_value` appears in its
+excerpt — both true here. It was found by building the mock frontend and clicking a country.
+
+**What the README must say.** Citations hang off each datum (`Datum.citations`,
+`Edge.citations`); there is no response-level map. Give the reason — one trial, several
+datums — and the 32/55 measurement, because it is the evidence that the shape was chosen
+rather than assumed.
+
+---
+
+## 19. A leg is a search expression, so its evidence is sometimes honestly absent
+
+**The problem.** A grouped datum has two coordinates — the bucket and the series — and one
+excerpt rarely states both. Citing only the bucket leaves half the datum unevidenced: in
+the comparison example all 76 citations quoted `protocolSection.designModule.phases`, and
+nothing showed why a trial sat in the Nivolumab series rather than the Pembrolizumab one.
+
+Evidencing the series is harder than it looks, because a leg is not a field. Measured over
+200 trials matching `query.intr=pembrolizumab`:
+
+| | |
+|---|---|
+| State the term literally in an intervention name or title | **86%** |
+| Do not, but carry it as a MeSH concept in the same response | **6%** |
+| State it nowhere quotable | **8%** |
+
+The 6% are rescued by ClinicalTrials.gov's *own* index rather than any outside ontology:
+
+```json
+"interventions": [{"name": "Immune checkpoint inhibitor"}],
+"meshes": [{"id": "C582435", "term": "pembrolizumab"}]
+```
+
+The remaining 8% are more interesting than a gap. They include a sildenafil
+pharmacokinetics trial and one whose only intervention is "Anti-angiogenic agents plus
+anti-PD-1/PD-L1 antibodies". These are the registry's **search** matching loosely, not
+records we failed to cite. An uncitable contribution is therefore a signal that the search
+recalled something the record does not support.
+
+**Why silence is not acceptable.** The tempting fix is to quote the nearest available text
+— showing `"Immune checkpoint inhibitor"` as evidence that a trial is a pembrolizumab
+trial. That excerpt is real, verifies, and is not evidence of the claim. It would be a
+worse failure than the citation bug above, because it looks more convincing.
+
+**A projection can silently starve the evidence.** The first working version evidenced only
+**56%** of contributions, not 86%. The compiler projects the narrowest `fields=` set that
+answers the plan, and for a phases-by-drug comparison that is `NCTId,BriefTitle,Phase` — so
+the drug name was absent from every fetched record and the title was the only place it
+could ever be found. Adding `InterventionName` and `InterventionMeshTerm` to the projection
+for multi-leg plans took it to **86%**, sourced 60 from intervention names, 8 from MeSH
+concepts and 1 from a title, with 11 honestly uncited. This is the same failure as the
+arm-fields trap: *a projection that omits the evidence does not error, it just quietly
+cites less*, and the only symptom is a number that looks plausible.
+
+**What the README must say.** Series membership is cited separately (`supports: "series"`),
+sourced from the sponsor's intervention name first and the registry's MeSH concept second,
+with the `derivedSection` path making clear which is which. Where the record states the
+term nowhere, no citation is emitted and the contribution is counted. Quote the 86/6/8
+split, and say that the 8% is partly the registry's own search recall rather than a defect
+here — that is the difference between reporting a limitation and understanding it.
+
+
+---
+
+## 20. An edge cites both endpoints, and the payload is deliberately uncapped
+
+**The problem.** A co-occurrence edge claims two agents shared an arm group. One excerpt
+cannot show that: the smallest span containing both drug names is usually the entire
+`interventions` array — 1,435 characters on one measured record — which is a true substring
+and useless as evidence. The first implementation quoted one endpoint plus its arm labels,
+and **85 of 179 edge citations named only one of the two drugs**, leaving the pairing
+itself unevidenced.
+
+Each endpoint is now cited separately, on its own intervention entry, so the shared arm
+label is visible in both:
+
+```json
+{"type":"DRUG","name":"Dexamethasone","armGroupLabels":["SCTC21C + VRd (S-VRd)","VRd"]}
+{"type":"DRUG","name":"Lenalidomide", "armGroupLabels":["SCTC21C + VRd (S-VRd)","VRd"]}
+```
+
+Measured on the live network: 100% of edge contributions locatable, **0 of 13,780 excerpts
+name a drug other than the one cited**, 96% show a shared arm label directly. The other 4%
+are entries too long to quote whole, which fall back to the bare name leaf — weaker
+evidence, and stated as such rather than padded out.
+
+**The trap, because it is the third instance of one shape.** The obvious implementation —
+"narrowest intervention object containing the term" — is wrong. An arm label reads
+`"Arm B: Daratumumab + Lenalidomide + Dexamethasone"`, so searching a subtree for
+"Dexamethasone" returns *Daratumumab's* entry: a citation whose `field_value` and whose
+excerpt's `name` disagree. Matching is therefore on the intervention's own `name`, widening
+to the parent afterwards. If either endpoint cannot be quoted, neither is emitted — half a
+pairing is not evidence of a pairing.
+
+**Why silence is not acceptable on the payload.** Citations hang off every datum and are
+**not capped**. On a complete 5,215-edge graph that is 13,780 citations, 85% of an 8 MB
+response (554 KB gzipped) against 1.2 MB for the graph alone. That is a deliberate choice —
+every datum carries its own evidence rather than a privileged subset — but a reader who
+meets an 8 MB response without warning will reasonably think nobody measured it.
+
+**What the README must say.** That edges cite both endpoints and why one excerpt cannot;
+the 0/13,780 wrong-drug figure as evidence the subtree trap was avoided; and the payload
+arithmetic with the `suggested_min_occurrences` filter named as the client-side lever. Note
+that a planner-chosen `top_n` changes this by two orders of magnitude — the same query
+returned 41 edges on one run and 5,215 on another — so quote both.
+
+
+---
+
+## 21. The reviewer earns its place, and its verdict is always recorded
+
+**The problem.** Asked *"Which drugs **frequently** co-occur in combination studies for
+multiple myeloma?"*, the system returned **every** pair that co-occurs at all — 5,215 edges
+over 1,234 nodes, 76% of which appear in a single trial. Every number was correct. It
+answered "which drugs co-occur", which is not the question asked.
+
+Nothing was broken. `top_n` is planner-chosen (`plan.py:200`) with no rule and no default,
+so the same query produced `top_n: 10` on one run and `null` on the next — 87 KB against
+11 MB for the same question. And the reviewer approved it, correctly: its prompt names five
+failure classes and says *"This is the whole list — do not invent other grounds"*, and none
+covered a question whose quantifier the plan had dropped.
+
+The fix is a sixth class, UNQUANTIFIED SUPERLATIVE, judged from the wording alone — the
+reviewer never learns how many values there will be, and does not need to. Live result
+after the change:
+
+```json
+"review": {"verdict": "concern", "revised": true,
+           "concerns": ["UNQUANTIFIED SUPERLATIVE — the question asks which drugs
+             'frequently' co-occur, so the plan should set a top_n ... rather than
+             leaving the result unrestricted to all co-occurrences, including one-off
+             pairs."]}
+```
+
+The plan was revised to `top_n: 10` and the response went from 11 MB to 270 KB. **12/12 on
+the adversarial set on both providers**, six wrong plans caught and six correct plans left
+alone — the controls matter as much, since a reviewer that flags everything is as useless
+as one that flags nothing.
+
+**Why the fix is not a default.** The tempting alternative is to default `top_n` whenever
+the layout is co-occurrence. That is the "hard node cap" already rejected under Graph size,
+and it is wrong for the same reason: it would trim a genuine "which drugs co-occur" query
+that legitimately wants the whole network. The restriction has to come from the question
+asking for a frequent subset, not from policy. The reviewer is the right place precisely
+because it is the only stage that reads the question and the plan together.
+
+**Why the verdict is always recorded.** Previously only *unactioned concerns* produced a
+warning, so an approval left no trace and `meta` could not distinguish "the reviewer
+approved this plan" from "the reviewer never ran". Working out which had happened meant
+reading the prompt in the source. `meta.review` now carries `verdict`, `concerns` and
+`revised` on every reviewed request, and is null only when the reviewer genuinely did not
+run.
+
+**What the README must say.** This is the strongest available evidence that the reviewer is
+load-bearing rather than decorative — a real question, a legal plan, a wrong answer, caught
+and repaired, with the repair visible in the response. Quote the concern text and the
+11 MB → 270 KB result. Say that `top_n` remains planner-chosen and the reviewer is
+advisory with one re-plan, so this raises the odds rather than guaranteeing the outcome.
