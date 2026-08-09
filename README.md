@@ -484,6 +484,23 @@ dropped record is counted by reason.
 
 ---
 
+## Example runs
+
+Eight captured runs live in `examples/`, loadable in the demo UI at `GET /ui`.
+
+| | query | type |
+|---|---|---|
+| 01 | How has the number of pembrolizumab trials changed per year since 2015? | `line` |
+| 02 | How are melanoma trials distributed across phases? | `bar` |
+| 03 | Compare phases for trials involving pembrolizumab vs nivolumab | `grouped_bar` |
+| 04 | Where are recruiting trials for non-small cell lung cancer running? | `choropleth` |
+| 05 | Which drugs frequently co-occur in combination studies for multiple myeloma? | `network` |
+| 06 | What is the median number of participants with serious adverse events in melanoma phase 3 trials, by sponsor class? | `bar` |
+| 07 | Is there a relationship between enrollment and the number of sites in melanoma trials? | `scatter` |
+| 08 | Which drug works better for melanoma, pembrolizumab or nivolumab? | `unsupported` |
+
+---
+
 ## Key design decisions
 
 ### A query/parameter contradiction is refused, not resolved
@@ -532,7 +549,43 @@ The motivation for this was also the fact that rendering >60,000 points on a gra
 
 ---
 
-## Future work
+## Tools, validation, and what was designed deliberately
+
+### Tools
+
+Built with **Claude Code**. The architecture, the core invariant, the decision log and every measurement-driven choice were specified deliberately and recorded as they were made — `docs/decisions.md` carries each decision with what was **rejected** and why, because the rejected option is what stops a choice being silently reversed later.
+
+### How correctness was validated
+
+**A 39-query sweep**, chosen to force every axis: all eleven chart families, all four
+metrics, all three layouts, every filter, posted results, multi-leg comparisons, the
+non-chart response types, and deliberate traps ("trials in Georgia" — country or US state?).
+Audited on three levels: self-consistency (14 checks, each documenting the bug that
+motivated it), ground truth (`tests/ground_truth.py`, which **imports nothing from
+`cheiron`** and refetches from the registry), and human judgement.
+
+
+**What that found.** Across the final sweep, **35 of 39 queries reached independent
+verification against the live registry with zero mismatches**, and a separate pass re-sliced
+**96 citations from freshly refetched records with 0 mismatched**. Eight defects were found,
+and **not one was a wrong value** — seven of the eight were *right number, wrong words
+around it*: a unit, a label, an answer sentence, an encoding, a response type. Values were
+never the problem, which is precisely why unit tests alone were not enough.
+
+### What was generated and adapted
+
+**Generated and adapted** — mechanical surface where the shape was specified and the typing
+was not: Pydantic model boilerplate, the HTTP client's pagination and retry loop, test
+scaffolding, the demo frontend's rendering code, and the first draft of most prose.
+
+**Iterated under measurement** — the prompts. None of the four survived first contact
+unchanged, and the changes were driven by the adversarial sets rather than by taste: the
+reviewer gained two failure classes, the chart selector gained a geography rule after both
+providers were found to be *actively downgrading* the canonical map question to a bar chart.
+
+---
+
+## Limitations and future work
 
 ### Make peak memory independent of the slice, so the cap is only about time
 
@@ -584,54 +637,3 @@ normalizer. Reducing them to a number without one would be exactly the plausible
 output the rest of the system refuses to produce.
 
 ---
-
-## Tools, validation, and what was designed deliberately
-
-### Tools
-
-Built with **Claude Code**. The architecture, the core invariant, the decision log and every measurement-driven choice were specified deliberately and recorded as they were made — `docs/decisions.md` carries each decision with what was **rejected** and why, because the rejected option is what stops a choice being silently reversed later.
-
-### How correctness was validated
-
-**A 39-query sweep**, chosen to force every axis: all eleven chart families, all four
-metrics, all three layouts, every filter, posted results, multi-leg comparisons, the
-non-chart response types, and deliberate traps ("trials in Georgia" — country or US state?).
-Audited on three levels: self-consistency (14 checks, each documenting the bug that
-motivated it), ground truth (`tests/ground_truth.py`, which **imports nothing from
-`cheiron`** and refetches from the registry), and human judgement.
-
-
-**What that found.** Across the final sweep, **35 of 39 queries reached independent
-verification against the live registry with zero mismatches**, and a separate pass re-sliced
-**96 citations from freshly refetched records with 0 mismatched**. Eight defects were found,
-and **not one was a wrong value** — seven of the eight were *right number, wrong words
-around it*: a unit, a label, an answer sentence, an encoding, a response type. Values were
-never the problem, which is precisely why unit tests alone were not enough.
-
-### What was generated and adapted
-
-**Generated and adapted** — mechanical surface where the shape was specified and the typing
-was not: Pydantic model boilerplate, the HTTP client's pagination and retry loop, test
-scaffolding, the demo frontend's rendering code, and the first draft of most prose.
-
-**Iterated under measurement** — the prompts. None of the four survived first contact
-unchanged, and the changes were driven by the adversarial sets rather than by taste: the
-reviewer gained two failure classes, the chart selector gained a geography rule after both
-providers were found to be *actively downgrading* the canonical map question to a bar chart.
-
----
-
-## Example runs
-
-Eight captured runs live in `examples/`, loadable in the demo UI at `GET /ui`.
-
-| | query | type |
-|---|---|---|
-| 01 | How has the number of pembrolizumab trials changed per year since 2015? | `line` |
-| 02 | How are melanoma trials distributed across phases? | `bar` |
-| 03 | Compare phases for trials involving pembrolizumab vs nivolumab | `grouped_bar` |
-| 04 | Where are recruiting trials for non-small cell lung cancer running? | `choropleth` |
-| 05 | Which drugs frequently co-occur in combination studies for multiple myeloma? | `network` |
-| 06 | What is the median number of participants with serious adverse events in melanoma phase 3 trials, by sponsor class? | `bar` |
-| 07 | Is there a relationship between enrollment and the number of sites in melanoma trials? | `scatter` |
-| 08 | Which drug works better for melanoma, pembrolizumab or nivolumab? | `unsupported` |

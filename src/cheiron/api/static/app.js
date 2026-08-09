@@ -905,20 +905,58 @@ function App() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ query: asked }),
       });
-      const payload = await response.json();
+      // Read the body as text first, and only then try to parse it. Calling
+      // `response.json()` up front throws on any non-JSON body, and the throw lands in the
+      // catch below — which reported "could not reach the service" for a service that had
+      // been reached and had answered with a status. A platform error page (a gateway
+      // timeout, a restarted container) is HTML, so that was the common case, and the
+      // status was the one useful fact being discarded.
+      const raw = await response.text();
+      let payload = null;
+      try {
+        payload = JSON.parse(raw);
+      } catch {
+        payload = null;
+      }
+
       if (!response.ok) {
-        // The backend's failure modes are part of its design, so show what it actually
-        // said rather than a generic apology. An invariant failure in particular is a
-        // deliberate refusal to return a chart, not a crash.
         setBody(null);
+        if (payload) {
+          // The backend's failure modes are part of its design, so show what it actually
+          // said rather than a generic apology. An invariant failure in particular is a
+          // deliberate refusal to return a chart, not a crash.
+          setError({
+            message: payload.message || payload.detail || `Request failed (${response.status}).`,
+            detail: payload.detail,
+          });
+        } else {
+          // Nothing this application wrote. Saying "declined to answer" here would claim a
+          // decision that was never made.
+          setError({
+            title: 'The service is unavailable',
+            message:
+              `The request did not reach the application — it was answered with ` +
+              `${response.status}${response.statusText ? ' ' + response.statusText : ''} ` +
+              `by something in front of it. Try again in a moment.`,
+            detail: raw.slice(0, 300),
+          });
+        }
+        return;
+      }
+
+      if (!payload) {
         setError({
-          message: payload.message || payload.detail || `Request failed (${response.status}).`,
-          detail: payload.detail,
+          title: 'The service is unavailable',
+          message: `The service answered ${response.status} with a body that is not JSON.`,
+          detail: raw.slice(0, 300),
         });
+        setBody(null);
         return;
       }
       setBody(payload);
     } catch (e) {
+      // Reserved for a request that genuinely never completed — offline, DNS, a refused
+      // connection. Anything with a status code is handled above.
       setBody(null);
       setError({ message: `Could not reach the service: ${e.message}` });
     } finally {
@@ -981,7 +1019,7 @@ function App() {
 
         ${error && html`
           <section className="callout warn">
-            <h4>The service declined to answer</h4>
+            <h4>${error.title || 'The service declined to answer'}</h4>
             <p><b>${error.message}</b></p>
             ${error.detail && html`<pre>${typeof error.detail === 'string' ? error.detail : JSON.stringify(error.detail, null, 2)}</pre>`}
           </section>`}
