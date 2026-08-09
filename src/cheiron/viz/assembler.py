@@ -389,8 +389,29 @@ def build_encoding(plan: Plan, shape: Shape, viz: VizType) -> Encoding:
     return encoding
 
 
+def _axis_scale(field_key: str | None) -> str:
+    """Log where the registry says the field is heavy-tailed, linear otherwise.
+
+    Derived from `FieldSpec.skewed` rather than from the values in front of us, and never
+    from a model — the same rule `bin_scale` already applies to histograms, so the same
+    evidence produces the same decision in both places.
+
+    It matters most on a scatter, which has no binning step to absorb the skew. Measured on
+    the captured example: median enrolment 44 against a maximum of 2,953,748, with 3,611 of
+    3,625 points below 1% of that maximum. A linear axis there is arithmetically correct
+    and shows a single dot and a smear along the edge.
+    """
+    return "log" if field_key and FIELDS[field_key].skewed else "linear"
+
+
 def build_config(plan: Plan, result: AggregationResult, viz: VizType) -> VizConfig:
+    # Only a point layout binds a *field* to x; elsewhere x is a bucket label, which has no
+    # distribution to be skewed.
+    x_field = plan.group_by if plan.layout is Layout.POINT else None
+    y_field = plan.metric_field if plan.metric is not Metric.COUNT else None
     return VizConfig(
+        x_scale=_axis_scale(x_field),
+        y_scale=_axis_scale(y_field) if plan.layout is Layout.POINT else "linear",
         sort=plan.sort.value,
         granularity=plan.granularity.value if plan.granularity else None,
         top_n=plan.top_n,

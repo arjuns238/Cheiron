@@ -2240,6 +2240,8 @@
       "other_bucket": false,
       "stacked": false,
       "y_starts_at_zero": true,
+      "x_scale": "linear",
+      "y_scale": "linear",
       "suggested_min_occurrences": null,
       "value_format": "integer"
     }
@@ -2304,12 +2306,12 @@
       "bin_scale": "linear",
       "top_n": null,
       "sort": "dimension_asc",
-      "viz_hint": "grouped bar chart comparing trial counts by phase for pembrolizumab versus nivolumab",
+      "viz_hint": "grouped bar chart",
       "assumptions": [
-        "Interpreted 'involving pembrolizumab vs nivolumab' as filtering intervention_names for each drug separately.",
-        "Interpreted 'compare phases' as comparing counts of trials across the phases categories.",
-        "Included all study types, statuses, countries, and years because none were specified.",
-        "A trial may appear in a leg if it lists the named drug among its interventions, including combination trials."
+        "Interpreted 'trials involving pembrolizumab vs nivolumab' as two populations defined by intervention_names search, one for pembrolizumab and one for nivolumab.",
+        "Interpreted 'compare phases' as counting trials by the categorical field phases.",
+        "A trial may appear in both legs if it involves both pembrolizumab and nivolumab, because the comparison is by involvement of each named intervention rather than mutually exclusive assignment.",
+        "No restriction was added for study type, status, sponsor, country, or date range because none was specified."
       ]
     },
     "filters_applied": {
@@ -2329,10 +2331,10 @@
       "truncated": false
     },
     "assumptions": [
-      "Interpreted 'involving pembrolizumab vs nivolumab' as filtering intervention_names for each drug separately.",
-      "Interpreted 'compare phases' as comparing counts of trials across the phases categories.",
-      "Included all study types, statuses, countries, and years because none were specified.",
-      "A trial may appear in a leg if it lists the named drug among its interventions, including combination trials."
+      "Interpreted 'trials involving pembrolizumab vs nivolumab' as two populations defined by intervention_names search, one for pembrolizumab and one for nivolumab.",
+      "Interpreted 'compare phases' as counting trials by the categorical field phases.",
+      "A trial may appear in both legs if it involves both pembrolizumab and nivolumab, because the comparison is by involvement of each named intervention rather than mutually exclusive assignment.",
+      "No restriction was added for study type, status, sponsor, country, or date range because none was specified."
     ],
     "warnings": [
       "'Not Applicable' and 'Not Reported' together are roughly 63% of the registry. Combination phases (e.g. Phase 1/Phase 2) form their own bucket and are never double-counted into Phase 1 and Phase 2, so these totals will not match ClinicalTrials.gov's own phase facets, which do double-count.",

@@ -43588,6 +43588,8 @@
       "other_bucket": false,
       "stacked": false,
       "y_starts_at_zero": false,
+      "x_scale": "log",
+      "y_scale": "log",
       "suggested_min_occurrences": null,
       "value_format": "decimal:1"
     }
@@ -43630,11 +43632,12 @@
       "bin_scale": "linear",
       "top_n": null,
       "sort": "dimension_asc",
-      "viz_hint": "Scatter plot of trials with site_count on the x-axis and enrollment on the y-axis to assess relationship.",
+      "viz_hint": "scatter",
       "assumptions": [
-        "Interpreted 'melanoma trials' as trials filtered by the condition field using the value 'melanoma'.",
-        "Interpreted 'relationship between enrollment and the number of sites' as a trial-level scatter, using layout 'point', with site_count on the x-axis and enrollment on the y-axis.",
-        "No restriction was applied for study type, phase, status, country, or date range because none were specified."
+        "Interpret 'melanoma trials' as trials filtered by the condition field using 'melanoma'.",
+        "Use a trial-level scatter plot to assess the relationship, with site_count on the x-axis and enrollment on the y-axis.",
+        "In point layout, each point represents one trial, so enrollment is not aggregated across trials even though metric_field is enrollment.",
+        "No restriction was specified for study type, phase, status, country, or date range."
       ]
     },
     "filters_applied": {
@@ -43653,21 +43656,25 @@
       "truncated": false
     },
     "assumptions": [
-      "Interpreted 'melanoma trials' as trials filtered by the condition field using the value 'melanoma'.",
-      "Interpreted 'relationship between enrollment and the number of sites' as a trial-level scatter, using layout 'point', with site_count on the x-axis and enrollment on the y-axis.",
-      "No restriction was applied for study type, phase, status, country, or date range because none were specified."
+      "Interpret 'melanoma trials' as trials filtered by the condition field using 'melanoma'.",
+      "Use a trial-level scatter plot to assess the relationship, with site_count on the x-axis and enrollment on the y-axis.",
+      "In point layout, each point represents one trial, so enrollment is not aggregated across trials even though metric_field is enrollment.",
+      "No restriction was specified for study type, phase, status, country, or date range."
     ],
     "warnings": [
       "Counts listed sites only; absent location lists yield 0, which is a reporting gap rather than a trial with no sites.",
       "Heavily right-skewed (observed values range from 0 to over 1.1 million), so median is preferred over mean. Mixes ACTUAL and ESTIMATED counts.",
       "118 record(s) excluded: missing enrollment.",
-      "3103 contribution(s) carry no citation because the record does not state the value anywhere quotable — an absent field reported as its own bucket has nothing to quote, and a leg whose term the registry matched through a synonym is not repeated in the record. Nothing is cited that the record does not say."
+      "3103 contribution(s) carry no citation because the record does not state the value anywhere quotable — an absent field reported as its own bucket has nothing to quote, and a leg whose term the registry matched through a synonym is not repeated in the record. Nothing is cited that the record does not say.",
+      "The plan was revised after review. METRIC MISMATCH — the question asks about the relationship between trial-level enrollment and number of sites, but the plan’s metric is median enrollment by site_count; use a trial-level enrollment measure for each trial (not an aggregated median) against site_count."
     ],
     "planning_trace": [],
     "review": {
-      "verdict": "ok",
-      "concerns": [],
-      "revised": false
+      "verdict": "concern",
+      "concerns": [
+        "METRIC MISMATCH — the question asks about the relationship between trial-level enrollment and number of sites, but the plan’s metric is median enrollment by site_count; use a trial-level enrollment measure for each trial (not an aggregated median) against site_count."
+      ],
+      "revised": true
     },
     "api_requests": [
       "https://clinicaltrials.gov/api/v2/studies?format=json&pageSize=1000&countTotal=true&fields=NCTId%2CBriefTitle%2CLocationCountry%2CEnrollmentCount%2CEnrollmentType&query.cond=melanoma",
@@ -43677,7 +43684,7 @@
     ],
     "suggested_requests": [],
     "generated_at": "<captured>",
-    "cache_hit": false,
+    "cache_hit": true,
     "llm_provider": "openai",
     "elapsed_ms": null
   }

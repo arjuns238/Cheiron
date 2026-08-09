@@ -347,9 +347,20 @@ function drawScatter(viz, canvas, dim) {
         },
       },
       scales: {
-        x: { type: 'linear', title: { display: true, text: viz.encoding?.x?.label || '' } },
+        // The scale comes from the response, not from inspecting the data here. Both
+        // measures are heavy-tailed — 99.6% of points sit below 1% of the maximum — so a
+        // linear axis is correct and shows nothing. A log axis cannot plot 0, and 0 is a
+        // real value for site_count, so the floor is nudged rather than the point dropped.
+        x: {
+          type: viz.config?.x_scale === 'log' ? 'logarithmic' : 'linear',
+          min: viz.config?.x_scale === 'log' ? 0.5 : undefined,
+          title: { display: true, text: viz.encoding?.x?.label || '' },
+        },
         y: {
-          beginAtZero: viz.config?.y_starts_at_zero !== false,
+          type: viz.config?.y_scale === 'log' ? 'logarithmic' : 'linear',
+          min: viz.config?.y_scale === 'log' ? 0.5 : undefined,
+          beginAtZero: viz.config?.y_scale !== 'log'
+            && viz.config?.y_starts_at_zero !== false,
           title: { display: true, text: viz.encoding?.y?.label || '' },
         },
       },

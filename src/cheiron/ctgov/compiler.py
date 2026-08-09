@@ -131,6 +131,21 @@ def _advanced_clauses(filters: Filters) -> list[str]:
         high = f"{filters.start_year_max}-12-31" if filters.start_year_max else "MAX"
         clauses.append(f"AREA[StartDate]RANGE[{low},{high}]")
 
+    if filters.site_status and not filters.country:
+        # `site_status` alone used to compile to nothing at all: it was only ever emitted
+        # inside the country branch below, so a plan filtering on it without a country
+        # issued an unfiltered query while `meta.filters_applied` still reported the
+        # filter. Measured on non-small cell lung cancer: 8,493 trials unfiltered against
+        # 2,107 with this clause — the geographic example silently answered a question
+        # about 7,744 trials instead of the 1,295 it claimed.
+        #
+        # On its own the clause means "has at least one site in this status, anywhere",
+        # which is a different question from trial-level status and is not a substitute
+        # for it: 2,107 against 1,295 for the same slice. The gap is trials whose overall
+        # status is not RECRUITING but which still carry a recruiting site.
+        statuses = " OR ".join(s.value for s in filters.site_status)
+        clauses.append(f"SEARCH[Location](AREA[LocationStatus]({statuses}))")
+
     if filters.country:
         if filters.site_status:
             # Nested, and the nesting is load-bearing. The unnested form matches trials

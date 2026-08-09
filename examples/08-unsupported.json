@@ -1,7 +1,7 @@
 {
   "request_id": "example-08-unsupported",
   "response_type": "unsupported",
-  "answer": "ClinicalTrials.gov records trial-level and, for posted results, arm-level outcomes, but it does not provide a common, comparable field for comparative efficacy across studies. Sponsors define different endpoints, units, and analysis windows, so there is no registry-based way to say whether pembrolizumab works better than nivolumab for melanoma.",
+  "answer": "ClinicalTrials.gov records can show trial counts, sponsors, phases, enrollment, and posted safety results, but they do not provide a single comparable field for comparative efficacy across studies. Different trials define melanoma outcomes differently, with varying endpoints, units, and analysis windows, so the registry cannot determine which drug works better overall.",
   "visualization": {
     "type": "kpi",
     "title": "Not answerable from registration data",
@@ -19,12 +19,14 @@
       "other_bucket": false,
       "stacked": false,
       "y_starts_at_zero": true,
+      "x_scale": "linear",
+      "y_scale": "linear",
       "suggested_min_occurrences": null,
       "value_format": null
     }
   },
   "meta": {
-    "interpretation": "ClinicalTrials.gov records trial-level and, for posted results, arm-level outcomes, but it does not provide a common, comparable field for comparative efficacy across studies. Sponsors define different endpoints, units, and analysis windows, so there is no registry-based way to say whether pembrolizumab works better than nivolumab for melanoma.",
+    "interpretation": "ClinicalTrials.gov records can show trial counts, sponsors, phases, enrollment, and posted safety results, but they do not provide a single comparable field for comparative efficacy across studies. Different trials define melanoma outcomes differently, with varying endpoints, units, and analysis windows, so the registry cannot determine which drug works better overall.",
     "plan": null,
     "filters_applied": {},
     "counting_semantics": null,
@@ -37,20 +39,20 @@
     },
     "assumptions": [],
     "warnings": [
-      "ClinicalTrials.gov records trial-level and, for posted results, arm-level outcomes, but it does not provide a common, comparable field for comparative efficacy across studies. Sponsors define different endpoints, units, and analysis windows, so there is no registry-based way to say whether pembrolizumab works better than nivolumab for melanoma."
+      "ClinicalTrials.gov records can show trial counts, sponsors, phases, enrollment, and posted safety results, but they do not provide a single comparable field for comparative efficacy across studies. Different trials define melanoma outcomes differently, with varying endpoints, units, and analysis windows, so the registry cannot determine which drug works better overall."
     ],
     "planning_trace": [],
     "review": null,
     "api_requests": [],
     "suggested_requests": [
       {
-        "query": "How many melanoma trials have studied pembrolizumab versus nivolumab, and how have those counts changed over time?"
+        "query": "How many ClinicalTrials.gov studies of pembrolizumab for melanoma are registered by phase?"
       },
       {
-        "query": "What phases were melanoma trials of pembrolizumab and nivolumab conducted in?"
+        "query": "How many ClinicalTrials.gov studies of nivolumab for melanoma are registered by phase?"
       },
       {
-        "query": "Who are the main sponsors of melanoma trials for pembrolizumab and nivolumab?"
+        "query": "Which sponsors have the most ClinicalTrials.gov melanoma studies for pembrolizumab versus nivolumab?"
       }
     ],
     "generated_at": "<captured>",

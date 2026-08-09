@@ -217,6 +217,38 @@ not name pembrolizumab in the title — the API expands synonyms and related ter
 match here. This is a coverage/precision tradeoff to state in the README, and a reason the
 planner's `probe_count` is worth its cost.
 
+## Site status vs trial status — three different questions
+
+`LocationStatus` and `OverallStatus` are not interchangeable, and the nesting matters.
+Measured on `query.cond=non-small cell lung cancer`, `countTotal=true`:
+
+| clause | trials |
+|---|---|
+| *(none)* | 8,493 |
+| `SEARCH[Location](AREA[LocationStatus](RECRUITING))` | **2,107** |
+| `AREA[OverallStatus]RECRUITING` | **1,295** |
+
+The 812-trial gap between the middle and bottom rows is trials whose *overall* status is not
+RECRUITING but which still carry at least one site marked recruiting — a trial in follow-up
+with an open site, or stale site-level data. Reading one as the other answers a different
+question.
+
+With a country the clause must stay **nested inside one `SEARCH[Location]`**, so the
+recruiting site is the one in that country:
+
+```
+SEARCH[Location](AREA[LocationCountry]France AND AREA[LocationStatus](RECRUITING))   9,347
+AREA[LocationCountry]France AND AREA[LocationStatus](RECRUITING)                    42,635
+```
+
+The unnested form matches a trial with a French site that is separately recruiting
+somewhere else entirely. Both forms are valid Essie and neither errors, which is what makes
+this worth writing down.
+
+`SEARCH[Location](AREA[LocationStatus](...))` **without** a country is also valid — that was
+not obvious, and was checked before relying on it. It means "has at least one site in this
+status, anywhere".
+
 ## Enum vocabulary (boot-time, from `/studies/enums`)
 
 41 types. The ones the plan's validator needs:

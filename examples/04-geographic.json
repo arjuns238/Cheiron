@@ -899,6 +899,8 @@
       "other_bucket": true,
       "stacked": false,
       "y_starts_at_zero": true,
+      "x_scale": "linear",
+      "y_scale": "linear",
       "suggested_min_occurrences": null,
       "value_format": "integer"
     }
@@ -945,10 +947,10 @@
       "sort": "value_desc",
       "viz_hint": "choropleth or ranked bar chart by country",
       "assumptions": [
-        "Interpreted 'Where are ... running?' as a geographic distribution of trials by country.",
-        "Used the condition field for 'non-small cell lung cancer'.",
-        "Used overall trial status RECRUITING because no site-specific country constraint was requested.",
-        "Applied a top_n limit because country is a multi-valued entity field and the user asked for locations rather than a single headline total."
+        "Interpreted 'Where are ... running?' as a geographic breakdown by trial country using the countries field.",
+        "Used overall trial status RECRUITING as the definition of 'recruiting trials'.",
+        "Mapped 'non-small cell lung cancer' to the condition field.",
+        "Applied a top_n limit because countries is a multi-valued entity field and a ranked view of the leading countries is the most practical default."
       ]
     },
     "filters_applied": {
@@ -968,10 +970,10 @@
       "truncated": false
     },
     "assumptions": [
-      "Interpreted 'Where are ... running?' as a geographic distribution of trials by country.",
-      "Used the condition field for 'non-small cell lung cancer'.",
-      "Used overall trial status RECRUITING because no site-specific country constraint was requested.",
-      "Applied a top_n limit because country is a multi-valued entity field and the user asked for locations rather than a single headline total."
+      "Interpreted 'Where are ... running?' as a geographic breakdown by trial country using the countries field.",
+      "Used overall trial status RECRUITING as the definition of 'recruiting trials'.",
+      "Mapped 'non-small cell lung cancer' to the condition field.",
+      "Applied a top_n limit because countries is a multi-valued entity field and a ranked view of the leading countries is the most practical default."
     ],
     "warnings": [
       "Country is multi-valued: bucket totals sum to more than the number of distinct trials.",

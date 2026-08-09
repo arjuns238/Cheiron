@@ -27,7 +27,7 @@ five HTTP endpoints, and the captured example runs.
 | Free-text name casing | Sponsor-authored entity fields group case-insensitively under the commonest spelling; route/salt/brand variants deliberately stay split |
 | Optional parameters | 13 structured fields, applied deterministically; contradiction with the question is judge class 7 → 422. `max_records` removed |
 
-All **7** examples are captured; `verify_examples.py` independently reconciles three of them
+All **8** examples are captured; `verify_examples.py` independently reconciles three of them
 (phases, countries, posted-results medians) with no mismatches.
 
 ### Read these first
@@ -42,14 +42,14 @@ All **7** examples are captured; `verify_examples.py` independently reconciles t
 - `docs/api-findings.md` — what the API actually does, verified by curl. Items marked
   **CORRECTION** contradict `plan.md`; the findings win, because they were measured.
 - `docs/corpus-facts.md` — corpus statistics with the exact query that produced each.
-- `docs/readme-notes.md` — 23 disclosures the README must carry, each with the problem, why
+- `docs/readme-notes.md` — 25 disclosures the README must carry, each with the problem, why
   silence is unacceptable, and what to write. This is the raw material for ⑭.
 
 ### Commands
 
 ```bash
 uv sync --all-extras                      # install
-.venv/bin/pytest -q                       # 459 tests, offline, no API key needed
+.venv/bin/pytest -q                       # 465 tests, offline, no API key needed
 .venv/bin/ruff check src tests examples
 
 .venv/bin/python -m uvicorn cheiron.api.app:app --port 8000   # serve
@@ -152,7 +152,13 @@ docs/          decisions, api findings, corpus facts, readme notes
    the plan together. A brief attempt to detect contradictions by withholding the
    parameters from the planner is recorded in `decisions.md` as rejected: it worked, but
    left the planner calibrating to a slice nobody asked about.
-8. **When you add anything that reads the raw record, check the projection.** The compiler
+8. **Every filter must have a compiled clause and a test asserting it.** `site_status`
+   compiled to nothing unless `country` was also set, so the query went out unfiltered
+   while `meta.filters_applied` reported the filter — 7,744 trials answered for a question
+   claiming 1,295. A filter that silently does nothing is indistinguishable from one that
+   works. `meta.api_requests` carries the issued URLs verbatim precisely so this is
+   checkable from the response.
+9. **When you add anything that reads the raw record, check the projection.** The compiler
    fetches the narrowest `fields=` set that answers the plan, so a new reader silently sees
    nothing. This has bitten three times: `combination_groups` (empty graph, no error),
    struct sub-fields (`StartDate` without `.type`), and series citations (56% instead of

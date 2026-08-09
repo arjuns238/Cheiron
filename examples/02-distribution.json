@@ -675,6 +675,8 @@
       "other_bucket": false,
       "stacked": false,
       "y_starts_at_zero": true,
+      "x_scale": "linear",
+      "y_scale": "linear",
       "suggested_min_occurrences": null,
       "value_format": "integer"
     }
@@ -721,7 +723,7 @@
       "assumptions": [
         "Interpreted 'melanoma trials' as trials filtered by the condition field using 'melanoma'.",
         "Interpreted 'distributed across phases' as a count of trials grouped by phase.",
-        "Included all study types, statuses, countries, and years because none were specified."
+        "Included all study types, statuses, countries, sponsors, and years because none were specified."
       ]
     },
     "filters_applied": {
@@ -740,7 +742,7 @@
     "assumptions": [
       "Interpreted 'melanoma trials' as trials filtered by the condition field using 'melanoma'.",
       "Interpreted 'distributed across phases' as a count of trials grouped by phase.",
-      "Included all study types, statuses, countries, and years because none were specified."
+      "Included all study types, statuses, countries, sponsors, and years because none were specified."
     ],
     "warnings": [
       "'Not Applicable' and 'Not Reported' together are roughly 63% of the registry. Combination phases (e.g. Phase 1/Phase 2) form their own bucket and are never double-counted into Phase 1 and Phase 2, so these totals will not match ClinicalTrials.gov's own phase facets, which do double-count.",

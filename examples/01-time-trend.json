@@ -1029,6 +1029,8 @@
       "other_bucket": false,
       "stacked": false,
       "y_starts_at_zero": true,
+      "x_scale": "linear",
+      "y_scale": "linear",
       "suggested_min_occurrences": null,
       "value_format": "integer"
     }
@@ -1073,9 +1075,9 @@
       "sort": "dimension_asc",
       "viz_hint": "line",
       "assumptions": [
-        "Interpreted 'pembrolizumab trials' as trials filtered by intervention name.",
-        "Interpreted 'per year since 2015' as grouping by start date year with start_year_min set to 2015.",
-        "Measured 'number of trials' as a count of trial records (NCT IDs)."
+        "Interpreted 'pembrolizumab trials' as trials filtered by intervention name using intervention='pembrolizumab'.",
+        "Interpreted 'per year since 2015' as grouping by trial start_date by calendar year with start_year_min set to 2015.",
+        "Count means number of trial records (nct_id count) per year."
       ]
     },
     "filters_applied": {
@@ -1093,9 +1095,9 @@
       "truncated": false
     },
     "assumptions": [
-      "Interpreted 'pembrolizumab trials' as trials filtered by intervention name.",
-      "Interpreted 'per year since 2015' as grouping by start date year with start_year_min set to 2015.",
-      "Measured 'number of trials' as a count of trial records (NCT IDs)."
+      "Interpreted 'pembrolizumab trials' as trials filtered by intervention name using intervention='pembrolizumab'.",
+      "Interpreted 'per year since 2015' as grouping by trial start_date by calendar year with start_year_min set to 2015.",
+      "Count means number of trial records (nct_id count) per year."
     ],
     "warnings": [
       "Registry lag undercounts the most recent periods: sponsors register and update records on their own schedule.",

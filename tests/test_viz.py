@@ -35,7 +35,7 @@ from cheiron.schemas.plan import (
     Sort,
 )
 from cheiron.schemas.response import NetworkData, ResponseType, VizType
-from cheiron.viz.assembler import assemble, build_answer, build_title
+from cheiron.viz.assembler import assemble, build_answer, build_config, build_title
 from cheiron.viz.rules import Shape, choose, describe_shape, legal_charts
 
 FIXTURE_DIR = Path(__file__).parent / "fixtures" / "raw_studies"
@@ -552,3 +552,33 @@ def test_a_scatter_is_not_described_as_an_aggregation(
     assert not any("Median is reported" in w for w in result.warnings)
     # And the claim it makes instead is true: one datum per contributing trial.
     assert all(len(b.nct_ids) == 1 for b in result.buckets)
+
+
+def test_a_scatter_on_skewed_measures_asks_for_log_axes(
+    records: list[NormalizedRecord],
+) -> None:
+    """Derived from the field registry, so the rule matches `bin_scale`'s.
+
+    Measured on the captured example: median enrolment 44 against a maximum of 2,953,748,
+    and 3,611 of 3,625 points below 1% of that maximum. A linear axis is arithmetically
+    correct and renders one dot plus a smear along the edge — the same failure the log
+    histogram already exists to prevent.
+    """
+    plan = Plan(
+        legs=[Leg(label="All")],
+        group_by="site_count",
+        metric=Metric.MEDIAN,
+        metric_field="enrollment",
+        layout=Layout.POINT,
+    )
+    result = aggregate(plan, {"All": records})
+    config = build_config(plan, result, VizType.SCATTER)
+    assert (config.x_scale, config.y_scale) == ("log", "log")
+
+
+def test_a_bucketed_chart_keeps_linear_axes(records: list[NormalizedRecord]) -> None:
+    """A bar's x is a label, not a distribution, and its y is a count of trials."""
+    plan = Plan(legs=[Leg(label="All")], group_by="phases")
+    result = aggregate(plan, {"All": records})
+    config = build_config(plan, result, VizType.BAR)
+    assert (config.x_scale, config.y_scale) == ("linear", "linear")

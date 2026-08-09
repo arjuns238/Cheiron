@@ -14,6 +14,7 @@ import pytest
 
 from cheiron.ctgov.compiler import (
     PAGE_SIZE,
+    _advanced_clauses,
     compile_leg,
     compile_plan,
     escape,
@@ -280,3 +281,43 @@ def test_a_multi_leg_plan_projects_what_its_series_citation_needs() -> None:
     pieces = projection(two_legs)
     assert "InterventionName" in pieces
     assert "InterventionMeshTerm" in pieces, "the registry's own synonym index"
+
+
+def test_site_status_without_a_country_is_still_compiled() -> None:
+    """It used to compile to nothing, which is worse than being unsupported.
+
+    The clause was only ever emitted inside the country branch, so a plan filtering on
+    `site_status` alone issued an unfiltered query while `meta.filters_applied` still
+    reported the filter as applied. Measured on non-small cell lung cancer: 8,493 trials
+    unfiltered against 2,107 with the clause — the geographic example answered a question
+    about 7,744 trials while claiming 1,295.
+    """
+    clauses = _advanced_clauses(
+        Filters(condition="nsclc", site_status=[Status.RECRUITING])
+    )
+    assert clauses == ["SEARCH[Location](AREA[LocationStatus](RECRUITING))"]
+
+
+def test_site_status_with_a_country_stays_nested() -> None:
+    """The nesting is the whole point: the *French* site must be the recruiting one.
+
+    Unnested, it matches a trial with a French site that is separately recruiting
+    somewhere else. Measured corpus-wide: 42,635 unnested against 9,347 nested.
+    """
+    clauses = _advanced_clauses(
+        Filters(condition="nsclc", country="France", site_status=[Status.RECRUITING])
+    )
+    assert clauses == [
+        "SEARCH[Location](AREA[LocationCountry]France AND AREA[LocationStatus](RECRUITING))"
+    ]
+    assert len(clauses) == 1, "one nested clause, never two independent ones"
+
+
+def test_site_status_is_not_silently_read_as_trial_status() -> None:
+    """They are different questions and differ by hundreds of trials on one slice.
+
+    2,107 trials have a recruiting site; 1,295 are recruiting at trial level. Mapping one
+    onto the other would answer a question the caller did not ask.
+    """
+    site = _advanced_clauses(Filters(site_status=[Status.RECRUITING]))
+    assert not any("OverallStatus" in c for c in site)

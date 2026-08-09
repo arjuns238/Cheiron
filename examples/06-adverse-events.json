@@ -304,6 +304,8 @@
       "other_bucket": false,
       "stacked": false,
       "y_starts_at_zero": false,
+      "x_scale": "linear",
+      "y_scale": "linear",
       "suggested_min_occurrences": null,
       "value_format": "decimal:1"
     }
@@ -352,9 +354,9 @@
       "assumptions": [
         "Interpreted 'melanoma' as the condition filter.",
         "Restricted to phase 3 trials using the phases field.",
-        "Computed the median of serious_ae_participants within each sponsor_class bucket.",
-        "Included all matching trials regardless of overall status unless the question did not specify otherwise.",
-        "Did not restrict to has_results even though serious adverse event fields are typically available only when results are posted; missing values will be handled by deterministic code."
+        "Computed the median of the trial-level serious_ae_participants field within each sponsor_class bucket.",
+        "Included all overall statuses because none were specified.",
+        "Did not restrict to trials with posted results in the filters; trials lacking serious adverse event participant data will be excluded by the metric computation where the field is unreported."
       ]
     },
     "filters_applied": {
@@ -378,9 +380,9 @@
     "assumptions": [
       "Interpreted 'melanoma' as the condition filter.",
       "Restricted to phase 3 trials using the phases field.",
-      "Computed the median of serious_ae_participants within each sponsor_class bucket.",
-      "Included all matching trials regardless of overall status unless the question did not specify otherwise.",
-      "Did not restrict to has_results even though serious adverse event fields are typically available only when results are posted; missing values will be handled by deterministic code."
+      "Computed the median of the trial-level serious_ae_participants field within each sponsor_class bucket.",
+      "Included all overall statuses because none were specified.",
+      "Did not restrict to trials with posted results in the filters; trials lacking serious adverse event participant data will be excluded by the metric computation where the field is unreported."
     ],
     "warnings": [
       "Summed across arm groups. Compare against serious_ae_at_risk rather than enrollment: the safety population is often smaller than the enrolled one.",

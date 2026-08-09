@@ -886,3 +886,96 @@ outermost and least documented objects in the envelope, which was backwards.
 reasons. The brief's test is that "a frontend engineer can implement a renderer without
 guessing", so a deviation from its own examples has to be stated by us rather than
 discovered by them.
+
+
+---
+
+## 24. Scatter: a chart that folds nothing, and had to say so
+
+**The problem.** The point layout was implemented, unit-tested and reachable — the planner
+picks it unprompted from *"Is there a relationship between enrollment and the number of
+sites in melanoma trials?"* — but no captured example used it. Three defects had therefore
+survived, and all three were found the moment one was captured.
+
+**It described itself as an aggregation.** The subtitle read *"Each value is the median of
+enrollment over the trials in that bucket"* across **3,625 buckets of one trial each**. A
+point layout folds nothing: `value` is that trial's own enrolment. `metric` is only set
+because the plan validator requires one, and the generic wording believed it. The right-skew
+warning had the same flaw, explaining a median nobody computed. Every number was correct and
+every reader would have been misled — the same shape as the citation bug in §18, in a
+different field.
+
+**A linear axis made it unreadable.** Both bound measures are flagged `skewed` in the field
+registry, and `VizConfig` had no axis-scale hint at all, so `bin_scale`'s rule had simply
+never been extended to the one chart type with no binning step to absorb the skew.
+
+| enrollment across 3,625 points | |
+|---|---|
+| median | 44 |
+| p99 | 7,000 |
+| max | 2,953,748 |
+| **below 1% of the max** | **3,611 (99.6%)** |
+
+`config.x_scale` / `y_scale` are now derived from `FieldSpec.skewed`, exactly as `bin_scale`
+is — deterministic, never model-chosen. Rendered pixel coverage went from 15,372 to 56,634,
+and the positive relationship between site count and enrolment becomes visible instead of a
+dot and a smear.
+
+**And the demo frontend would have drawn the wrong relationship.** It passed Chart.js a
+`labels` array plus y-values, which for `type: "scatter"` plots the *row index* against y.
+The chart would have rendered, looked plausible, and shown nothing real.
+
+**One honest characteristic, not a defect.** On that query **3,103 of 3,625 contributions
+carry no citation**. `site_count` is *derived* — a count of the locations array — so no
+literal "12" exists in the record to quote, and the system emits nothing rather than
+something adjacent. High uncited counts are inherent to scatters over derived measures, and
+the response says so.
+
+**Why silence is not acceptable.** A scatter is the one chart here where each mark is a
+trial rather than a summary, and a reader who assumes otherwise misreads all 3,625 points.
+The axis scale matters just as much: a linear axis on this data is arithmetically correct
+and communicates nothing, which is the argument §2 already makes for histograms.
+
+**What the README must say.** That point layout aggregates nothing and the subtitle states
+it; that axis scale is derived from the same field metadata as bin scale, with the 99.6%
+figure; and that citation coverage is low on derived measures *by construction*. Also worth
+stating plainly: the bugs existed because no example exercised the type. An untested chart
+family is an untested code path, and the fix was to capture one.
+
+---
+
+## 25. A filter that compiled to nothing and was reported as applied
+
+**The problem.** `site_status` was only ever emitted inside the `country` branch of the
+query compiler. A plan filtering on `site_status` with no country produced **no clause at
+all**, issued a bare `query.cond=…`, and still listed the filter in `meta.filters_applied`.
+
+The geographic example answered a question about **7,744 trials while claiming 1,295**. It
+had been correct in every earlier capture because those runs planned trial-level `status`,
+which does compile; this run planned `site_status`, which did not.
+
+Verified against the live API before fixing, on `query.cond=non-small cell lung cancer`:
+
+| clause | trials |
+|---|---|
+| *(none)* | 8,493 |
+| `SEARCH[Location](AREA[LocationStatus](RECRUITING))` | 2,107 |
+| `AREA[OverallStatus]RECRUITING` | 1,295 |
+
+Those figures also settle what the fix should *not* be. Mapping a lone `site_status` onto
+trial-level status would have been simple and always valid, and would have answered a
+different question by 812 trials: the gap is trials whose overall status is not RECRUITING
+but which still carry a recruiting site.
+
+**Why silence is not acceptable.** This is the third instance of one pattern, and by now it
+is the pattern most worth stating: **a response that reports a filter it did not apply**.
+The others were structured parameters passed to the planner and never enforced (§3), and a
+projection that omitted the field a reader needed (§19). None of them errored; each produced
+a confident answer to a question nobody asked. `filters_applied` is only trustworthy if it
+is derived from what was actually issued, which is why `meta.api_requests` carries the URLs
+verbatim — it is the one field that cannot lie about this.
+
+**What the README must say.** The three-row table above as evidence that site and trial
+status are different questions, and the general rule: every filter has a compiled clause and
+a test asserting it, because a filter that silently does nothing is indistinguishable from a
+filter that works.

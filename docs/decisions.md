@@ -42,6 +42,8 @@ answer but never an illegal one.
 | Overlapping legs | Count in **both**, detect and warn | Assign to first leg | Each leg is a population, not a partition; a combination trial genuinely involves both drugs. First-leg assignment silently under-reports and depends on leg order |
 | Histogram + scatter | Build both | Defer | Named in the assignment's viz list. Needed `bins`/`bin_scale` and `Layout.POINT` |
 | Bin scale | Derived from `FieldSpec.skewed` | Model choice everywhere | Enrollment spans 0–1.1M; linear bins put nearly everything in one bar |
+| Scatter axis scale | Derived from the same `skewed` flag into `config.x_scale`/`y_scale` | Frontend heuristic; leave linear and document | Same rule as `bin_scale`, so the same evidence decides both. Measured: median enrolment 44 against a max of 2,953,748, 99.6% of points below 1% of the max |
+| Scatter `counting_semantics` | Special-cased for point layout | The generic metric wording | A point layout folds nothing, but `metric` must be set to validate, so the subtitle claimed a median over 3,625 buckets of one trial each |
 
 ## Retrieval
 
@@ -177,7 +179,12 @@ Recorded because each one produced output that looked correct.
    shape is `meshes[]`/`ancestors[]`, reachable as `InterventionMeshTerm`. Same trap as
    `api-findings.md` CORRECTION 2; check an unprojected record before concluding a field
    is absent.
-11. **Field notes were emitted for `group_by` only, never `metric_field`.** So the caveat on
+11. **A filter can compile to nothing and be reported as applied.** `site_status` was only
+    ever emitted inside the `country` branch, so `site_status` alone produced no clause at
+    all while `meta.filters_applied` still listed it. The geographic example silently
+    answered a question about 7,744 trials instead of 1,295. Invisible until a recapture
+    happened to plan `site_status` where earlier runs planned trial-level `status`.
+12. **Field notes were emitted for `group_by` only, never `metric_field`.** So the caveat on
    the field actually being charted disappeared. Found by capturing the adverse-events
    example: it published a median of 184.5 participants with serious adverse events and
    dropped the registry note saying to compare that against `serious_ae_at_risk` rather

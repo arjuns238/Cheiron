@@ -5540,6 +5540,8 @@
       "other_bucket": false,
       "stacked": false,
       "y_starts_at_zero": true,
+      "x_scale": "linear",
+      "y_scale": "linear",
       "suggested_min_occurrences": 18,
       "value_format": "integer"
     }
@@ -5582,11 +5584,12 @@
       "bin_scale": "linear",
       "top_n": 10,
       "sort": "value_desc",
-      "viz_hint": "drug co-occurrence network limited to the most frequent intervention pairs",
+      "viz_hint": "drug co-occurrence network for common combinations",
       "assumptions": [
-        "Interpreted 'drugs' as drug interventions, using condition='multiple myeloma', study_type='INTERVENTIONAL', and intervention_type='DRUG'.",
-        "Interpreted 'combination studies' as trials represented in the cooccurrence layout over the multi-valued intervention_names field, which forms drug-drug pairs from trials listing multiple interventions.",
-        "Interpreted 'frequently' as restricting output to the most common co-occurrences, using top_n=10 ranked by trial count."
+        "Interpreted 'multiple myeloma' as the condition filter.",
+        "Interpreted 'drugs' as intervention names restricted to intervention type DRUG.",
+        "Interpreted 'combination studies' as interventional trials with drug interventions, using a cooccurrence layout over the multi-valued intervention_names field to find pairs that appear in the same trial.",
+        "Used top_n to focus on the most frequent co-occurring drug pairs rather than all observed pairs."
       ]
     },
     "filters_applied": {
@@ -5607,9 +5610,10 @@
       "truncated": false
     },
     "assumptions": [
-      "Interpreted 'drugs' as drug interventions, using condition='multiple myeloma', study_type='INTERVENTIONAL', and intervention_type='DRUG'.",
-      "Interpreted 'combination studies' as trials represented in the cooccurrence layout over the multi-valued intervention_names field, which forms drug-drug pairs from trials listing multiple interventions.",
-      "Interpreted 'frequently' as restricting output to the most common co-occurrences, using top_n=10 ranked by trial count."
+      "Interpreted 'multiple myeloma' as the condition filter.",
+      "Interpreted 'drugs' as intervention names restricted to intervention type DRUG.",
+      "Interpreted 'combination studies' as interventional trials with drug interventions, using a cooccurrence layout over the multi-valued intervention_names field to find pairs that appear in the same trial.",
+      "Used top_n to focus on the most frequent co-occurring drug pairs rather than all observed pairs."
     ],
     "warnings": [
       "621 trial(s) fall outside the top 10 entities and are counted in the record totals but drawn in no node or edge, because 'Other' is a residue rather than an entity that can co-occur.",
@@ -5618,13 +5622,13 @@
       "Free text: brand names, code names, and generics all appear. Prefer intervention_mesh for drug-network nodes.",
       "1320 record(s) excluded: no cooccurring values.",
       "1104 value(s) beyond the top 10 were collapsed into 'Other'.",
-      "The plan was revised after review. UNQUANTIFIED SUPERLATIVE — the question asks which drugs 'frequently' co-occur, but top_n is null, so the plan would include all co-occurring drugs rather than a frequent subset; add a top_n limit on intervention_names or otherwise explicitly restrict to the most common co-occurrences."
+      "The plan was revised after review. UNQUANTIFIED SUPERLATIVE — the question asks which drugs frequently co-occur, but top_n is null so the plan would include all co-occurrences; add a top_n limit (or equivalent frequency threshold) so it returns the common co-occurring drugs rather than every pair seen at least once."
     ],
     "planning_trace": [],
     "review": {
       "verdict": "concern",
       "concerns": [
-        "UNQUANTIFIED SUPERLATIVE — the question asks which drugs 'frequently' co-occur, but top_n is null, so the plan would include all co-occurring drugs rather than a frequent subset; add a top_n limit on intervention_names or otherwise explicitly restrict to the most common co-occurrences."
+        "UNQUANTIFIED SUPERLATIVE — the question asks which drugs frequently co-occur, but top_n is null so the plan would include all co-occurrences; add a top_n limit (or equivalent frequency threshold) so it returns the common co-occurring drugs rather than every pair seen at least once."
       ],
       "revised": true
     },
