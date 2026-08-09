@@ -133,7 +133,7 @@ within a set the rules already computed.
  │   │ plan validator ·det │ ── errors ─────────► re-plan, ≤3 revisions     │
  │   └──────────┬──────────┘                                                │
  │              │ legal                                                     │
- │   ┌──────────▼──────────┐ ── concern ────────► re-plan, ≤1               │
+ │   ┌──────────▼──────────┐ ── concern ────────► re-plan.                  │
  │   │ ③ JUDGE        ·LLM │ ── contradiction ──► 422                       │
  │   └──────────┬──────────┘                                                │
  └──────────────┼───────────────────────────────────────────────────────────┘
@@ -164,15 +164,16 @@ within a set the rules already computed.
 ```
 
 The models choose **what to compute** (the planner) and **how to display it** (the
-selector). They never choose **what a value is** — that is the aggregator folding over
-lists of source records, and the invariant check is what makes the claim testable rather
-than aspirational.
+selector). The probe tools are how the Planner LLM learns anything about the actual data before committing to a query plan — they're the planner's only window into the corpus.
 
+There are three, each answering a different  question:
+
+- probe_count — how many trials match a filter set. Answers "does this drug/condition name even resolve" (zero = no match) and the planner gets an idea of the size of data it's dealing with
+- field_values — breaks a slice down by a field to see how many buckets it'd produce and which dominate, so the planner can decide whether it needs a top_n. 
+- fill_rate — what fraction of a slice actually populates a given field.
 ### How correctness is enforced: rules first, judgement second
 
-Two different kinds of check, at two different layers, because they catch different things.
-A rule can only test what is expressible in code; a judge can read the question. Neither
-alone is enough.
+Two different kinds of check, at two different layers.
 
 **Deterministic gates**
 
@@ -183,10 +184,6 @@ alone is enough.
 | Invariant check | `used + Σ excluded ≠ retrieved`, or `retrieved ≠ matched` without `truncated` | `500`, **no chart** |
 | Viz rules | Any chart type illegal for the result shape | The type never enters the selector's choices |
 | Citation verifier | An excerpt that is not a literal substring at its stated offsets | The citation is dropped and counted |
-
-The invariant check is the load-bearing one, and it is deliberately not a warning. A
-reconciliation failure means the chart would have been wrong, and shipping a wrong chart
-with a caveat is exactly the quiet failure the architecture exists to prevent.
 
 **The LLM judge — for what a rule cannot express.** A plan can pass every validator rule
 and still answer a different question than the one asked. That is not expressible as a
@@ -200,30 +197,11 @@ constraint over the plan alone: it needs the question. So the judge reads both, 
 4  TIME BASIS               8  DROPPED QUALIFIER
 ```
 
-The list is closed on purpose — the prompt says *"this is the whole list, do not invent
-other grounds"*, which is what stops a reviewer manufacturing concerns. "Assess quality"
-invites agreement; a checklist forces a decision per item.
+The list is closed on purpose. The judge is **advisory** everywhere except class 7. Its verdict is recorded in `meta.review` on every reviewed request.
 
-The judge is **advisory** everywhere except class 7. Its verdict is recorded in `meta.review` on every reviewed request — including approvals, so that "the judge approved this" and "the judge never ran" are distinguishable from the response alone.
+### Validation
 
-**Feedback loops — three, each bounded, each degrading to something safe.**
-
-| Loop | Trigger | Budget | When exhausted |
-|---|---|---|---|
-| Planner repair | Plan validator errors, handed back verbatim | 3 revisions | Ship the best-scoring attempt, flag `contested` |
-| Judge re-plan | A concern from the closed list | 1 | Commit anyway; the concern becomes a warning |
-| Selector fallback | Malformed or unusable choice | 0 | Fall back to `legal[0]` |
-
-Every failure direction is chosen so an outage costs nothing rather than something wrong:
-the router fails **open** to in-domain (a wrong refusal looks broken; a wrongly-analysed
-greeting merely returns nothing), the judge fails toward **approval** (it is advisory, so a
-provider outage should not spend a re-plan on no evidence), and a malformed verdict is
-treated as a concern rather than an approval — a garbled token must not read as silent
-assent.
-
-### How correctness is evaluated
-
-Four harnesses. Full results and what they found are in [validation](#tools-validation-and-what-was-designed-deliberately).
+Full results  in [validation](#tools-validation-and-what-was-designed-deliberately).
 
 | Harness | Scope | Runs | Catches |
 |---|---|---|---|
@@ -245,7 +223,7 @@ Four harnesses. Full results and what they found are in [validation](#tools-vali
 }
 ```
 
-Unknown fields are rejected (`extra="forbid"`).
+Unknown fields are rejected.
 
 ### Required
 
@@ -439,12 +417,8 @@ adjacent is quoted in place of the missing 8% — showing `"Immune checkpoint in
 evidence that a trial is a pembrolizumab trial would be a real excerpt that verifies and is
 not evidence of the claim.
 
-Two rules hold everywhere:
 
-- **A citation must both verify at its offsets and state the value it is cited for.** The
-  first without the second is the dangerous case, and offset verification cannot catch it —
-  the text really is in the record, at a position supporting a different claim.
-- **An unverifiable citation is dropped and counted**, never emitted with a caveat. An
+**An unverifiable citation is dropped and counted**, never emitted with a caveat. An
   unverified excerpt looks like evidence.
 
 ### `meta`
@@ -455,7 +429,7 @@ Two rules hold everywhere:
 | `plan` | Echo of the committed plan. |
 | `filters_applied` | The filters actually used. |
 | `counting_semantics` | Set whenever the rule is not "one trial, one unit" — e.g. a multi-valued grouping field, where column sums exceed the distinct trial count. |
-| `record_counts` | See below. |
+| `record_counts` | Invariant |
 | `assumptions` | Including every structured parameter that was pinned. |
 | `warnings` | |
 | `planning_trace` | The planner's probe calls and their results. Probe results are aggregate counts and can never become a chart value. |
@@ -464,29 +438,11 @@ Two rules hold everywhere:
 | `suggested_requests` | Complete, postable request bodies. Populated on `unsupported`, so a refusal becomes a redirect. |
 | `generated_at`, `cache_hit`, `llm_provider`, `elapsed_ms` | |
 
-
-### `record_counts` — the transparency block, which is also the invariant
-
-```json
-{"matched": 3743, "retrieved": 3743, "used": 3743, "excluded_by_reason": {}, "truncated": false}
-```
-
-The same four numbers that guard correctness are the ones reported, so they cannot drift
-apart. Two invariants are **enforced in production, not merely reported**:
-
-```
-used + sum(excluded_by_reason.values()) == retrieved
-retrieved == matched  or  truncated is True
-```
-
-A failure raises and returns HTTP 500 with no chart. Nothing disappears silently: every
-dropped record is counted by reason.
-
 ---
 
 ## Example runs
 
-Eight captured runs live in `examples/`, loadable in the demo UI at `GET /ui`.
+Eight captured runs live in `examples/`.
 
 | | query | type |
 |---|---|---|
@@ -531,10 +487,9 @@ Retrieval stops at **10 pages / 10,000 records per leg** unless told otherwise. 
 bound it, and one number bounds both.
 
 **Time**, because of the registry's own pagination. `pageSize` **clamps silently at 1,000**
-— asking for 2,000 returns 1,000, with nothing in the response saying so. There is no bulk endpoint and no way to widen a page, so the number of records you want is not a size question, it is a count of sequential round trips: one request per 1,000 records,
+— asking for 2,000 returns 1,000, with nothing in the response saying so. 
 **Memory**, because every retrieved record is retained until the fold completes — measured
-at **~2,270 bytes each**, of which ~1,600 is the flattened `values` dict and ~510 the
-serialized payload citations are sliced from. Peak memory therefore scales with the slice:
+at **~2,270 bytes each**. Peak memory therefore scales with the slice:
 
 | cap | records | retained |
 |---|---|---|
@@ -543,7 +498,7 @@ serialized payload citations are sliced from. Peak memory therefore scales with 
 
 
 **Raise it with `CHEIRON_MAX_PAGES` where there is headroom**, because a higher cap
-genuinely answers more questions whole. 
+genuinely answers more questions whole. The demo explicitly caps the CHEIRON_MAX_PAGES to 10 in order to be supported by Render's free tier
 
 The motivation for this was also the fact that rendering >60,000 points on a graph makes it difficult to view and is slow on the browser. 
 
@@ -555,22 +510,8 @@ The motivation for this was also the fact that rendering >60,000 points on a gra
 
 Built with **Claude Code**. The architecture, the core invariant, the decision log and every measurement-driven choice were specified deliberately and recorded as they were made — `docs/decisions.md` carries each decision with what was **rejected** and why, because the rejected option is what stops a choice being silently reversed later.
 
-### How correctness was validated
-
-**A 39-query sweep**, chosen to force every axis: all eleven chart families, all four
-metrics, all three layouts, every filter, posted results, multi-leg comparisons, the
-non-chart response types, and deliberate traps ("trials in Georgia" — country or US state?).
-Audited on three levels: self-consistency (14 checks, each documenting the bug that
-motivated it), ground truth (`tests/ground_truth.py`, which **imports nothing from
-`cheiron`** and refetches from the registry), and human judgement.
-
-
-**What that found.** Across the final sweep, **35 of 39 queries reached independent
-verification against the live registry with zero mismatches**, and a separate pass re-sliced
-**96 citations from freshly refetched records with 0 mismatched**. Eight defects were found,
-and **not one was a wrong value** — seven of the eight were *right number, wrong words
-around it*: a unit, a label, an answer sentence, an encoding, a response type. Values were
-never the problem, which is precisely why unit tests alone were not enough.
+### Results
+Across a sweep of 39 queries, **35 reached independent verification against the live registry with zero mismatches**, and a separate pass re-sliced **96 citations from freshly refetched records with 0 mismatched**. Eight defects were found, and **not one was a wrong value** — seven of the eight were *right number, wrong words around it*: a unit, a label, an answer sentence, an encoding, a response type.
 
 ### What was generated and adapted
 
@@ -624,9 +565,7 @@ by the registry's own indexing.
 
 ### Extension of Query Types — Cross-trial efficacy from outcome measures
 
-The biggest capability gap, and the reason is worth stating precisely. Posted results *are*
-read — participant flow, adverse events with their own denominators, baseline demographics —
-but `outcomeMeasuresModule` is deliberately not extracted.
+Posted results *are* read — participant flow, adverse events with their own denominators, baseline demographics — but `outcomeMeasuresModule` is deliberately not extracted.
 
 Measured: **25 melanoma trials with results carried 157 outcome measures under 144 distinct
 titles in 34 distinct units**, where even `"Percentage of participants"` and
