@@ -149,6 +149,21 @@ async def main() -> int:
             body["meta"]["generated_at"] = "<captured>"
             body["meta"]["elapsed_ms"] = None
 
+            # The request is written into the file, first, so each example is a complete
+            # run rather than an output whose question lives somewhere else. `index.json`
+            # also carries the query, and a reader who opens a single file should not have
+            # to go looking.
+            #
+            # `exclude_defaults` rather than `exclude_none`, so what appears here is what
+            # the caller actually chose: an example that sets no structured parameters
+            # shows a bare query rather than thirteen nulls and two defaulted flags. A
+            # non-default value — `include_citations: false`, or any filter — still shows,
+            # which is the part that has to be visible.
+            body = {
+                "request": example.request.model_dump(mode="json", exclude_defaults=True),
+                **body,
+            }
+
             path = HERE / f"{example.slug}.json"
             path.write_text(json.dumps(body, indent=2, ensure_ascii=False) + "\n")
 

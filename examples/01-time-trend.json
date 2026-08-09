@@ -1,4 +1,7 @@
 {
+  "request": {
+    "query": "How has the number of pembrolizumab trials changed per year since 2015?"
+  },
   "request_id": "example-01-time-trend",
   "response_type": "visualization",
   "answer": "Across 2,857 trials, the highest start date is 2022 at 298 trials.",

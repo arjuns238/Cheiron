@@ -1,4 +1,7 @@
 {
+  "request": {
+    "query": "Compare phases for trials involving pembrolizumab vs nivolumab"
+  },
   "request_id": "example-03-comparison",
   "response_type": "visualization",
   "answer": "Across 4,938 trials, the highest phase is PHASE2 (Pembrolizumab) at 1,235 trials.",

@@ -1,4 +1,7 @@
 {
+  "request": {
+    "query": "Where are recruiting trials for non-small cell lung cancer running?"
+  },
   "request_id": "example-04-geographic",
   "response_type": "visualization",
   "answer": "Across 1,295 trials, the highest country is China at 569 trials.",

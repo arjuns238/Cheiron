@@ -1,4 +1,7 @@
 {
+  "request": {
+    "query": "Which drug works better for melanoma, pembrolizumab or nivolumab?"
+  },
   "request_id": "example-08-unsupported",
   "response_type": "unsupported",
   "answer": "ClinicalTrials.gov records can show trial counts, sponsors, phases, enrollment, and posted safety results, but they do not provide a single comparable field for comparative efficacy across studies. Different trials define melanoma outcomes differently, with varying endpoints, units, and analysis windows, so the registry cannot determine which drug works better overall.",

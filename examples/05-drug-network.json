@@ -1,4 +1,7 @@
 {
+  "request": {
+    "query": "Which drugs frequently co-occur in combination studies for multiple myeloma?"
+  },
   "request_id": "example-05-drug-network",
   "response_type": "visualization",
   "answer": "10 entities and 41 links across 1,391 trials; the strongest is Dexamethasone – Lenalidomide with 250 shared trials.",

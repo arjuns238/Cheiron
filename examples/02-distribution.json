@@ -1,4 +1,7 @@
 {
+  "request": {
+    "query": "How are melanoma trials distributed across phases?"
+  },
   "request_id": "example-02-distribution",
   "response_type": "visualization",
   "answer": "Across 3,743 trials, the highest phase is PHASE2 at 1,033 trials.",

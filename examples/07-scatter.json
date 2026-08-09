@@ -1,4 +1,7 @@
 {
+  "request": {
+    "query": "Is there a relationship between enrollment and the number of sites in melanoma trials?"
+  },
   "request_id": "example-07-scatter",
   "response_type": "visualization",
   "answer": "3,625 trials plotted by site count against enrollment.",

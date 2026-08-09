@@ -1,4 +1,7 @@
 {
+  "request": {
+    "query": "What is the median number of participants with serious adverse events in melanoma phase 3 trials, by sponsor class?"
+  },
   "request_id": "example-06-adverse-events",
   "response_type": "visualization",
   "answer": "Across 79 trials, the highest sponsor class is INDUSTRY at 184.5 participants.",
