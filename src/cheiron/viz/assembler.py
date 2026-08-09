@@ -506,9 +506,14 @@ def bucket_citations(
 
     for contribution in bucket.contributions[:limit]:
         record = records.get(contribution.nct_id)
-        if record is None or not record.raw:
+        if record is None or not record.raw_json:
             unquotable += 1
             continue
+
+        # Parsed once here, for this record only. Records are retained as their serialized
+        # payload rather than as parsed dicts, so this is where the parse cost is paid —
+        # bounded by `limit` per bucket instead of by the size of the slice.
+        raw = record.parsed_raw()
 
         # Two different failures, kept apart because they mean opposite things. A value
         # the record never states — "NOT_REPORTED" is our label for an absent `phases`
@@ -537,7 +542,7 @@ def bucket_citations(
             # splitting them would replace one correct citation with two weaker ones.
             found = 0
             for endpoint in endpoints:
-                located = locate_endpoint(record.raw, endpoint)
+                located = locate_endpoint(raw, endpoint)
                 if located is None:
                     continue
                 payload, path, excerpt = located
@@ -564,7 +569,7 @@ def bucket_citations(
                 unquotable += 1
             continue
 
-        located = locate(record.raw, contribution.field_path, contribution.field_value)
+        located = locate(raw, contribution.field_path, contribution.field_value)
         if located is None:
             unquotable += 1
             continue
@@ -587,7 +592,7 @@ def bucket_citations(
         )
 
         if series_term:
-            found = locate_term(record.raw, series_term)
+            found = locate_term(raw, series_term)
             if found is None:
                 unquotable += 1
                 continue

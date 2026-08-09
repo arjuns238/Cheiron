@@ -43,6 +43,8 @@ import re
 from dataclasses import dataclass
 from typing import Any
 
+from cheiron.ctgov.normalizer import serialize as _serialize
+
 #: Characters of context kept around a matched value in a prose excerpt. An official title
 #: can run past 200 characters, and quoting all of it buries the part that supports the
 #: datum. The offsets stay exact — this only chooses a narrower span of the same payload.
@@ -71,9 +73,11 @@ class Excerpt:
     kind: str  # "prose" | "field"
 
 
-def serialize(record: dict[str, Any]) -> str:
-    """The canonical payload that offsets index into."""
-    return json.dumps(record, separators=(",", ":"), ensure_ascii=False)
+#: The canonical payload that offsets index into. Imported rather than redefined: it is
+#: what `NormalizedRecord` retains, and a second definition here could drift from the
+#: string the offsets were measured against. Re-exported because this module is where
+#: callers look for it.
+serialize = _serialize
 
 
 # --------------------------------------------------------------------------------------

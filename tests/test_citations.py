@@ -317,7 +317,7 @@ def test_every_emitted_citation_re_verifies_independently(
 
     assert citations
     for citation in citations:
-        payload = serialize(by_id(records)[citation.nct_id].raw)
+        payload = by_id(records)[citation.nct_id].raw_json
         start, end = citation.offset
         assert payload[start:end] == citation.excerpt
 
@@ -351,7 +351,7 @@ def test_a_record_without_its_raw_payload_is_not_cited(
     records: list[NormalizedRecord],
 ) -> None:
     """Nothing to locate an offset in, so nothing honest to emit."""
-    stripped = [NormalizedRecord(r.nct_id, r.values, raw={}) for r in records]
+    stripped = [NormalizedRecord(r.nct_id, r.values, raw_json="") for r in records]
     plan = Plan(legs=[Leg(label="All")], group_by="phases")
     result = aggregate(plan, {"All": stripped})
     citations, unquotable, _ = all_citations(result, by_id(stripped))
@@ -564,13 +564,89 @@ def test_half_a_pairing_is_not_emitted_as_evidence_of_a_pairing(
     )
     dropped = bucket.contributions[0].field_value.split(COMBINATION_SEPARATOR)[0]
 
-    raw = json.loads(json.dumps(combo.raw))
+    raw = combo.parsed_raw()
     interventions = raw["protocolSection"]["armsInterventionsModule"]["interventions"]
     raw["protocolSection"]["armsInterventionsModule"]["interventions"] = [
         i for i in interventions if i.get("name") != dropped
     ]
-    maimed = NormalizedRecord(combo.nct_id, combo.values, raw=raw)
+    maimed = NormalizedRecord(combo.nct_id, combo.values, raw_json=serialize(raw))
 
     cites, unquotable, _ = bucket_citations(bucket, {combo.nct_id: maimed})
     assert not cites, "one endpoint alone does not evidence a pairing"
     assert unquotable > 0, "and the omission is counted"
+
+
+# --------------------------------------------------------------------------------------
+# The retained payload is a string, and the round trip through it is byte-exact
+#
+# Records are retained as `serialize(raw)` rather than as parsed dicts, because the string
+# is what offsets index into and the dict cost ~7x the memory for every retrieved record
+# while only the cited handful is ever read. That saving is only sound if reparsing gives
+# back something that re-serializes identically — a single byte of drift would shift every
+# offset after it, and the excerpt would still *verify*, against the wrong text.
+#
+# So it is asserted here on every fixture rather than assumed from how `json` ought to
+# behave.
+# --------------------------------------------------------------------------------------
+
+
+def test_reparsing_the_retained_payload_reserializes_byte_for_byte(
+    records: list[NormalizedRecord],
+) -> None:
+    for record in records:
+        assert serialize(record.parsed_raw()) == record.raw_json, record.nct_id
+
+
+def test_offsets_hold_against_the_retained_string_itself(
+    records: list[NormalizedRecord],
+) -> None:
+    """The end-to-end property: every offset indexes the string the record was stored as.
+
+    `verify` already re-slices before emitting, but it does so against a payload the
+    assembler produced. This checks the other end — that the same span, read out of what
+    the record actually retains, is the excerpt the response published.
+    """
+    plan = Plan(legs=[Leg(label="All")], group_by="phases")
+    result = aggregate(plan, {"All": records})
+    citations, _, _ = all_citations(result, by_id(records))
+
+    assert citations, "the fixture set must produce citations or this proves nothing"
+    for citation in citations:
+        retained = by_id(records)[citation.nct_id].raw_json
+        start, end = citation.offset
+        assert retained[start:end] == citation.excerpt, citation.nct_id
+
+
+def test_an_empty_payload_is_unquotable_rather_than_an_error(
+    records: list[NormalizedRecord],
+) -> None:
+    """`parsed_raw()` on a record that retained nothing returns {}, not a JSONDecodeError."""
+    assert NormalizedRecord("NCT1", {}, raw_json="").parsed_raw() == {}
+
+
+def test_the_retained_payload_is_smaller_than_the_parsed_dict(
+    records: list[NormalizedRecord],
+) -> None:
+    """The reason for the change, asserted so a revert to dicts is visible.
+
+    Not a benchmark — a direction. Deep-sizing the parsed form against the retained string
+    fails if someone reintroduces a parsed payload on the record, which is the regression
+    that would quietly put peak memory back on the size of the slice.
+    """
+    import sys
+
+    def deep(obj: Any, seen: set[int] | None = None) -> int:
+        seen = seen if seen is not None else set()
+        if id(obj) in seen:
+            return 0
+        seen.add(id(obj))
+        size = sys.getsizeof(obj)
+        if isinstance(obj, dict):
+            size += sum(deep(k, seen) + deep(v, seen) for k, v in obj.items())
+        elif isinstance(obj, (list, tuple, set)):
+            size += sum(deep(x, seen) for x in obj)
+        return size
+
+    retained = sum(sys.getsizeof(r.raw_json) for r in records)
+    parsed = sum(deep(r.parsed_raw()) for r in records)
+    assert retained * 2 < parsed, f"retained {retained:,} B vs parsed {parsed:,} B"

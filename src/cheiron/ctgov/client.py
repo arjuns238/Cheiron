@@ -28,26 +28,31 @@ log = logging.getLogger(__name__)
 
 BASE_URL = "https://clinicaltrials.gov/api/v2"
 
-#: Stop after this many pages. At `pageSize=1000` that is 100,000 records.
+#: Stop after this many pages. At `pageSize=1000` that is 10,000 records per leg.
 #:
-#: It was 20 pages, on the assumption that 20,000 "covers the overwhelming majority of
-#: realistic queries whole". A 39-query sweep measured that assumption and it did not hold:
-#: **6 queries truncated**, including "how many diabetes trials are there by sponsor class"
-#: — an entirely ordinary question — which answered from 83% of its slice.
+#: Two costs bound retrieval, and they are bounded by the same number.
 #:
-#: 100,000 completes four of those six (24,207 / 33,792 / 49,614 / 61,724). The two that
-#: still truncate are genuinely large: a phase-by-sponsor composition of all oncology
-#: trials (122,458) and every trial started since 2000 (585,468).
+#: *Time.* `pageSize` clamps silently at 1,000 and there is no bulk endpoint, so a slice is
+#: a count of sequential round trips at ~0.7s each. The whole-corpus case (585,468 trials)
+#: is only ~141 MB but 586 requests and about seven minutes, which no browser, proxy or
+#: client library waits for.
 #:
-#: The limit is **time, not data**. Measured at a narrow projection: 241 bytes per record,
-#: 0.7s per page, so 100 pages is ~24 MB and ~70s worst case — and a results-heavy
-#: projection is roughly 16x the bytes. Removing the cap entirely would mean a 7-minute
-#: request for the whole-corpus case, which no client waits for; a cap that reports itself
-#: is better than a request that times out with nothing to show.
+#: *Memory.* Every retrieved record is retained until the fold completes — measured at
+#: ~2,270 bytes each, of which ~1,600 is the flattened `values` dict. So peak memory scales
+#: with the slice: ~23 MB at this cap, ~227 MB at 100 pages. The default is deliberately
+#: low because it has to hold on the smallest machine anyone deploys this to, and a process
+#: killed for memory is the one failure that cannot report itself.
+#:
+#: **Raise it with `CHEIRON_MAX_PAGES` where there is headroom.** A 39-query sweep measured
+#: coverage at various caps: 20 pages truncated 6 of 39, including "how many diabetes trials
+#: are there by sponsor class" — an ordinary question — at 83% of its slice; 100 pages
+#: completes four of those six (24,207 / 33,792 / 49,614 / 61,724). So a higher cap
+#: genuinely answers more questions whole, and the right value is a property of the machine
+#: rather than of the question. That is why it is configuration and not a constant.
 #:
 #: Past the cap the chart is a sample, and it says so: `truncated` is set, surfaced as a
 #: warning, and `matched` vs `retrieved` in `meta.record_counts` shows how much was seen.
-DEFAULT_MAX_PAGES = 100
+DEFAULT_MAX_PAGES = 10
 
 #: Environment variable that overrides the default, so a deployment can run a lower cap
 #: than a developer machine without a code change. A 512 MB container cannot hold the

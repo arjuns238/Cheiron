@@ -380,9 +380,17 @@ def test_batch_partitions_and_counts_exclusions() -> None:
 
 
 def test_raw_record_is_retained_for_citations() -> None:
-    """The spec assembler locates excerpt offsets in the original payload."""
+    """The spec assembler locates excerpt offsets in the original payload.
+
+    Retained as the serialized string rather than a parsed dict — that string *is* what
+    offsets index into, and holding the dict cost ~7x the memory for every retrieved
+    record while only the cited handful is ever read.
+    """
     record = norm("NCT02803307")
-    assert record.raw["protocolSection"]["identificationModule"]["nctId"] == "NCT02803307"
+    assert isinstance(record.raw_json, str)
+    assert record.parsed_raw()["protocolSection"]["identificationModule"]["nctId"] == (
+        "NCT02803307"
+    )
 
 
 # --------------------------------------------------------------------------------------

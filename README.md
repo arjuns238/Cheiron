@@ -10,9 +10,22 @@ POST /analyze  {"query": "How are melanoma trials distributed across phases?"}
       from the records that produced it
 ```
 
-A demo frontend is served at `GET /ui`. It is deliberately a plain client of the documented
-schema: it reads `encoding` to find the dimension key rather than hardcoding one, so it
-doubles as evidence the schema is implementable without guessing.
+## Live demo
+
+**[cheiron-take-home-tjum.onrender.com/ui](https://cheiron-take-home-tjum.onrender.com/ui)**
+— click any bar, point or edge to see the trial records behind it.
+
+[`/docs`](https://cheiron-take-home-tjum.onrender.com/docs) is Swagger, generated from the models, if you would rather POST directly:
+
+```bash
+curl -X POST https://cheiron-take-home-tjum.onrender.com/analyze \
+  -H 'Content-Type: application/json' \
+  -d '{"query": "How are melanoma trials distributed across phases?"}'
+```
+
+The frontend is deliberately a plain client of the documented schema: it reads `encoding` to
+find the dimension key rather than hardcoding one, so it doubles as evidence the schema is
+implementable without guessing.
 
 ---
 
@@ -44,8 +57,8 @@ Then:
 
 | | |
 |---|---|
-| `http://localhost:8000/ui` | the demo frontend |
-| `http://localhost:8000/docs` | Swagger, generated from the Pydantic models |
+| [`/ui`](https://cheiron-take-home-tjum.onrender.com/ui) | the demo frontend |
+| [`/docs`](https://cheiron-take-home-tjum.onrender.com/docs) | Swagger, generated from the Pydantic models |
 
 ### Configuration
 
@@ -128,7 +141,7 @@ within a set the rules already computed.
      ┌──────────▼───────────┐
      │ query compiler  ·det │  Plan → one query per leg, narrowest `fields=`
      ├──────────────────────┤
-     │ API client      ·det │  paginate ≤100 pages, retry, rate-limit, cache
+     │ API client      ·det │  paginate to the page cap, retry, rate-limit, cache
      ├──────────────────────┤
      │ normalizer      ·det │  flatten to scalars; every drop counted by reason
      ├──────────────────────┤
@@ -495,26 +508,40 @@ The position here is that either answer is a question the caller did not ask, an
 
 Detection lives in the plan reviewer.
 
-### The page cap is at 100,000
+### The page cap is configuration, and defaults to 10,000
 
-The cap is now **100 pages / 100,000 records per leg**. This is because the constraint is **time, not data**, and the reason is the registry's own pagination. `pageSize` **clamps silently at 1,000** — asking for 2,000 returns 1,000, with nothing in the response saying so. There is no bulk endpoint and no way to widen a page, so the number of records you want is not a size question, it is a count of sequential round trips: one request per 1,000 records, each about 0.7 s.
+Retrieval stops at **10 pages / 10,000 records per leg** unless told otherwise. Two costs
+bound it, and one number bounds both.
 
-That is what makes a large slice expensive. Fetching all 585,468 trials for "how many
-started each year since 2000" is only **141 MB** — genuinely not much — but at 1,000 per page
-it is **586 requests, about seven minutes**. No browser, proxy or client library waits that
-long; the request would time out having shown nothing.
+**Time**, because of the registry's own pagination. `pageSize` **clamps silently at 1,000**
+— asking for 2,000 returns 1,000, with nothing in the response saying so. There is no bulk endpoint and no way to widen a page, so the number of records you want is not a size question, it is a count of sequential round trips: one request per 1,000 records,
+**Memory**, because every retrieved record is retained until the fold completes — measured
+at **~2,270 bytes each**, of which ~1,600 is the flattened `values` dict and ~510 the
+serialized payload citations are sliced from. Peak memory therefore scales with the slice:
 
-The cap is therefore a bound on round trips rather than on bytes.
+| cap | records | retained |
+|---|---|---|
+| 10 pages *(default)* | 10,000 | ~23 MB |
+| 100 pages | 100,000 | ~227 MB |
 
-**The cap is set per deployment, via `CHEIRON_MAX_PAGES`.** It defaults to 100 pages and is
-read from the environment, because the right ceiling is a property of the machine rather than of the question:
+
+**Raise it with `CHEIRON_MAX_PAGES` where there is headroom**, because a higher cap
+genuinely answers more questions whole. 
+
+The motivation for this was also the fact that rendering >60,000 points on a graph makes it difficult to view and is slow on the browser. 
 
 ---
 
 ## Future work
 
-### Remove the page cap completely:
-Parallelize the calls. Then payload retention.
+### Make peak memory independent of the slice, so the cap is only about time
+
+The structural fix is to **fold page by page** — fetch a page, normalize it, update the
+buckets, discard it — with a **bounded citation reservoir**: each bucket keeps at most
+`INLINE_CITATIONS` payloads and drops the rest as it goes. Peak memory then becomes one page
+in flight (~2.3 MB), the bucket accumulators, and ~255 KB of reservoir for a hundred-bucket
+chart. Single-digit megabytes at any slice size, and the cap goes back to being purely about
+time, which is what it should have been measuring all along.
 
 ### Entity resolution over free-text intervention names
 
@@ -591,22 +618,6 @@ scaffolding, the demo frontend's rendering code, and the first draft of most pro
 unchanged, and the changes were driven by the adversarial sets rather than by taste: the
 reviewer gained two failure classes, the chart selector gained a geography rule after both
 providers were found to be *actively downgrading* the canonical map question to a bar chart.
-
----
-
-## Where the reasoning lives
-
-The docs are the working record, not an afterthought — much of the evidence quoted above is
-worked through in full there.
-
-| | |
-|---|---|
-| `docs/decisions.md` | Every decision, with what was **rejected** and why. Read before changing anything. |
-| `docs/api-findings.md` | ClinicalTrials.gov behaviour verified by curl. Items marked `CORRECTION` overrule the original plan, because they were measured. |
-| `docs/corpus-facts.md` | Corpus statistics, each with the exact query that produced it. |
-| `docs/readme-notes.md` | The long-form version of everything in this README, plus the disclosures that did not fit. |
-| `plan.md` | The original design, superseded by `docs/decisions.md` where they disagree. |
-| `examples/` | Eight captured runs with their actual JSON output, plus `verify_examples.py`, which independently reconciles three of them against the registry and imports no `cheiron` code. |
 
 ---
 
