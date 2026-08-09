@@ -230,7 +230,7 @@ the answer changes your plan:
   Zero means it does not resolve there.
 - an entity group_by: field_values, to see whether it needs top_n and how large a tail.
 - a field that may be sparsely reported in this slice: fill_rate before grouping on it.
-- a slice that may be huge: probe_count, since above 20,000 the chart becomes a sample.
+- a slice that may be huge: probe_count, since above 100,000 the chart becomes a sample.
 Do not probe to confirm something the schema already tells you, and do not copy a probe
 result into the Plan as if it were an answer — probes shape the plan, they are not the
 output.

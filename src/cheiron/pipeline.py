@@ -36,7 +36,7 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 
 from cheiron.agg.aggregator import aggregate
-from cheiron.ctgov.client import ApiError, CtGovClient
+from cheiron.ctgov.client import CtGovClient
 from cheiron.ctgov.retrieval import Retrieval, retrieve
 from cheiron.llm.client import LLMClient
 from cheiron.llm.planner import PlanningError, plan_and_review
@@ -182,21 +182,13 @@ async def analyze(deps: Deps, request: AnalyzeRequest) -> AnalyzeResponse:
         )
 
     # Query compiler → API client → normalizer.
-    try:
-        retrieval = await retrieve(deps.ctgov, planned.plan)
-    except ApiError as exc:
-        return AnalyzeResponse(
-            request_id=request_id,
-            response_type=ResponseType.NO_RESULTS,
-            answer="ClinicalTrials.gov could not answer the query for this plan.",
-            visualization=_empty_visualization("Retrieval failed"),
-            meta=_meta(
-                f"ClinicalTrials.gov returned {exc.status}: {exc.detail[:200]}",
-                warnings=[f"ClinicalTrials.gov returned {exc.status}."],
-                elapsed_ms=elapsed(),
-                provider=provider,
-            ),
-        )
+    # An upstream failure is **not** an empty result, and used to be reported as one.
+    # `no_results` is the machine-readable statement "the registry holds no trials matching
+    # this", so a 502 came back as an answer: a frontend branching on `response_type` would
+    # render "no diabetes trials found" for an outage. Observed live — five queries in one
+    # sweep hit 502/429 and every one of them claimed an empty slice. The error propagates
+    # instead, and the HTTP layer maps it to a 502.
+    retrieval = await retrieve(deps.ctgov, planned.plan)
 
     # Aggregator + invariant check. An InvariantError here is deliberately not caught.
     result = aggregate(

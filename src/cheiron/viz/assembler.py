@@ -76,10 +76,16 @@ def _channel_type(kind: FieldKind | None) -> str:
 
 
 def _metric_label(plan: Plan) -> tuple[str, str | None]:
-    """Human-readable name and unit for the measured quantity."""
+    """Human-readable name and unit for the measured quantity.
+
+    The unit comes from the field registry, not from an assumption. Every sum and median
+    used to be labelled "participants": a chart of median *deaths* by sponsor class then
+    read "the highest sponsor class is NETWORK at 78 participants", which is a different
+    and much less alarming claim than 78 deaths.
+    """
     if plan.layout is Layout.POINT:
         assert plan.metric_field is not None
-        return FIELDS[plan.metric_field].label, "participants"
+        return FIELDS[plan.metric_field].label, FIELDS[plan.metric_field].unit
     match plan.metric:
         case Metric.COUNT:
             return "Trials", "trials"
@@ -88,10 +94,10 @@ def _metric_label(plan: Plan) -> tuple[str, str | None]:
             return f"Distinct {FIELDS[plan.distinct_of].label}", None
         case Metric.SUM:
             assert plan.metric_field is not None
-            return f"Total {FIELDS[plan.metric_field].label}", "participants"
+            return f"Total {FIELDS[plan.metric_field].label}", FIELDS[plan.metric_field].unit
         case Metric.MEDIAN:
             assert plan.metric_field is not None
-            return f"Median {FIELDS[plan.metric_field].label}", "participants"
+            return f"Median {FIELDS[plan.metric_field].label}", FIELDS[plan.metric_field].unit
     raise AssertionError(f"unhandled metric {plan.metric!r}")
 
 
@@ -149,7 +155,12 @@ def build_answer(
     trials = f"{result.used:,} trial{'s' if result.used != 1 else ''}"
 
     if viz is VizType.KPI:
-        return f"{measure} across {trials}: {_format(result.buckets[0].value)}."
+        value = _format(result.buckets[0].value)
+        # "Trials across 1,764 trials: 1,764." repeats the same number in two grammatical
+        # roles. When the measure *is* a trial count there is only one figure to state.
+        if plan.metric is Metric.COUNT:
+            return f"{value} trial{'s' if result.buckets[0].value != 1 else ''} matched."
+        return f"{measure} across {trials}: {value}{' ' + unit if unit else ''}."
 
     if viz is VizType.NETWORK:
         # A network has no "highest bucket" — describing it as a ranked dimension would
@@ -177,14 +188,35 @@ def build_answer(
             f"{FIELDS[plan.group_by].label.lower()} against {measure.lower()}."
         )
 
-    top = max(result.buckets, key=lambda b: b.value)
-    dimension = FIELDS[plan.group_by].label.lower() if plan.group_by else "bucket"
+    # "Other" is a residue of everything past `top_n`, not a value of the dimension.
+    # Naming it as the leader produced "the highest condition is Other at 5,200 trials",
+    # which reads as a condition called Other outranking breast cancer. The same guard
+    # already exists for networks; flat charts needed it too.
+    ranked = [b for b in result.buckets if b.dimension != OTHER] or result.buckets
+    top = max(ranked, key=lambda b: b.value)
+
+    # With no grouping dimension the buckets share one placeholder label and the legs carry
+    # the meaning, so the leg *is* the subject: "the highest group is All (Interventional)"
+    # named the placeholder and parenthesised the answer.
+    if plan.group_by is None and top.series:
+        return (
+            f"Across {trials}, {top.series} is the largest at "
+            f"{_format(top.value)} {unit or ''}".strip() + "."
+        )
+
+    dimension = FIELDS[plan.group_by].label.lower() if plan.group_by else "group"
     where = f" ({top.series})" if top.series else ""
-    return (
+    sentence = (
         f"Across {trials}, the highest {dimension} is {top.dimension}{where} "
-        f"at {_format(top.value)} {unit or ''}".strip()
-        + "."
+        f"at {_format(top.value)} {unit or ''}".strip() + "."
     )
+    if (other := next((b for b in result.buckets if b.dimension == OTHER), None)) is not None:
+        tail = (
+            f"A further {_format(other.value)} {unit or ''}".strip()
+            + f" fall outside the top {plan.top_n} and are collected in '{OTHER}'."
+        )
+        sentence += " " + tail
+    return sentence
 
 
 def _format(value: float) -> str:
@@ -369,6 +401,15 @@ def build_encoding(plan: Plan, shape: Shape, viz: VizType) -> Encoding:
             y=Channel(field="weight", label="Trials in common", type="quantitative", unit="trials"),
         )
 
+    # With no grouping dimension but several legs, the legs *are* the categories: bind
+    # them to x rather than to a series channel over a single constant bucket, which would
+    # render as one group of bars labelled "All".
+    if plan.group_by is None and shape.has_series:
+        return Encoding(
+            x=Channel(field=SERIES_KEY, label="Comparison", type="nominal", unit=None),
+            y=y,
+        )
+
     group_key = plan.group_by or DIMENSION_KEY
     x_label = FIELDS[plan.group_by].label if plan.group_by else "Group"
     x_type = "quantitative" if plan.layout is Layout.POINT else _channel_type(shape.group_kind)
@@ -468,6 +509,15 @@ def bucket_citations(
         # key, not something the registry says — has nothing to quote, and no citation is
         # possible or honest. A located excerpt that fails re-slicing is a defect in this
         # code, and must be loud rather than folded in with the former.
+        if not contribution.field_value:
+            # Nothing put this trial in a *bucket* — the plan has no grouping dimension, so
+            # its membership is decided by the leg's filter, which is not a field on the
+            # record. Emitting a citation anyway produced `field_value: ""` with the brief
+            # title as its excerpt: real text, quoted at correct offsets, evidencing
+            # nothing. Counted as unquotable instead, which is what it is.
+            unquotable += 1
+            continue
+
         endpoints = contribution.field_value.split(COMBINATION_SEPARATOR)
         if len(endpoints) > 1:
             # A co-occurrence edge claims two agents shared an arm group, and no single
@@ -618,10 +668,18 @@ def assemble(
             f"is a residue rather than an entity that can co-occur.",
         )
     if retrieval.truncated:
+        # "A sample" understates it. Measured on the corpus sweep, the sample is
+        # proportionally uniform — 3.4% to 3.8% of each year — so the *shape* of a trend
+        # survives, but every value is a count within the sample, not an estimate of the
+        # real one: the chart showed 1,359 trials starting in 2024 against a true 40,280.
+        # A reader takes 1,359 as a number of trials unless told otherwise.
+        share = result.used / retrieval.matched if retrieval.matched else 0
         warnings.insert(
             0,
             f"The page cap was reached: {result.used:,} of {retrieval.matched:,} matching "
-            f"trials were analysed, so this chart is a sample rather than the whole slice.",
+            f"trials were analysed ({share:.0%}). Every value below is a count within that "
+            f"sample, not an estimate of the full slice — relative shape is meaningful, "
+            f"absolute magnitudes are not. Narrow the question to get exact figures.",
         )
 
     if unquotable:

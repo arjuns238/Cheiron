@@ -453,7 +453,13 @@ def test_truncation_is_the_first_warning_a_reader_sees(
     retrieval.matched = 50_000
     response = assemble(plan, result, retrieval)
 
-    assert "sample rather than the whole slice" in response.meta.warnings[0]
+    first = response.meta.warnings[0]
+    assert "page cap was reached" in first
+    # Saying only "a sample" let a reader take the values as trial counts. Measured on the
+    # corpus sweep: the chart showed 1,359 trials starting in 2024 against a true 40,280,
+    # because the sample is proportionally uniform — shape survives, magnitude does not.
+    assert "not an estimate" in first, "the warning must say the magnitudes are not real"
+    assert "%" in first, "and quote the share actually seen"
     assert response.meta.record_counts is not None
     assert response.meta.record_counts.truncated is True
 

@@ -26,7 +26,7 @@ from dotenv import load_dotenv
 from cheiron.llm.client import LLMSettings, build_client
 from cheiron.llm.judge import review
 from cheiron.schemas.plan import Filters, Granularity, Layout, Leg, Metric, Plan
-from cheiron.schemas.request import Phase
+from cheiron.schemas.request import Phase, Status
 
 
 @dataclass
@@ -235,6 +235,55 @@ CASES = [
             granularity=Granularity.YEAR,
         ),
         overrides={"condition": "Melanoma"},
+        should_flag=False,
+    ),
+    Case(
+        name="dropped qualifier: 'actual recorded start date' not filtered",
+        query="How many trials with an actual recorded start date began in 2023, by phase?",
+        plan=Plan(
+            legs=[Leg(label="2023", filters=Filters(start_year_min=2023, start_year_max=2023))],
+            group_by="phases",
+        ),
+        should_flag=True,
+        expected=(
+            "the question restricts to actual (not estimated) start dates and the plan "
+            "sets no date_certainty, so it answers about every 2023 trial. Observed live "
+            "in the sweep, where it also silently truncated at the page cap."
+        ),
+    ),
+    Case(
+        name="dropped qualifier: 'posted results' not filtered",
+        query="How many phase 3 trials that have posted results started each year since 2015?",
+        plan=Plan(
+            legs=[
+                Leg(label="Phase 3", filters=Filters(phase=[Phase.PHASE3], start_year_min=2015))
+            ],
+            group_by="start_date",
+            granularity=Granularity.YEAR,
+        ),
+        should_flag=True,
+        expected="has_results is never set, so trials without posted results are included",
+    ),
+    Case(
+        name="control: a question with no qualifier needs no filter",
+        query="How many trials are there by phase?",
+        plan=Plan(legs=[Leg(label="All")], group_by="phases"),
+        should_flag=False,
+    ),
+    Case(
+        name="control: every stated qualifier is present",
+        query="How many recruiting phase 3 melanoma trials are there by sponsor class?",
+        plan=Plan(
+            legs=[
+                Leg(
+                    label="Melanoma",
+                    filters=Filters(
+                        condition="melanoma", phase=[Phase.PHASE3], status=[Status.RECRUITING]
+                    ),
+                )
+            ],
+            group_by="sponsor_class",
+        ),
         should_flag=False,
     ),
 ]

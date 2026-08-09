@@ -41,7 +41,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from cheiron.llm.client import LLMClient, LLMError, Tier
 from cheiron.llm.probes import ProbeCall
 from cheiron.schemas.fields import FIELDS
-from cheiron.schemas.plan import Plan
+from cheiron.schemas.plan import Filters, Plan
 
 log = logging.getLogger(__name__)
 
@@ -125,6 +125,15 @@ other grounds, and do not comment on style or completeness:
    This one is fatal, not advisory: answer {"verdict": "contradiction", "concerns": ["..."]}
    naming both values. Re-planning cannot fix it, because the disagreement is in the input.
 
+8. DROPPED QUALIFIER — the question names a constraint that appears in no leg's filters,
+   so the plan answers a broader question than the one asked. Look for qualifiers the
+   registry can express: an *actual* (rather than estimated) start date, trials that have
+   *posted results*, a recruitment status, a country, a phase, a sponsor, a study type, a
+   date range. "Trials with an actual recorded start date that began in 2023" filtered
+   only on the year is this failure: it answers about every 2023 trial, estimated dates
+   included. Only raise this for a constraint the question states outright — do not invent
+   one from context, and a question with no qualifiers is correct with no filters.
+
 If none applies, answer exactly {"verdict": "ok", "concerns": []}. Approving is a real
 decision and is frequently the right one — most plans are correct, and inventing a concern
 to seem useful costs a re-plan and makes the review worthless.
@@ -156,6 +165,11 @@ def build_review_prompt(
     parts = [
         f"QUESTION: {query}",
         f"PLAN:\n{plan.model_dump_json(indent=2, exclude_none=True)}",
+        # Class 8 asks whether a stated qualifier is missing from the filters, which is
+        # unanswerable without knowing which qualifiers are expressible at all.
+        "FILTERS AVAILABLE (a qualifier the question states and this list can express, but "
+        "the plan omits, is a DROPPED QUALIFIER):\n"
+        + ", ".join(sorted(Filters.model_fields)),
     ]
     if overrides:
         parts.append(

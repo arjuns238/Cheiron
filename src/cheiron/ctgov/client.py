@@ -27,12 +27,26 @@ log = logging.getLogger(__name__)
 
 BASE_URL = "https://clinicaltrials.gov/api/v2"
 
-#: Stop after this many pages. At `pageSize=1000` that is 20,000 records, which covers the
-#: overwhelming majority of realistic queries whole — the largest single-country slice in
-#: the corpus (`query.locn=France`, 42,724) is one of the few that exceeds it. Past the cap
-#: the chart is a sample, and it says so: `truncated` is set, surfaced as a warning, and
-#: `matched` vs `retrieved` in `meta.record_counts` shows exactly how much was seen.
-MAX_PAGES = 20
+#: Stop after this many pages. At `pageSize=1000` that is 100,000 records.
+#:
+#: It was 20 pages, on the assumption that 20,000 "covers the overwhelming majority of
+#: realistic queries whole". A 39-query sweep measured that assumption and it did not hold:
+#: **6 queries truncated**, including "how many diabetes trials are there by sponsor class"
+#: — an entirely ordinary question — which answered from 83% of its slice.
+#:
+#: 100,000 completes four of those six (24,207 / 33,792 / 49,614 / 61,724). The two that
+#: still truncate are genuinely large: a phase-by-sponsor composition of all oncology
+#: trials (122,458) and every trial started since 2000 (585,468).
+#:
+#: The limit is **time, not data**. Measured at a narrow projection: 241 bytes per record,
+#: 0.7s per page, so 100 pages is ~24 MB and ~70s worst case — and a results-heavy
+#: projection is roughly 16x the bytes. Removing the cap entirely would mean a 7-minute
+#: request for the whole-corpus case, which no client waits for; a cap that reports itself
+#: is better than a request that times out with nothing to show.
+#:
+#: Past the cap the chart is a sample, and it says so: `truncated` is set, surfaced as a
+#: warning, and `matched` vs `retrieved` in `meta.record_counts` shows how much was seen.
+MAX_PAGES = 100
 
 #: Retried on: the registry rate-limits and occasionally 502s behind its CDN. A 400 is a
 #: malformed query and retrying it would just be slower failure.
@@ -126,7 +140,7 @@ class CtGovClient:
             a transport backed by fixtures and so the caller controls connection reuse.
         cache: Off by default — see `cache.py` for why live queries are not cached.
         base_url: Overridable for tests.
-        max_pages: Overridable so a test can exercise truncation without 20,000 records.
+        max_pages: Overridable so a test can exercise truncation without 100,000 records.
     """
 
     def __init__(

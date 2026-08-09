@@ -930,7 +930,23 @@ def _warnings(plan: Plan, result: AggregationResult) -> list[str]:
                 warnings.append(note)
 
     for reason, count in sorted(result.excluded_by_reason.items()):
-        warnings.append(f"{count} record(s) excluded: {reason.replace('_', ' ')}.")
+        share = count / result.retrieved if result.retrieved else 0
+        # The share matters more than the count, and only appears when it is large enough
+        # to change how the answer should be read. Measured in the sweep: "the typical
+        # baseline age in completed obesity trials" answered from 1,132 of 9,100 — 12% —
+        # because only those trials posted results, which is a systematically different
+        # population (larger, industry-sponsored, completed). The count alone was already
+        # reported; the proportion is what tells a reader the answer is about a minority.
+        warnings.append(
+            f"{count:,} record(s) excluded: {reason.replace('_', ' ')}."
+            + (
+                f" That is {share:.0%} of the slice, so this describes the "
+                f"{result.used:,} trial(s) that do report it — a different population "
+                f"from the whole."
+                if share >= 0.25
+                else ""
+            )
+        )
 
     if result.collapsed_dimensions:
         warnings.append(

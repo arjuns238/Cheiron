@@ -188,8 +188,8 @@ Three distinct disappearances, each reported, none obvious from a chart alone:
 - **Missing grouping dimension** — a trial with no value for `group_by` is excluded and
   counted under `missing_<field>`, not bucketed as "Unknown". The exception is `phases`,
   where absence is a recorded fact and becomes a first-class bucket.
-- **Page cap** — beyond 20 pages the chart is a sample; `truncated` is set and the warning
-  leads the list.
+- **Page cap** — beyond 100 pages (100,000 records per leg) the chart is a sample;
+  `truncated` is set and the warning leads the list. See §26 for what that costs.
 - **Network `Other`** — after a top-N collapse those trials appear in `record_counts` but
   in no node or edge, because "Other" is a residue rather than an entity that co-occurs.
   Live example: 365 of 393 trials on a top-8 sponsor↔condition graph.
@@ -979,3 +979,143 @@ verbatim — it is the one field that cannot lie about this.
 status are different questions, and the general rule: every filter has a compiled clause and
 a test asserting it, because a filter that silently does nothing is indistinguishable from a
 filter that works.
+
+
+---
+
+## 26. The page cap, what it costs, and why it is not zero
+
+**The problem.** Retrieval stopped after 20,000 records per leg, on the stated assumption
+that this "covers the overwhelming majority of realistic queries whole". That assumption
+was never measured. A 39-query sweep measured it:
+
+| query | matched | seen | coverage |
+|---|---|---|---|
+| "diabetes trials by sponsor class" | 24,207 | 20,000 | 83% |
+| "trials started in 2023, by phase" | 33,792 | 20,000 | 59% |
+| "female participants by sponsor class" | 49,614 | 4,802 | 10% |
+| "drug classes in cancer trials" | 61,724 | 10,598 | 17% |
+| "phase composition of oncology trials" | 122,458 | 20,000 | 16% |
+| "trials started each year since 2000" | 585,468 | 20,000 | 3% |
+
+**6 of 39 truncated**, and the first row is the one that matters: *how many diabetes trials
+are there by sponsor class* is an entirely ordinary question, and it answered from 83% of
+its slice.
+
+The cap is now **100,000 records per leg**, which completes four of the six.
+
+**What it costs, measured rather than assumed.** At a narrow projection the registry
+returns 241 bytes per record and about 0.7s per 1,000-record page. So 100 pages is roughly
+**24 MB and 70 seconds** at worst — and a results-heavy projection carries about 4 KB per
+record, some sixteen times the bytes, so a posted-results query at the cap is slower than
+that.
+
+**Why not remove the cap altogether.** Because the constraint is time, not data. Fetching
+all 585,468 trials for "how many started each year since 2000" is only 141 MB — genuinely
+not much — but it is **586 pages and about seven minutes**. No browser, proxy or client
+library waits that long; the request would time out having shown nothing. A cap that
+reports itself beats a request that fails silently.
+
+**What is still true above the cap, and must be said.** The values are not estimates of the
+real counts. Measured on the corpus sweep, the sample is *proportionally* uniform — 3.4% to
+3.8% of each year — so the **shape** of a trend survives truncation. The **magnitudes** do
+not: the chart shows 1,359 trials starting in 2024 against a true 40,280. A reader takes
+1,359 as a number of trials. The warning currently says only that the chart "is a sample
+rather than the whole slice", which is honest and not enough.
+
+**What was considered and not done.** Two options would remove truncation rather than
+raise it, and both are recorded because they remain the right answer if this is revisited:
+
+* **Per-bucket `countTotal`.** For a plain `count` metric on a filterable dimension the
+  registry will count exactly, for free — it is how this project's own ground-truth
+  verifier checked these numbers without fetching anything. Ten cheap requests instead of a
+  hundred heavy pages. Rejected for now because chart values would then come from the
+  registry's count rather than from a fold over retained records, which is the invariant the
+  whole architecture is built on, and that deserves more than a passing change.
+* **Retain fewer raw payloads.** Every record's raw payload is kept so citations can be
+  sliced from it, but `INLINE_CITATIONS` is 5 per datum — a ten-bucket chart cites 50
+  records. At 585,468 records that is 400–700 MB of parsed dicts held to serve 50 citations.
+  Fixing that makes memory independent of slice size, and only then does an uncapped fetch
+  become viable.
+
+**What the README must say.** The new cap and the measured cost of it; the six-of-39 figure
+as the reason it moved; that above the cap magnitudes are wrong even though shape survives;
+and both rejected alternatives, because "we raised a constant" is a weaker answer than "we
+measured, raised it, and know what the real fix is".
+
+
+---
+
+## 27. The sweep: how correctness was actually checked, and what it found
+
+**The problem.** Eight captured examples prove the paths they exercise and nothing else.
+Every serious bug in this project survived because no query reached the code holding it —
+an empty co-occurrence graph, a scatter describing itself as a median, a filter compiling
+to nothing. Each was one question away from being obvious.
+
+`tests/sweep_queries.py` is 39 questions chosen to force every axis: all eleven chart
+families, all four metrics, all three layouts, every filter, posted results, multi-leg
+comparisons, the non-chart response types, and deliberate traps ("trials in Georgia" —
+country or US state?). Each records *what it probes*, so a failure names a broken
+capability rather than a bad question.
+
+**Three layers, because two of them cannot see what the third does.**
+
+1. **Self-consistency** (`tests/audit.py`, 14 checks) — does the response contradict
+   itself? Every check documents the bug that motivated it, because a check whose reason is
+   forgotten is one someone deletes as redundant.
+2. **Ground truth** (`tests/ground_truth.py`) — does it match ClinicalTrials.gov? It
+   **imports nothing from `cheiron`** and reports which of four levels each row reached:
+   `recount` (refetch the slice, recompute every bucket in plain Python), `membership`
+   (refetch sampled trials by ID, confirm each holds its bucket's value), `total` (compare
+   against the registry's own `countTotal`), or `none` — stated rather than dressed up,
+   because arm-scoped co-occurrence cannot be restated without reimplementing the
+   aggregator.
+3. **Judgement** — does the plan answer the question? Not automatable; the runner prints
+   what a reviewer needs.
+
+**What it found in the system.** Eight defects, and notably **not one wrong value**: 30
+rows reached ground truth (4 recounts, 10 membership checks, 16 totals) with zero
+mismatches, and a separate pass re-sliced **96 citations from freshly refetched records
+with 0 mismatched**. Where numbers could be independently verified, they were right. The
+defects were all in the layers ground truth does not touch:
+
+| finding | class |
+|---|---|
+| A two-leg comparison rendered as a KPI, discarding one leg | wrong |
+| An upstream 502 reported as `no_results` | wrong |
+| A stated qualifier ("actual recorded start date") dropped from the plan | wrong |
+| Every sum and median labelled "participants", including a *deaths* chart | misleading |
+| "Other" named as the leading condition | misleading |
+| Truncated charts describing themselves only as "a sample" | misleading |
+| Posted-results answers drawn from as little as 12% of the slice, unstated | misleading |
+| "Trials across 1,764 trials: 1,764." | cosmetic |
+
+Seven of the eight are **right number, wrong words around it**. That category is why
+`audit.py` gives it its own severity, and why the sweep is worth more than another
+end-to-end test: unit tests assert values, and values were never the problem.
+
+**What it found in itself, which is the part worth stating.** The tooling was wrong three
+times before the system was wrong once:
+
+* No HTTP backoff. The registry answers a throttled request with an HTML error page, so
+  every ground-truth row read "verification failed" — the layer that answers *is this
+  actually the answer* silently produced nothing, and was nearly reported as a clean result.
+* Result files truncated to 4 MB, which is invalid JSON, so the re-audit could not read
+  them back.
+* Totals compared against one leg of a multi-leg plan, fabricating three failures.
+
+Plus seven auditors too strict to be usable: a KPI has no dimension by design; a histogram
+bin labelled `1–3.2` is legitimately cited by a trial with enrolment `3`, because no record
+contains the string "1–3.2"; `%g` rendered a correct 5,147,269 as `5.14727e+06`.
+
+The discipline that separated these from real findings was **calibrating against the eight
+known-good captured runs first, with a target of zero findings**. Unfixed, they would have
+produced hundreds of false positives across 39 queries and buried everything real.
+
+**What the README must say.** That correctness is checked at three levels and what each can
+and cannot see; the 0-mismatch ground-truth result with the 96 re-sliced citations, since
+that is the strongest evidence the citation design works; the eight findings as evidence
+the sweep earns its keep; and — plainly — that the verification tooling itself was wrong
+three times first. A verifier that has not been verified is another source of confident
+wrong answers, which is the failure this whole project is organised against.

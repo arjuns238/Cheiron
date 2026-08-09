@@ -40,6 +40,10 @@ answer but never an illegal one.
 |---|---|---|---|
 | Missing `group_by` value | Exclude, count as `missing_<field>` | "Not Reported" bucket per field | Keeps invariant 4 exact; matches `plan.md`'s own `missing_start_date` example. `phases` is the exception — absence there is a recorded fact |
 | Overlapping legs | Count in **both**, detect and warn | Assign to first leg | Each leg is a population, not a partition; a combination trial genuinely involves both drugs. First-leg assignment silently under-reports and depends on leg order |
+| KPI vs comparison | A KPI is **one** number; legs become the axis when there is no grouping dimension | Keep KPI and show the first leg | `rules.py` returned KPI before checking series, so "observational vs interventional obesity trials" computed 3,013 **and** 11,731 correctly and rendered only 11,731 |
+| Metric units | From `FieldSpec.unit` | Hardcoded "participants" for every sum and median | A chart of median *deaths* read "NETWORK at 78 participants" — a materially less alarming claim than 78 deaths |
+| 'Other' in the answer sentence | Excluded from the ranking; its total stated separately | Named as the leading value | "the highest condition is Other at 5,200 trials" reads as a condition outranking breast cancer |
+| Upstream failure | **502**, propagated | `no_results` (the original) | `no_results` is the claim "the registry holds no matching trials". Five sweep queries hit 502/429 and each asserted an empty slice |
 | Histogram + scatter | Build both | Defer | Named in the assignment's viz list. Needed `bins`/`bin_scale` and `Layout.POINT` |
 | Bin scale | Derived from `FieldSpec.skewed` | Model choice everywhere | Enrollment spans 0–1.1M; linear bins put nearly everything in one bar |
 | Scatter axis scale | Derived from the same `skewed` flag into `config.x_scale`/`y_scale` | Frontend heuristic; leave linear and document | Same rule as `bin_scale`, so the same evidence decides both. Measured: median enrolment 44 against a max of 2,953,748, 99.6% of points below 1% of the max |
@@ -49,7 +53,7 @@ answer but never an illegal one.
 
 | Decision | Chosen | Rejected | Why |
 |---|---|---|---|
-| Page cap | 20 pages / 20,000 records | 5, 50, unlimited | Covers most queries whole; ~20s worst case cold |
+| Page cap | **100 pages / 100,000 records** | 20 (the original); no cap; per-bucket `countTotal`; retain fewer raw payloads then uncap | User's call. 20,000 was set on an untested assumption; a 39-query sweep truncated **6**, including "diabetes trials by sponsor class" at 83% coverage. 100,000 completes 4 of the 6. Not uncapped because the limit is *time*, not data: 141 MB but ~7 min for the 585,468-trial corpus sweep, which no client waits for |
 | Caching | **Off** for live queries; on for demo recording and tests | Always-on, 24h TTL | User's call. Live answers should reflect the registry now; examples must reproduce |
 | Filter pushdown | **Everything** pushed down | `plan.md`'s pushdown/local split | All six "local" filters work server-side — see `api-findings.md` CORRECTION 3. Fewer records fetched, far less truncation |
 | Rate limiting | Concurrency 3 + 0.15s spacing | Retry only | Added after a live 429; retry alone survives it but does not avoid it |
@@ -84,7 +88,8 @@ answer but never an illegal one.
 | Judge authority | One re-plan, then commit regardless | Veto; unlimited revisions | A reviewer that can veto is a second planner with no repair loop; unlimited revisions turn one disagreement into a loop |
 | Malformed verdict | Treated as a concern | Treated as approval | A garbled token must not read as silent approval |
 | `concern` with no concerns | **Not** a concern | Block anyway | A re-plan with no feedback has nothing to act on |
-| Judge failure classes | **Six**, closed list — added UNQUANTIFIED SUPERLATIVE | Five; open-ended "assess quality" | A question saying *frequently*/*most common* asks for a ranked subset; with `top_n` null the plan answers "which values occur" instead. Caught live: the myeloma network returned all 5,215 edges. 12/12 on both providers after |
+| Judge failure classes | **Eight**, closed list — added UNQUANTIFIED SUPERLATIVE and DROPPED QUALIFIER | Six; open-ended "assess quality" | Class 8 needs the filter vocabulary in the prompt, since "is a stated qualifier missing" is unanswerable without it. 19/19 on both providers |
+| Judge failure classes (was) | **Six**, closed list — added UNQUANTIFIED SUPERLATIVE | Five; open-ended "assess quality" | A question saying *frequently*/*most common* asks for a ranked subset; with `top_n` null the plan answers "which values occur" instead. Caught live: the myeloma network returned all 5,215 edges. 12/12 on both providers after |
 | Judge verdict in `meta` | **Always recorded** (`meta.review`) | Only unactioned concerns produce a warning | An approval that leaves no trace is indistinguishable from a reviewer that never ran |
 | Selector failure | Fall back to `legal[0]` | Error | The model can only ever downgrade; membership is enforced, not trusted |
 
@@ -139,6 +144,22 @@ See `readme-notes.md` §13.
 
 ---
 
+## Demo frontend (`GET /ui`)
+
+| Decision | Chosen | Rejected | Why |
+|---|---|---|---|
+| Product name | **Trace**, in the page title, the masthead and the drawer's eyebrow | Cheiron; Assay, Ledger, Marginalia, Tessera, Endpoint, Sextant, Casebook, Warrant, Loupe | User's call. The word does double duty and the lede says so: the service *traces* a question through to a chart, and traces each value back to the record it came from. **UI only** — the Python package, module paths and repo stay `cheiron`, so nothing importable moved |
+| Framework | **React 18 UMD + htm**, vendored beside Chart.js and d3 | Vite + JSX with the bundle committed; Babel-standalone in the browser; staying with hand-rolled DOM | User's call. htm is a tagged-template stand-in for JSX, so components and hooks arrive without a Node toolchain in a Python repo — `uv sync` and uvicorn remain the whole setup, and the earlier "vendored deps, no build step" decision stands. A committed bundle would add a stale-artifact failure mode nobody would notice |
+| Loading state | A six-stage pipeline advancing on **typical durations**, captioned as indicative | A spinner; a fake progress bar; streaming the real stages | The service returns one response at the end, so there is nothing to stream. The stage *sequence* is real and is the architecture; claiming the *timing* is measured would be the kind of plausible-looking lie the rest of the system exists to prevent, so the caption says which is which |
+| Provenance surface | A **drawer** over the page, opened by clicking a datum | The inline table under the chart | The evidence for one bar is a reading task; a drawer gives it the full column width and closes without losing the chart. Still datum-scoped — see invariant 5, unchanged |
+| Uncited datum | Explains the sampling rule | A blank panel; suppressing the click | Only 522 of the scatter's 3,625 points carry a verified excerpt, so an empty panel is the *common* case there and reads as a bug |
+| Choropleth ramp floor | `rgb(219,231,245)`, with the no-data grey moved **off-hue** to `#e6e6e4` | Keeping the old ramp | The ramp started at `rgb(232,238,244)`, within three points of the no-data grey: a country with one trial and a country with none were the same colour. Same failure the "unmapped countries" list exists to prevent, reintroduced by the palette |
+| Map legend | Endpoints plus a "no trials" swatch | No legend | A ramp with no endpoints is decoration; the swatch is what makes the grey mean "absent" rather than "few" |
+| Network labels | Pushed away from the centre, greedily de-overlapped, white halo | All labels above the node | "Dexamethasone" printed over "fludarabine phosphate" — two settled nodes side by side put their labels in the same place |
+| Network framing | Settled positions **uniformly rescaled** to fill the fixed frame | Fitting the `viewBox` to the content bounding box | Fitting the viewBox trims the empty margin but scales the drawing with it, rendering 11px labels at ~20px. Scaling positions only spends the space without touching type size, and staying uniform keeps edge lengths comparable |
+
+---
+
 ## Traps that cost real time
 
 Recorded because each one produced output that looked correct.
@@ -179,12 +200,19 @@ Recorded because each one produced output that looked correct.
    shape is `meshes[]`/`ancestors[]`, reachable as `InterventionMeshTerm`. Same trap as
    `api-findings.md` CORRECTION 2; check an unprojected record before concluding a field
    is absent.
-11. **A filter can compile to nothing and be reported as applied.** `site_status` was only
+11. **Verify the verifier first.** A 39-query sweep found three bugs in its own tooling
+    before one in the system: no HTTP backoff, which silently disabled the entire
+    ground-truth layer and made every row read "verification failed"; result files
+    truncated to invalid JSON; and totals compared against one leg of a multi-leg plan,
+    which fabricated three failures. Seven auditors were also too strict. Calibrating
+    against known-good captured runs first — target zero findings — is what separated
+    tooling noise from real defects.
+12. **A filter can compile to nothing and be reported as applied.** `site_status` was only
     ever emitted inside the `country` branch, so `site_status` alone produced no clause at
     all while `meta.filters_applied` still listed it. The geographic example silently
     answered a question about 7,744 trials instead of 1,295. Invisible until a recapture
     happened to plan `site_status` where earlier runs planned trial-level `status`.
-12. **Field notes were emitted for `group_by` only, never `metric_field`.** So the caveat on
+13. **Field notes were emitted for `group_by` only, never `metric_field`.** So the caveat on
    the field actually being charted disappeared. Found by capturing the adverse-events
    example: it published a median of 184.5 participants with serious adverse events and
    dropped the registry note saying to compare that against `serious_ae_at_risk` rather

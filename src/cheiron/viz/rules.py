@@ -97,6 +97,13 @@ def legal_charts(shape: Shape) -> tuple[VizType, ...]:
         return (VizType.HISTOGRAM,)
 
     if shape.group_kind is None:
+        # A KPI is *one* number. A comparison with no grouping dimension still has one
+        # value per leg, and calling that a KPI renders one of them and silently discards
+        # the rest: "how many observational obesity trials compared with interventional
+        # ones" produced 3,013 and 11,731, both correct, and showed only 11,731. The legs
+        # are the categories here, so they become the axis.
+        if shape.has_series:
+            return (VizType.BAR, VizType.PIE)
         return (VizType.KPI,)
 
     if shape.group_kind is FieldKind.TEMPORAL:

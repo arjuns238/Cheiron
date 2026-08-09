@@ -3,66 +3,19 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Cheiron — query to visualization</title>
+<title>Trace — clinical trials, question to chart</title>
 <link rel="stylesheet" href="/static/styles.css">
 </head>
 <body>
 
-<header>
-  <h1>Cheiron</h1>
-  <p>A question about clinical trials becomes a chart, and every value in it traces back to
-     a trial record. This page is a client of the documented response envelope — it reads
-     <code>encoding</code>, <code>type</code> and <code>citations</code>, and nothing else.</p>
-</header>
+<div id="root"></div>
 
-<main>
-  <section id="ask">
-    <form id="query-form">
-      <input id="query" type="text" autocomplete="off"
-             placeholder="How are melanoma trials distributed across phases?">
-      <button type="submit" id="run">Ask</button>
-    </form>
-    <p class="hint">
-      A live question calls the language models and the registry — typically 10–60 seconds,
-      and it needs an API key. The captured runs below load instantly and cost nothing.
-    </p>
-    <div id="examples" class="examples"></div>
-  </section>
-
-  <section id="status" hidden></section>
-
-  <section id="result" hidden>
-    <div class="titles">
-      <h2 id="viz-title"></h2>
-      <p id="viz-subtitle" class="subtitle"></p>
-    </div>
-
-    <p id="answer" class="answer"></p>
-
-    <div id="chart-area">
-      <canvas id="chart" hidden></canvas>
-      <svg id="map" hidden viewBox="0 0 960 500" preserveAspectRatio="xMidYMid meet"></svg>
-      <svg id="network" hidden viewBox="0 0 960 560" preserveAspectRatio="xMidYMid meet"></svg>
-      <div id="kpi" hidden></div>
-    </div>
-
-    <p id="pick-hint" class="hint" hidden>Select a bar, point or edge to see the trials behind it.</p>
-    <div id="unmapped" class="callout warn" hidden></div>
-    <div id="warnings" class="callout" hidden></div>
-
-    <div id="provenance" hidden>
-      <h3 id="provenance-title">Sources</h3>
-      <p class="hint" id="provenance-note"></p>
-      <table id="citations"><tbody></tbody></table>
-    </div>
-
-    <details id="meta-panel">
-      <summary>Plan, counts and the exact API requests</summary>
-      <div id="meta-body"></div>
-    </details>
-  </section>
-</main>
-
+<!-- Vendored, in load order. React and htm replace the hand-rolled DOM code; htm is a
+     tagged-template stand-in for JSX, which is what keeps this page buildless — the whole
+     UI is still `uv sync` and uvicorn, with no Node toolchain in a Python repository. -->
+<script src="/static/vendor/react.production.min.js"></script>
+<script src="/static/vendor/react-dom.production.min.js"></script>
+<script src="/static/vendor/htm.js"></script>
 <script src="/static/vendor/chart.umd.js"></script>
 <script src="/static/vendor/d3-array.min.js"></script>
 <script src="/static/vendor/d3-geo.min.js"></script>

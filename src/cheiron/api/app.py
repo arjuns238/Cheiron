@@ -30,7 +30,7 @@ from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from cheiron.agg.aggregator import InvariantError
-from cheiron.ctgov.client import BASE_URL, MAX_PAGES, CtGovClient
+from cheiron.ctgov.client import BASE_URL, MAX_PAGES, ApiError, CtGovClient
 from cheiron.llm.client import LLMError, LLMSettings, build_client
 from cheiron.llm.planner import plan_and_review
 from cheiron.llm.probes import PROBE_BUDGET, ProbeRunner
@@ -151,6 +151,29 @@ async def _override_conflict(request: Any, exc: OverrideConflict) -> JSONRespons
             "error": "override_conflict",
             "detail": exc.conflicts,
             "message": str(exc),
+        },
+    )
+
+
+@app.exception_handler(ApiError)
+async def _upstream_failed(request: Any, exc: ApiError) -> JSONResponse:
+    """ClinicalTrials.gov did not answer, which is not the same as answering "none".
+
+    Reported as 502 rather than as an empty chart. `no_results` means the registry holds
+    no trials matching the query; returning it for an outage tells a caller something
+    false about the data, and a frontend branching on `response_type` renders an
+    authoritative empty state for a transient failure.
+    """
+    log.warning("upstream failure: %s %s", exc.status, exc.detail[:200])
+    return JSONResponse(
+        status_code=502,
+        content={
+            "error": "upstream_unavailable",
+            "detail": f"ClinicalTrials.gov returned {exc.status}: {exc.detail[:300]}",
+            "message": (
+                "The registry could not be reached, so no answer was computed. This is "
+                "not a statement that no trials match — retry the request."
+            ),
         },
     )
 

@@ -22,7 +22,7 @@ import httpx
 import pytest
 
 from cheiron.agg.aggregator import InvariantError
-from cheiron.ctgov.client import CtGovClient
+from cheiron.ctgov.client import ApiError, CtGovClient
 from cheiron.llm.client import LLMSettings, Provider
 from cheiron.llm.judge import JudgeVerdict
 from cheiron.llm.router import Intent, RouterVerdict
@@ -168,12 +168,31 @@ async def test_no_matching_trials_is_reported_not_faked() -> None:
     assert any("No trials matched" in w for w in response.meta.warnings)
 
 
-async def test_a_registry_failure_explains_itself() -> None:
-    response = await analyze(
-        deps(ctgov=registry(status=503)), AnalyzeRequest(query="phases")
-    )
-    assert response.response_type is ResponseType.NO_RESULTS
-    assert any("503" in w for w in response.meta.warnings)
+async def test_a_registry_failure_is_not_reported_as_an_empty_result() -> None:
+    """An outage and an empty slice are different facts and must not share a code.
+
+    This used to return `no_results`, which is the machine-readable claim "the registry
+    holds no trials matching this". Observed live: five sweep queries hit 502/429 and every
+    one of them asserted an empty slice — including "how many diabetes trials are there by
+    sponsor class", which has 24,207.
+    """
+    with pytest.raises(ApiError) as caught:
+        await analyze(deps(ctgov=registry(status=503)), AnalyzeRequest(query="phases"))
+    assert caught.value.status == 503
+
+
+def test_an_upstream_failure_surfaces_as_502_not_as_an_empty_chart() -> None:
+    from fastapi.testclient import TestClient
+
+    from cheiron.api.app import app
+
+    with TestClient(app, raise_server_exceptions=False) as client:
+        app.state.deps = deps(ctgov=registry(status=503))
+        response = client.post("/analyze", json={"query": "phases"})
+    assert response.status_code == 502
+    body = response.json()
+    assert body["error"] == "upstream_unavailable"
+    assert "not a statement that no trials match" in body["message"]
 
 
 async def test_a_planning_failure_becomes_unsupported() -> None:

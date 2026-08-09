@@ -60,6 +60,11 @@ class FieldSpec:
         filterable: May appear in a leg's filters.
         label: Human-readable axis title, used by the spec assembler.
         note: A data-quality caveat surfaced to the user when the field is used.
+        unit: What one of this field's values counts, for the axis label and the answer
+            sentence. Every sum and median was previously labelled "participants", so a
+            chart of median *deaths* read "NETWORK at 78 participants" — a different and
+            far less alarming claim than 78 deaths. Required on measurable fields; None
+            elsewhere, where nothing is being counted.
         sponsor_authored: True when the registry stores the value as free text written by
             the sponsor, so the same entity appears under several capitalisations —
             measured on 1,000 myeloma trials, 58 groups differing only in case, including
@@ -88,6 +93,7 @@ class FieldSpec:
     note: str | None = None
     skewed: bool = False
     sponsor_authored: bool = False
+    unit: str | None = None
 
     def __post_init__(self) -> None:
         if not self.label:
@@ -231,6 +237,7 @@ _FIELDS: tuple[FieldSpec, ...] = (
     ),
     FieldSpec(
         key="enrollment",
+        unit="participants",
         kind=FieldKind.NUMERIC,
         source="protocolSection.designModule.enrollmentInfo.count",
         projection=("EnrollmentCount", "EnrollmentType"),
@@ -333,6 +340,7 @@ _FIELDS: tuple[FieldSpec, ...] = (
     ),
     FieldSpec(
         key="site_count",
+        unit="sites",
         kind=FieldKind.NUMERIC,
         source="len(protocolSection.contactsLocationsModule.locations)",
         projection=("LocationCountry",),
@@ -361,6 +369,7 @@ _FIELDS: tuple[FieldSpec, ...] = (
     # safety look better the less it was reported.
     FieldSpec(
         key="serious_ae_participants",
+        unit="participants",
         kind=FieldKind.NUMERIC,
         source="resultsSection.adverseEventsModule.eventGroups[].seriousNumAffected",
         projection=(
@@ -378,6 +387,7 @@ _FIELDS: tuple[FieldSpec, ...] = (
     ),
     FieldSpec(
         key="serious_ae_at_risk",
+        unit="participants",
         kind=FieldKind.NUMERIC,
         source="resultsSection.adverseEventsModule.eventGroups[].seriousNumAtRisk",
         projection=(
@@ -393,6 +403,7 @@ _FIELDS: tuple[FieldSpec, ...] = (
     ),
     FieldSpec(
         key="deaths",
+        unit="deaths",
         kind=FieldKind.NUMERIC,
         source="resultsSection.adverseEventsModule.eventGroups[].deathsNumAffected",
         projection=(
@@ -410,6 +421,7 @@ _FIELDS: tuple[FieldSpec, ...] = (
     ),
     FieldSpec(
         key="deaths_at_risk",
+        unit="participants",
         kind=FieldKind.NUMERIC,
         source="resultsSection.adverseEventsModule.eventGroups[].deathsNumAtRisk",
         projection=(
@@ -425,6 +437,7 @@ _FIELDS: tuple[FieldSpec, ...] = (
     ),
     FieldSpec(
         key="participants_started",
+        unit="participants",
         kind=FieldKind.NUMERIC,
         source="resultsSection.participantFlowModule.periods[0].milestones[STARTED]",
         projection=("FlowMilestoneType", "FlowAchievementNumSubjects"),
@@ -437,6 +450,7 @@ _FIELDS: tuple[FieldSpec, ...] = (
     ),
     FieldSpec(
         key="participants_completed",
+        unit="participants",
         kind=FieldKind.NUMERIC,
         source="resultsSection.participantFlowModule.periods[0].milestones[COMPLETED]",
         projection=("FlowMilestoneType", "FlowAchievementNumSubjects"),
@@ -447,6 +461,7 @@ _FIELDS: tuple[FieldSpec, ...] = (
     ),
     FieldSpec(
         key="baseline_age",
+        unit="years",
         kind=FieldKind.NUMERIC,
         source="resultsSection.baselineCharacteristicsModule.measures[Age]",
         projection=(
@@ -481,6 +496,7 @@ _FIELDS: tuple[FieldSpec, ...] = (
     ),
     FieldSpec(
         key="female_participants",
+        unit="participants",
         kind=FieldKind.NUMERIC,
         source="resultsSection.baselineCharacteristicsModule.measures[Sex].Female",
         projection=(
@@ -499,6 +515,7 @@ _FIELDS: tuple[FieldSpec, ...] = (
     ),
     FieldSpec(
         key="male_participants",
+        unit="participants",
         kind=FieldKind.NUMERIC,
         source="resultsSection.baselineCharacteristicsModule.measures[Sex].Male",
         projection=(

@@ -18,7 +18,7 @@ five HTTP endpoints, and the captured example runs.
 | | |
 |---|---|
 | Posted results (`resultsSection`) | 9 fields — adverse events and deaths with separate denominators, participant flow, baseline age and sex |
-| Demo frontend (`GET /ui`) | The assignment's stated bonus. Vendored deps, no build step |
+| Demo frontend (`GET /ui`) | The assignment's stated bonus. React 18 UMD + htm, vendored deps, no build step |
 | Datum-scoped citations | The response-level `citations` map was **removed**; see invariant 5 |
 | Series citations | `supports:"series"` evidences which leg a trial fell in |
 | Per-endpoint edge citations | An edge cites both its drugs, so the shared arm label is visible |
@@ -42,14 +42,14 @@ All **8** examples are captured; `verify_examples.py` independently reconciles t
 - `docs/api-findings.md` — what the API actually does, verified by curl. Items marked
   **CORRECTION** contradict `plan.md`; the findings win, because they were measured.
 - `docs/corpus-facts.md` — corpus statistics with the exact query that produced each.
-- `docs/readme-notes.md` — 25 disclosures the README must carry, each with the problem, why
+- `docs/readme-notes.md` — 27 disclosures the README must carry, each with the problem, why
   silence is unacceptable, and what to write. This is the raw material for ⑭.
 
 ### Commands
 
 ```bash
 uv sync --all-extras                      # install
-.venv/bin/pytest -q                       # 465 tests, offline, no API key needed
+.venv/bin/pytest -q                       # 466 tests, offline, no API key needed
 .venv/bin/ruff check src tests examples
 
 .venv/bin/python -m uvicorn cheiron.api.app:app --port 8000   # serve
@@ -71,21 +71,42 @@ stages against fake clients, the deterministic core against 11 real records in
 and cost money. `pytest` will not collect them (they are not named `test_*`):
 
 ```bash
-.venv/bin/python tests/adversarial_judge.py    [anthropic|openai]   # 15 cases, expect 15/15
+.venv/bin/python tests/adversarial_judge.py    [anthropic|openai]   # 19 cases, expect 19/19
 .venv/bin/python tests/adversarial_selector.py [anthropic|openai]   # 8 cases, expect 8/8
+
+# The sweep: 39 queries chosen to force every path, audited on three levels.
+.venv/bin/python tests/run_sweep.py openai [--only PREFIX] [--concurrency N]
+.venv/bin/python tests/run_sweep.py openai --review-only   # re-audit saved bodies, no spend
 ```
+
+**Run the sweep after changing the aggregator, the viz rules, the answer template or the
+pipeline** — it is the only check that exercises all eleven chart families, all four
+metrics and every filter. `--review-only` re-audits the saved results without re-paying
+for model calls, which is how a fix to an auditor gets re-checked.
+
+**Calibrate a new auditor against `examples/` first, targeting zero findings.** Seven of
+the first batch were too strict, and unfixed they would have buried every real finding
+under false positives. Results land in `tests/sweep_results/` (gitignored).
 
 Run both after touching a prompt. Each has already caught a real bug that unit tests could
 not — see `docs/readme-notes.md` §13, §14 and §21. Their control cases matter as much as
 their failure cases: a reviewer that flags everything is as useless as one that flags
 nothing, so half of each set is plans that must be left alone.
 
-**The frontend has no automated test.** There is no browser extension in this environment;
-it was verified by driving headless Chrome over the DevTools protocol
-(`--headless=new --remote-debugging-port=…`, then raw WebSocket JSON) to load each captured
-example, assert what rendered, and read the console. That is how the citation bug in
-invariant 5 was found. If you change `api/static/`, do something equivalent — `node --check`
-proves only syntax, and both frontend bugs found so far were invisible to it.
+**The frontend's check is `tests/ui_smoke.py`**, and like the two above it is not collected
+by pytest — it needs Chrome and a running server. There is no browser extension in this
+environment, so it drives headless Chrome over the DevTools protocol
+(`--headless=new --remote-debugging-port=…`, then raw WebSocket JSON): it loads each
+captured example, clicks a datum, and checks the drawer's excerpt against the datum that
+was clicked. That is the shape of check that found the citation bug in invariant 5.
+
+```bash
+.venv/bin/python -m uvicorn cheiron.api.app:app --port 8123   # in another shell
+.venv/bin/python tests/ui_smoke.py                            # expect "all checks passed"
+```
+
+Run it after any change to `api/static/` — `node --check` proves only syntax, and every
+frontend bug found so far was invisible to it.
 
 `.env` needs `LLM_PROVIDER` plus that provider's key; see `.env.example`. Model IDs there
 have been verified against both live APIs — **do not assume a model ID exists**, one set in
@@ -110,10 +131,14 @@ src/cheiron/
                router.py, judge.py, selector.py
   pipeline.py  stages in sequence; decides which of four response types a request gets
   api/app.py   five endpoints; /capabilities and /schema generate from the models
-  api/static/  the demo frontend (GET /ui): index.html, app.js, styles.css, vendor/
+  api/static/  the demo frontend (GET /ui): index.html, app.js (React UMD + htm, no
+               build step), styles.css, vendor/
 
 examples/      captured runs + run_examples.py + verify_examples.py (imports no cheiron code)
-tests/         unit tests, plus adversarial_*.py live evaluations
+tests/         unit tests, plus three live evaluations that pytest does not collect:
+                 adversarial_judge.py / adversarial_selector.py  — prompt regression sets
+                 sweep_queries.py + audit.py + ground_truth.py + run_sweep.py
+                 ground_truth.py imports NOTHING from cheiron, on purpose
 docs/          decisions, api findings, corpus facts, readme notes
 ```
 
@@ -158,7 +183,12 @@ docs/          decisions, api findings, corpus facts, readme notes
    claiming 1,295. A filter that silently does nothing is indistinguishable from one that
    works. `meta.api_requests` carries the issued URLs verbatim precisely so this is
    checkable from the response.
-9. **When you add anything that reads the raw record, check the projection.** The compiler
+9. **Verify the verifier before believing it.** The sweep's own tooling was wrong three
+   times before it found a real defect: no HTTP backoff (which silently disabled the whole
+   ground-truth layer while every row read "verification failed"), truncated result files,
+   and totals compared against one leg of a multi-leg plan. A verifier that has not been
+   verified is another source of confident wrong answers.
+10. **When you add anything that reads the raw record, check the projection.** The compiler
    fetches the narrowest `fields=` set that answers the plan, so a new reader silently sees
    nothing. This has bitten three times: `combination_groups` (empty graph, no error),
    struct sub-fields (`StartDate` without `.type`), and series citations (56% instead of

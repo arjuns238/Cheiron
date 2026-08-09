@@ -35,12 +35,17 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
-from cheiron.ctgov.client import ApiError, CtGovClient
-from cheiron.ctgov.compiler import compile_leg
+from cheiron.ctgov.client import MAX_PAGES, ApiError, CtGovClient
+from cheiron.ctgov.compiler import PAGE_SIZE, compile_leg
 from cheiron.ctgov.normalizer import PHASE_NOT_REPORTED, normalize_studies
 from cheiron.schemas.fields import FIELDS, FieldKind
 from cheiron.schemas.plan import Filters
 from cheiron.schemas.request import Phase, Status, StudyType
+
+#: The retrieval ceiling, derived rather than restated. A duplicated literal here would
+#: keep advising the planner about a cap the client no longer enforces — and the probe's
+#: whole job is to tell the planner whether a slice will be truncated.
+RECORD_CAP = MAX_PAGES * PAGE_SIZE
 
 log = logging.getLogger(__name__)
 
@@ -202,8 +207,9 @@ class ProbeRunner:
                 "no trials match — the term may be misspelled or belong in a different "
                 "filter field"
                 if total == 0
-                else "exceeds the 20,000-record page cap; the chart would be a sample"
-                if total > 20_000
+                else f"exceeds the {RECORD_CAP:,}-record page cap; the chart would be a "
+                f"sample"
+                if total > RECORD_CAP
                 else ""
             ),
         }
@@ -397,7 +403,7 @@ def probe_tool_specs() -> list[dict[str, Any]]:
                 "Count trials matching a filter set. Use it to check that a drug or "
                 "condition name resolves at all (zero means it does not), to decide which "
                 "search field a term belongs in by comparing counts, and to see whether a "
-                "slice exceeds the 20,000-record page cap. Exact."
+                "slice exceeds the 100,000-record page cap. Exact."
             ),
             "input_schema": json_schema_for(ProbeCountArgs, Optionality.OMITTABLE),
         },
