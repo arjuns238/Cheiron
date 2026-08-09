@@ -840,3 +840,49 @@ that changed on the captured example, then the four uncollapsed families above a
 `melphalan flufenamide` example as the reason the line is drawn there rather than further
 along. It is a good illustration of the general rule the project follows — normalise what
 the data proves, disclose what it does not.
+
+
+---
+
+## 23. Where the response envelope departs from the brief's examples
+
+Every required output component is present, on every response type:
+
+| the brief requires | this service emits |
+|---|---|
+| `type` | `visualization.type` |
+| `title` | `visualization.title` |
+| `encoding` | `visualization.encoding` — `x`, `y`, and `series` when a datum has two coordinates |
+| `data` | `visualization.data` — a flat list, or `{nodes, edges}` for a network |
+| units, sorting, granularity, grouping | `encoding.*.unit`, `config.sort`, `config.granularity`, `config.top_n` / `other_bucket` / `stacked` |
+| notes on assumptions, filters, interpretation | `meta.assumptions`, `meta.filters_applied`, `meta.interpretation` |
+
+Two departures from the brief's *illustrative* wording. Both are deliberate, and a reader
+who notices them should find them addressed rather than have to wonder.
+
+**Chart type names.** The brief's examples are `bar_chart`, `time_series`, `network_graph`;
+this service emits `bar`, `line`, `network`. It says "e.g.", so the names are illustrative
+rather than required. One vocabulary is used because the brief names three of eleven types —
+`pie`, `scatter`, `histogram`, `choropleth`, `kpi`, `grouped_bar`, `stacked_bar`,
+`stacked_area` have no given name — and half-borrowing would leave the set in two styles.
+The README should give the mapping outright: `bar` = bar_chart, `line` = time_series,
+`network` = network_graph.
+
+**Networks reuse `x`/`y` rather than adding node/edge channels.** The brief lists
+"nodes/edges" among the channel kinds. Here `x` binds `Node.id`, `y` binds the `weight`
+carried by both nodes and edges, and `data` is a `NetworkData` object rather than a list —
+that switch is what tells a renderer to draw a graph. The alternative, optional `node` and
+`edge` channels on `Encoding`, was considered and not taken: it adds two channels that are
+null for ten of the eleven chart types, to express something the `data` shape already
+states unambiguously.
+
+Because that is a convention rather than something the JSON names, it is now written into
+the **field descriptions** on `Encoding`, not just the class docstring, so `GET /schema`
+answers it without the reader going looking. The same pass took `Visualization`, `Encoding`,
+`VizConfig`, `Node` and `Edge` from partly-described to fully described — they were the
+outermost and least documented objects in the envelope, which was backwards.
+
+**What the README must say.** The conformance table above, then both departures with their
+reasons. The brief's test is that "a frontend engineer can implement a renderer without
+guessing", so a deviation from its own examples has to be stated by us rather than
+discovered by them.

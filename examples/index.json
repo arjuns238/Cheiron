@@ -60,7 +60,17 @@
     "citations": 17
   },
   {
-    "file": "07-unsupported.json",
+    "file": "07-scatter.json",
+    "title": "Relationship between two measures",
+    "query": "Is there a relationship between enrollment and the number of sites in melanoma trials?",
+    "shows": "point layout: one datum per trial rather than per bucket, so nothing is aggregated \u2014 and the subtitle says so instead of claiming a median",
+    "response_type": "visualization",
+    "visualization": "scatter",
+    "trials_used": 3625,
+    "citations": 522
+  },
+  {
+    "file": "08-unsupported.json",
     "title": "A question the registry cannot answer",
     "query": "Which drug works better for melanoma, pembrolizumab or nivolumab?",
     "shows": "the refusal path: the specific obstruction, plus postable alternatives",

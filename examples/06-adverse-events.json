@@ -352,9 +352,9 @@
       "assumptions": [
         "Interpreted 'melanoma' as the condition filter.",
         "Restricted to phase 3 trials using the phases field.",
-        "Computed the median of the trial-level serious adverse event participant counts within each sponsor class.",
-        "No status restriction was specified, so all overall statuses are included.",
-        "This metric is only populated for trials with posted results that report serious adverse events; trials lacking that measure will not contribute to the median in their sponsor class."
+        "Computed the median of serious_ae_participants within each sponsor_class bucket.",
+        "Included all matching trials regardless of overall status unless the question did not specify otherwise.",
+        "Did not restrict to has_results even though serious adverse event fields are typically available only when results are posted; missing values will be handled by deterministic code."
       ]
     },
     "filters_applied": {
@@ -378,9 +378,9 @@
     "assumptions": [
       "Interpreted 'melanoma' as the condition filter.",
       "Restricted to phase 3 trials using the phases field.",
-      "Computed the median of the trial-level serious adverse event participant counts within each sponsor class.",
-      "No status restriction was specified, so all overall statuses are included.",
-      "This metric is only populated for trials with posted results that report serious adverse events; trials lacking that measure will not contribute to the median in their sponsor class."
+      "Computed the median of serious_ae_participants within each sponsor_class bucket.",
+      "Included all matching trials regardless of overall status unless the question did not specify otherwise.",
+      "Did not restrict to has_results even though serious adverse event fields are typically available only when results are posted; missing values will be handled by deterministic code."
     ],
     "warnings": [
       "Summed across arm groups. Compare against serious_ae_at_risk rather than enrollment: the safety population is often smaller than the enrolled one.",

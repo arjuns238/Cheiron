@@ -42,7 +42,7 @@ All **7** examples are captured; `verify_examples.py` independently reconciles t
 - `docs/api-findings.md` — what the API actually does, verified by curl. Items marked
   **CORRECTION** contradict `plan.md`; the findings win, because they were measured.
 - `docs/corpus-facts.md` — corpus statistics with the exact query that produced each.
-- `docs/readme-notes.md` — 22 disclosures the README must carry, each with the problem, why
+- `docs/readme-notes.md` — 23 disclosures the README must carry, each with the problem, why
   silence is unacceptable, and what to write. This is the raw material for ⑭.
 
 ### Commands

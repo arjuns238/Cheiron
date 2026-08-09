@@ -241,6 +241,11 @@ function drawChartJs(viz) {
   const rows = viz.data;
   const labels = [...new Set(rows.map((r) => r[dim]))];
 
+  // A scatter is not a bucketed chart: each datum is one trial, and both coordinates are
+  // numbers. Chart.js needs {x, y} pairs — feeding it labels plus values would plot the
+  // row index against y and silently draw the wrong relationship.
+  if (viz.type === 'scatter') return drawScatter(viz, canvas, dim);
+
   let datasets;
   if (series) {
     const names = [...new Set(rows.map((r) => r[series]))];
@@ -301,6 +306,49 @@ function drawChartJs(viz) {
         x: { stacked, title: { display: true, text: viz.encoding?.x?.label || '' } },
         y: {
           stacked,
+          beginAtZero: viz.config?.y_starts_at_zero !== false,
+          title: { display: true, text: viz.encoding?.y?.label || '' },
+        },
+      },
+    },
+  });
+}
+
+function drawScatter(viz, canvas, dim) {
+  const rows = viz.data;
+  chart = new Chart(canvas, {
+    type: 'scatter',
+    data: {
+      datasets: [{
+        label: viz.encoding?.y?.label || 'Value',
+        data: rows.map((r) => ({ x: r[dim], y: r.value, row: r })),
+        backgroundColor: 'rgba(47,111,176,.45)',
+        pointRadius: 3,
+      }],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      onClick: (_e, hit) => {
+        if (!hit.length) return;
+        const row = rows[hit[0].index];
+        showSourcesFor(row.citations, row.nct_id_total, row.nct_id || 'this trial');
+      },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: (item) => {
+              const row = item.raw.row;
+              return `${row.nct_id || ''}  ${viz.encoding?.x?.label}=${item.parsed.x}, `
+                + `${viz.encoding?.y?.label}=${item.parsed.y}`;
+            },
+          },
+        },
+      },
+      scales: {
+        x: { type: 'linear', title: { display: true, text: viz.encoding?.x?.label || '' } },
+        y: {
           beginAtZero: viz.config?.y_starts_at_zero !== false,
           title: { display: true, text: viz.encoding?.y?.label || '' },
         },

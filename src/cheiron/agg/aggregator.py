@@ -863,6 +863,18 @@ def _count_overlap(records_by_leg: dict[str, list[NormalizedRecord]]) -> int:
 
 def _counting_semantics(plan: Plan, result: AggregationResult) -> str:
     """One sentence saying what a single unit of the chart's value means."""
+    if plan.layout is Layout.POINT:
+        # A scatter aggregates nothing: each datum is one trial and `value` is that
+        # trial's own measure. The metric still has to be set for the plan to validate,
+        # so without this branch the subtitle read "each value is the median of enrolment
+        # over the trials in that bucket" above 3,625 buckets of one trial each — a true
+        # chart described as something it is not.
+        assert plan.group_by is not None and plan.metric_field is not None
+        return (
+            f"Each point is one trial: x is its {FIELDS[plan.group_by].label.lower()}, "
+            f"y its {FIELDS[plan.metric_field].label.lower()}. Nothing is aggregated, so "
+            f"overlapping points are distinct trials sharing a coordinate."
+        )
     if plan.metric is Metric.COUNT:
         base = "Each trial is counted once per bucket."
         if plan.group_by and FIELDS[plan.group_by].multi:
@@ -930,7 +942,9 @@ def _warnings(plan: Plan, result: AggregationResult) -> list[str]:
             f"{result.overlapping_trials} trial membership(s) are shared between legs; the "
             f"compared populations overlap and do not sum to a distinct total."
         )
-    if plan.metric is Metric.MEDIAN:
+    if plan.metric is Metric.MEDIAN and plan.layout is not Layout.POINT:
+        # Not in point layout: no median is taken there, and saying one is would describe
+        # a fold that did not happen.
         warnings.append(
             "Median is reported rather than mean because the underlying distribution is "
             "heavily right-skewed."

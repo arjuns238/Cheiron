@@ -526,3 +526,29 @@ def test_meta_carries_the_reproducible_audit_trail(
     assert response.meta.filters_applied["Melanoma"]["start_year_min"] == 2015
     assert response.meta.record_counts is not None
     assert response.meta.generated_at
+
+
+def test_a_scatter_is_not_described_as_an_aggregation(
+    records: list[NormalizedRecord],
+) -> None:
+    """A point layout folds nothing, and must not claim to.
+
+    `metric` still has to be set for the plan to validate, so the generic wording produced
+    "Each value is the median of enrollment over the trials in that bucket" above 3,625
+    buckets of one trial each — every number correct, every reader misled about what it
+    was. The same applied to the right-skew warning, which explains a fold that never ran.
+    """
+    plan = Plan(
+        legs=[Leg(label="All")],
+        group_by="site_count",
+        metric=Metric.MEDIAN,
+        metric_field="enrollment",
+        layout=Layout.POINT,
+    )
+    result = aggregate(plan, {"All": records})
+
+    assert "median" not in result.counting_semantics.lower()
+    assert "one trial" in result.counting_semantics
+    assert not any("Median is reported" in w for w in result.warnings)
+    # And the claim it makes instead is true: one datum per contributing trial.
+    assert all(len(b.nct_ids) == 1 for b in result.buckets)

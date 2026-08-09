@@ -945,10 +945,10 @@
       "sort": "value_desc",
       "viz_hint": "choropleth or ranked bar chart by country",
       "assumptions": [
-        "Interpreted 'non-small cell lung cancer' as the condition filter.",
-        "Interpreted 'recruiting trials' using trial overall status = RECRUITING.",
-        "Interpreted 'where are ... running' as grouping trials by country.",
-        "Used a top-N country breakdown because country is a multi-valued entity field and trials may span multiple countries."
+        "Interpreted 'Where are ... running?' as a geographic distribution of trials by country.",
+        "Used the condition field for 'non-small cell lung cancer'.",
+        "Used overall trial status RECRUITING because no site-specific country constraint was requested.",
+        "Applied a top_n limit because country is a multi-valued entity field and the user asked for locations rather than a single headline total."
       ]
     },
     "filters_applied": {
@@ -968,10 +968,10 @@
       "truncated": false
     },
     "assumptions": [
-      "Interpreted 'non-small cell lung cancer' as the condition filter.",
-      "Interpreted 'recruiting trials' using trial overall status = RECRUITING.",
-      "Interpreted 'where are ... running' as grouping trials by country.",
-      "Used a top-N country breakdown because country is a multi-valued entity field and trials may span multiple countries."
+      "Interpreted 'Where are ... running?' as a geographic distribution of trials by country.",
+      "Used the condition field for 'non-small cell lung cancer'.",
+      "Used overall trial status RECRUITING because no site-specific country constraint was requested.",
+      "Applied a top_n limit because country is a multi-valued entity field and the user asked for locations rather than a single headline total."
     ],
     "warnings": [
       "Country is multi-valued: bucket totals sum to more than the number of distinct trials.",

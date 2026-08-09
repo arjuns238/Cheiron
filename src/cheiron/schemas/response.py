@@ -64,17 +64,39 @@ class Channel(BaseModel):
 
 
 class Encoding(BaseModel):
-    """Field-to-channel mapping.
+    """Field-to-channel mapping: which key on each datum drives which visual channel.
 
-    For `network`, `x` binds the node identifier and `y` binds edge weight; `series` is
-    null. For `kpi`, only `y` is set.
+    Read `x.field` and `y.field` rather than assuming a key name. Nothing in `data` is
+    positional and no key is guaranteed by chart type — a phase chart carries `phases`, a
+    country chart `countries` — so a renderer that hardcodes either will break on the next
+    question. This is the one object that makes the payload self-describing.
+
+    **Networks reuse x/y rather than adding node/edge channels.** `x` binds the node
+    identifier and `y` binds the weight carried by both `Node` and `Edge`; `data` is a
+    `NetworkData` object, not a list, and that switch is what tells a renderer to draw a
+    graph. The channels are described per field below so the convention can be read here
+    rather than inferred.
     """
 
     model_config = ConfigDict(extra="forbid")
 
-    x: Channel | None = None
-    y: Channel | None = None
-    series: Channel | None = None
+    x: Channel | None = Field(
+        None,
+        description="The dimension axis. Its `field` names the key holding each datum's "
+        "bucket label — `phases`, `countries`, `start_date`. For `network` it binds "
+        "`Node.id`; for `kpi` it is null.",
+    )
+    y: Channel | None = Field(
+        None,
+        description="The measure axis, whose `field` is `value` on every flat datum. For "
+        "`network` it binds `weight` — trials per node, shared trials per edge.",
+    )
+    series: Channel | None = Field(
+        None,
+        description="The splitting channel, present only when a datum carries a second "
+        "coordinate: the leg of a comparison, or a crossed second field. Null otherwise, "
+        "including for `network`, where the second coordinate is the edge's other endpoint.",
+    )
 
 
 class Citation(BaseModel):
@@ -142,8 +164,10 @@ class Node(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    id: str
-    label: str
+    id: str = Field(description="`kind:label`, so two entities sharing a label but drawn "
+                                "from different fields stay distinct.")
+    label: str = Field(description="Display name. Sponsor-authored names are folded to one "
+                                   "spelling per entity — see `docs/readme-notes.md` §22.")
     kind: str = Field(description="The field key this node came from, e.g. 'sponsor_name'.")
     weight: int = Field(description="Number of distinct trials this node appears in.")
 
@@ -158,9 +182,12 @@ class Edge(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    source: str
-    target: str
-    weight: int
+    source: str = Field(description="`Node.id` of one endpoint.")
+    target: str = Field(description="`Node.id` of the other endpoint. Edges are unordered; "
+                                    "(A,B) and (B,A) are one edge.")
+    weight: int = Field(description="Trials in which both endpoints appear — the countable "
+                                    "value, folded from the trial list that carries the "
+                                    "citations, so the two cannot disagree.")
     strength: float | None = Field(
         None,
         description="Association strength: 2m·w / (k_source · k_target), where k is a "
@@ -172,8 +199,11 @@ class Edge(BaseModel):
         "maximally on a single trial, so the top of an unfiltered strength ranking is "
         "noise; apply `config.suggested_min_occurrences` to `Node.weight` first.",
     )
-    nct_ids: list[str] = Field(default_factory=list)
-    nct_id_total: int = 0
+    nct_ids: list[str] = Field(
+        default_factory=list, description="Up to 5 contributing trials, a sample of "
+                                          "`nct_id_total`."
+    )
+    nct_id_total: int = Field(0, description="Trials behind this edge, before sampling.")
     citations: list[Citation] = Field(
         default_factory=list,
         description="Evidence that both endpoints share an arm group in these trials. An "
@@ -196,14 +226,39 @@ class VizConfig(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    sort: str | None = None
-    granularity: str | None = None
-    top_n: int | None = None
+    sort: str | None = Field(
+        None, description="How `data` is already ordered — 'value_desc', 'dimension_asc'. "
+        "The order in the payload is the intended one; re-sorting is a choice, not a fix."
+    )
+    granularity: str | None = Field(
+        None, description="Time bucket width for temporal dimensions: 'year' or 'quarter'."
+    )
+    top_n: int | None = Field(
+        None, description="The cap the plan applied to distinct dimension values. Null "
+        "means every value is present."
+    )
     other_bucket: bool = Field(
         False, description="True when values beyond top_n were collapsed into 'Other'."
     )
-    stacked: bool = False
-    y_starts_at_zero: bool = True
+    stacked: bool = Field(
+        False, description="Whether series should be stacked rather than grouped."
+    )
+    y_starts_at_zero: bool = Field(
+        True, description="False only where a zero baseline would compress the signal to "
+        "nothing; truncating an axis otherwise misleads."
+    )
+    x_scale: Literal["linear", "log"] = Field(
+        "linear",
+        description="Scale for the x axis, derived from the bound field's distribution "
+        "rather than chosen by a model. 'log' when the field is heavy-tailed enough that a "
+        "linear axis collapses the data against one edge.",
+    )
+    y_scale: Literal["linear", "log"] = Field(
+        "linear",
+        description="Scale for the y axis, same rule as `x_scale`. Measured on the "
+        "captured scatter: median enrolment 44 against a maximum of 2,953,748, with 99.6% "
+        "of points below 1% of that maximum — linear is correct and unreadable.",
+    )
     suggested_min_occurrences: int | None = Field(
         None,
         description="Networks only, and **advisory** — the graph is returned complete and "
@@ -217,14 +272,42 @@ class VizConfig(BaseModel):
 
 
 class Visualization(BaseModel):
+    """The visualization specification: what to draw, titled, bound and populated.
+
+    Type names are this service's own (`bar`, `line`, `network`) rather than the
+    assignment's illustrative `bar_chart` / `time_series` / `network_graph`. The brief
+    offers those as examples; a single vocabulary is used here because eight of the eleven
+    types it does not name would otherwise have to be invented in a second style.
+    """
+
     model_config = ConfigDict(extra="forbid")
 
-    type: VizType
-    title: str
-    subtitle: str | None = None
-    encoding: Encoding
-    data: list[Datum] | NetworkData
-    config: VizConfig = Field(default_factory=VizConfig)
+    type: VizType = Field(
+        description="Which renderer to use. Chosen by deterministic rules from the result "
+        "shape; a model may only pick within the legal set, never outside it."
+    )
+    title: str = Field(description="Human-readable, derived from the plan rather than "
+                                   "written by a model.")
+    subtitle: str | None = Field(
+        None,
+        description="The counting semantics when they are not obvious — 'each trial "
+        "counted once per bucket', 'median of enrolment over the trials in that bucket'. "
+        "Null when the default reading is correct.",
+    )
+    encoding: Encoding = Field(
+        description="Which key on each datum drives which channel. Read this instead of "
+        "assuming key names."
+    )
+    data: list[Datum] | NetworkData = Field(
+        description="A flat list of datums for every type except `network`, which carries "
+        "`{nodes, edges}`. The union is the discriminator: a renderer branches on the "
+        "shape of `data`, or equivalently on `type == 'network'`."
+    )
+    config: VizConfig = Field(
+        default_factory=VizConfig,
+        description="Rendering hints that are not field bindings: sort order, time "
+        "granularity, whether an 'Other' bucket exists, value formatting.",
+    )
 
 
 class RecordCounts(BaseModel):

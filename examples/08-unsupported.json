@@ -1,0 +1,61 @@
+{
+  "request_id": "example-08-unsupported",
+  "response_type": "unsupported",
+  "answer": "ClinicalTrials.gov records trial-level and, for posted results, arm-level outcomes, but it does not provide a common, comparable field for comparative efficacy across studies. Sponsors define different endpoints, units, and analysis windows, so there is no registry-based way to say whether pembrolizumab works better than nivolumab for melanoma.",
+  "visualization": {
+    "type": "kpi",
+    "title": "Not answerable from registration data",
+    "subtitle": null,
+    "encoding": {
+      "x": null,
+      "y": null,
+      "series": null
+    },
+    "data": [],
+    "config": {
+      "sort": null,
+      "granularity": null,
+      "top_n": null,
+      "other_bucket": false,
+      "stacked": false,
+      "y_starts_at_zero": true,
+      "suggested_min_occurrences": null,
+      "value_format": null
+    }
+  },
+  "meta": {
+    "interpretation": "ClinicalTrials.gov records trial-level and, for posted results, arm-level outcomes, but it does not provide a common, comparable field for comparative efficacy across studies. Sponsors define different endpoints, units, and analysis windows, so there is no registry-based way to say whether pembrolizumab works better than nivolumab for melanoma.",
+    "plan": null,
+    "filters_applied": {},
+    "counting_semantics": null,
+    "record_counts": {
+      "matched": 0,
+      "retrieved": 0,
+      "used": 0,
+      "excluded_by_reason": {},
+      "truncated": false
+    },
+    "assumptions": [],
+    "warnings": [
+      "ClinicalTrials.gov records trial-level and, for posted results, arm-level outcomes, but it does not provide a common, comparable field for comparative efficacy across studies. Sponsors define different endpoints, units, and analysis windows, so there is no registry-based way to say whether pembrolizumab works better than nivolumab for melanoma."
+    ],
+    "planning_trace": [],
+    "review": null,
+    "api_requests": [],
+    "suggested_requests": [
+      {
+        "query": "How many melanoma trials have studied pembrolizumab versus nivolumab, and how have those counts changed over time?"
+      },
+      {
+        "query": "What phases were melanoma trials of pembrolizumab and nivolumab conducted in?"
+      },
+      {
+        "query": "Who are the main sponsors of melanoma trials for pembrolizumab and nivolumab?"
+      }
+    ],
+    "generated_at": "<captured>",
+    "cache_hit": false,
+    "llm_provider": "openai",
+    "elapsed_ms": null
+  }
+}

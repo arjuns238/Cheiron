@@ -2306,9 +2306,10 @@
       "sort": "dimension_asc",
       "viz_hint": "grouped bar chart comparing trial counts by phase for pembrolizumab versus nivolumab",
       "assumptions": [
-        "Interpreted 'involving pembrolizumab vs nivolumab' as comparing trials filtered by intervention_names/search intervention for each named drug.",
-        "Interpreted 'Compare phases' as trial counts grouped by the categorical field phases.",
-        "Used two legs because the question asks for a direct comparison between two named interventions."
+        "Interpreted 'involving pembrolizumab vs nivolumab' as filtering intervention_names for each drug separately.",
+        "Interpreted 'compare phases' as comparing counts of trials across the phases categories.",
+        "Included all study types, statuses, countries, and years because none were specified.",
+        "A trial may appear in a leg if it lists the named drug among its interventions, including combination trials."
       ]
     },
     "filters_applied": {
@@ -2328,9 +2329,10 @@
       "truncated": false
     },
     "assumptions": [
-      "Interpreted 'involving pembrolizumab vs nivolumab' as comparing trials filtered by intervention_names/search intervention for each named drug.",
-      "Interpreted 'Compare phases' as trial counts grouped by the categorical field phases.",
-      "Used two legs because the question asks for a direct comparison between two named interventions."
+      "Interpreted 'involving pembrolizumab vs nivolumab' as filtering intervention_names for each drug separately.",
+      "Interpreted 'compare phases' as comparing counts of trials across the phases categories.",
+      "Included all study types, statuses, countries, and years because none were specified.",
+      "A trial may appear in a leg if it lists the named drug among its interventions, including combination trials."
     ],
     "warnings": [
       "'Not Applicable' and 'Not Reported' together are roughly 63% of the registry. Combination phases (e.g. Phase 1/Phase 2) form their own bucket and are never double-counted into Phase 1 and Phase 2, so these totals will not match ClinicalTrials.gov's own phase facets, which do double-count.",

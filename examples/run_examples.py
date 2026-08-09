@@ -10,8 +10,9 @@ producing it. With the cache populated under `examples/cache/`, re-running this 
 the same records without touching the network, so a reader can verify the outputs are real
 rather than edited.
 
-The six cases cover every query class in the assignment's appendix, plus the refusal path,
-which is worth showing precisely because it is the one that declines to answer.
+The cases cover every query class in the assignment's appendix, plus a scatter — the one
+chart family whose absence from this set let two bugs survive — and the refusal path, which
+is worth showing precisely because it is the one that declines to answer.
 
 Run:  .venv/bin/python examples/run_examples.py [--live]
 
@@ -104,7 +105,17 @@ EXAMPLES = [
         "own safety-population denominator rather than enrolment",
     ),
     Example(
-        slug="07-unsupported",
+        slug="07-scatter",
+        title="Relationship between two measures",
+        request=AnalyzeRequest(
+            query="Is there a relationship between enrollment and the number of sites "
+            "in melanoma trials?"
+        ),
+        shows="point layout: one datum per trial rather than per bucket, so nothing is "
+        "aggregated — and the subtitle says so instead of claiming a median",
+    ),
+    Example(
+        slug="08-unsupported",
         title="A question the registry cannot answer",
         request=AnalyzeRequest(
             query="Which drug works better for melanoma, pembrolizumab or nivolumab?"

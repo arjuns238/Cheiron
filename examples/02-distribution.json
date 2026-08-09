@@ -720,7 +720,7 @@
       "viz_hint": "bar",
       "assumptions": [
         "Interpreted 'melanoma trials' as trials filtered by the condition field using 'melanoma'.",
-        "Interpreted 'distributed across phases' as a count of trials grouped by phases.",
+        "Interpreted 'distributed across phases' as a count of trials grouped by phase.",
         "Included all study types, statuses, countries, and years because none were specified."
       ]
     },
@@ -739,7 +739,7 @@
     },
     "assumptions": [
       "Interpreted 'melanoma trials' as trials filtered by the condition field using 'melanoma'.",
-      "Interpreted 'distributed across phases' as a count of trials grouped by phases.",
+      "Interpreted 'distributed across phases' as a count of trials grouped by phase.",
       "Included all study types, statuses, countries, and years because none were specified."
     ],
     "warnings": [
