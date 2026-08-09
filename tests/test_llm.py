@@ -211,13 +211,19 @@ def test_the_legal_field_list_is_generated_from_the_registry() -> None:
         assert key in prompt
 
 
-def test_structured_overrides_are_given_to_the_planner_as_constraints() -> None:
-    """The caller typed them deliberately; the natural-language phrasing is ambiguous."""
+def test_structured_parameters_are_given_to_the_planner() -> None:
+    """The planner must plan against the slice that will actually be fetched.
+
+    Its probes run on the plan's own filters, so a planner ignorant of `drug_name` probes
+    the whole corpus and calibrates granularity, bins and top_n to a population nobody
+    asked about. It is told them, but not trusted with them: `apply_overrides` pins them
+    afterwards, and the judge — not the planner — catches a contradiction.
+    """
     request = AnalyzeRequest(query="How many trials?", condition="Melanoma", start_year=2015)
     prompt = build_user_prompt(request)
+    assert "How many trials?" in prompt
     assert "Melanoma" in prompt
     assert "2015" in prompt
-    assert "precedence" in prompt
 
 
 def test_repair_feedback_carries_the_validator_errors_verbatim() -> None:

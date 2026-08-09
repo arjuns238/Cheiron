@@ -2304,11 +2304,11 @@
       "bin_scale": "linear",
       "top_n": null,
       "sort": "dimension_asc",
-      "viz_hint": "grouped bar chart",
+      "viz_hint": "grouped bar chart comparing trial counts by phase for pembrolizumab versus nivolumab",
       "assumptions": [
-        "Interpreted 'involving pembrolizumab vs nivolumab' as trials matched via the intervention field, with one comparison leg per drug.",
-        "Interpreted 'Compare phases' as counting trials by phase category.",
-        "A trial may appear in both legs if it includes both pembrolizumab and nivolumab."
+        "Interpreted 'involving pembrolizumab vs nivolumab' as comparing trials filtered by intervention_names/search intervention for each named drug.",
+        "Interpreted 'Compare phases' as trial counts grouped by the categorical field phases.",
+        "Used two legs because the question asks for a direct comparison between two named interventions."
       ]
     },
     "filters_applied": {
@@ -2317,8 +2317,7 @@
       },
       "Nivolumab": {
         "intervention": "nivolumab"
-      },
-      "overrides": {}
+      }
     },
     "counting_semantics": "Each trial is counted once per bucket. Legs are overlapping populations: 290 trial memberships are shared between legs, so series totals overlap.",
     "record_counts": {
@@ -2329,9 +2328,9 @@
       "truncated": false
     },
     "assumptions": [
-      "Interpreted 'involving pembrolizumab vs nivolumab' as trials matched via the intervention field, with one comparison leg per drug.",
-      "Interpreted 'Compare phases' as counting trials by phase category.",
-      "A trial may appear in both legs if it includes both pembrolizumab and nivolumab."
+      "Interpreted 'involving pembrolizumab vs nivolumab' as comparing trials filtered by intervention_names/search intervention for each named drug.",
+      "Interpreted 'Compare phases' as trial counts grouped by the categorical field phases.",
+      "Used two legs because the question asks for a direct comparison between two named interventions."
     ],
     "warnings": [
       "'Not Applicable' and 'Not Reported' together are roughly 63% of the registry. Combination phases (e.g. Phase 1/Phase 2) form their own bucket and are never double-counted into Phase 1 and Phase 2, so these totals will not match ClinicalTrials.gov's own phase facets, which do double-count.",

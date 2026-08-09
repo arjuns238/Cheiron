@@ -6,9 +6,15 @@ asked about enrolment, or that collapses "A versus B" into a single population, 
 every validator rule and answers the wrong question. That gap is what this stage looks at,
 and it is the only stage that reads the question and the plan together.
 
-**Advisory, and bounded.** A concern triggers at most one re-plan and then the pipeline
-proceeds regardless. `plan.md` is explicit that the judge cannot block: an advisory reviewer
-that can veto becomes a second planner with no repair loop of its own.
+**Advisory, and bounded — with one exception.** A concern triggers at most one re-plan and
+then the pipeline proceeds regardless. `plan.md` is explicit that the judge cannot block: an
+advisory reviewer that can veto becomes a second planner with no repair loop of its own.
+
+The exception is class 7, PARAMETER CONTRADICTION, which is fatal and returns 422. The
+distinction is where the fault lies. Every other class describes a plan that could have been
+better, so re-planning is a real remedy. Class 7 describes an input that disagrees with
+itself — "melanoma trials" asked with `condition="glioblastoma"` — and no plan satisfies
+both, so re-planning would burn a revision to arrive at the same place.
 
 **Two guards against a rubber stamp**, both from `plan.md` §3:
 
@@ -49,12 +55,27 @@ class JudgeVerdict(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    verdict: str = Field(description="Exactly 'ok' or 'concern'.")
+    verdict: str = Field(
+        description="Exactly 'ok', 'concern', or 'contradiction'. The last is reserved for "
+        "class 7 and is fatal: it ends the request rather than triggering a re-plan."
+    )
     concerns: list[str] = Field(
         default_factory=list,
         description="What the plan gets wrong about the question, one per entry. Each must "
         "name the specific mismatch and what would fix it. Empty when the verdict is ok.",
     )
+
+    @property
+    def is_contradiction(self) -> bool:
+        """A disagreement in the *input*, which no re-plan can repair.
+
+        The rest of the judge is advisory by design — an advisory reviewer that can veto
+        becomes a second planner. This one class is different in kind: the caller's question
+        and the caller's parameters state different things, so there is no plan to reach.
+        Requiring a stated concern keeps a bare "contradiction" token from killing a request
+        without saying why.
+        """
+        return self.verdict.strip().lower() == "contradiction" and bool(self.concerns)
 
     @property
     def is_concerned(self) -> bool:
@@ -95,6 +116,15 @@ other grounds, and do not comment on style or completeness:
    comparison, or simply "which X" is correct unrestricted — do not raise this merely
    because `top_n` is null.
 
+7. PARAMETER CONTRADICTION — the caller supplied a STRUCTURED PARAMETER, and the question
+   itself names a *different* value for that same dimension. "How have melanoma trials
+   changed?" with `condition="glioblastoma"` is the shape: not a preference to resolve, but
+   two statements from the same caller that cannot both hold. A question that simply leaves
+   the dimension open — "trials for this drug", "trials by this sponsor" — is the intended
+   use and is **not** a contradiction. Neither is a difference of spelling or case.
+   This one is fatal, not advisory: answer {"verdict": "contradiction", "concerns": ["..."]}
+   naming both values. Re-planning cannot fix it, because the disagreement is in the input.
+
 If none applies, answer exactly {"verdict": "ok", "concerns": []}. Approving is a real
 decision and is frequently the right one — most plans are correct, and inventing a concern
 to seem useful costs a re-plan and makes the review worthless.
@@ -129,9 +159,11 @@ def build_review_prompt(
     ]
     if overrides:
         parts.append(
-            "STRUCTURED FIELDS the caller set explicitly. The plan is required to honour "
-            "these, so a filter matching one of them is correct by construction and is not "
-            f"a field error:\n{json.dumps(overrides, indent=2, default=str)}"
+            "STRUCTURED PARAMETERS the caller set explicitly. The plan is required to "
+            "honour these, so a filter matching one of them is correct by construction and "
+            "is not a field error. But check them against the question itself: if the "
+            "question names a different value for the same dimension, that is class 7.\n"
+            f"{json.dumps(overrides, indent=2, default=str)}"
         )
     if plan.group_by:
         spec = FIELDS[plan.group_by]

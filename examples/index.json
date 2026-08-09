@@ -15,7 +15,7 @@
     "query": "How are melanoma trials distributed across phases?",
     "shows": "composite phase buckets (PHASE1|PHASE2 is its own bucket, never counted into both) and NOT_REPORTED as a first-class value",
     "response_type": "visualization",
-    "visualization": "pie",
+    "visualization": "bar",
     "trials_used": 3743,
     "citations": 40
   },
@@ -46,8 +46,8 @@
     "shows": "arm-scoped co-occurrence: an edge means two agents shared an arm group, not merely that a trial listed both",
     "response_type": "visualization",
     "visualization": "network",
-    "trials_used": 1392,
-    "citations": 358
+    "trials_used": 1391,
+    "citations": 370
   },
   {
     "file": "06-adverse-events.json",

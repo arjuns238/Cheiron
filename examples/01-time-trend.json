@@ -1073,18 +1073,16 @@
       "sort": "dimension_asc",
       "viz_hint": "line",
       "assumptions": [
-        "Interpreted 'pembrolizumab trials' as trials matched by the intervention field using 'pembrolizumab'.",
-        "Used start_date grouped by calendar year to represent 'changed per year since 2015'.",
-        "Count means number of trials, not distinct sponsors, sites, or participants.",
-        "Included all study types, phases, statuses, and both actual and estimated start dates unless otherwise specified."
+        "Interpreted 'pembrolizumab trials' as trials filtered by intervention_names via the intervention search field.",
+        "Interpreted 'per year since 2015' as grouping by start_date year with start_year_min set to 2015.",
+        "Used trial count as the measure for 'number of trials'."
       ]
     },
     "filters_applied": {
       "Pembrolizumab trials": {
         "intervention": "pembrolizumab",
         "start_year_min": 2015
-      },
-      "overrides": {}
+      }
     },
     "counting_semantics": "Each trial is counted once per bucket.",
     "record_counts": {
@@ -1095,10 +1093,9 @@
       "truncated": false
     },
     "assumptions": [
-      "Interpreted 'pembrolizumab trials' as trials matched by the intervention field using 'pembrolizumab'.",
-      "Used start_date grouped by calendar year to represent 'changed per year since 2015'.",
-      "Count means number of trials, not distinct sponsors, sites, or participants.",
-      "Included all study types, phases, statuses, and both actual and estimated start dates unless otherwise specified."
+      "Interpreted 'pembrolizumab trials' as trials filtered by intervention_names via the intervention search field.",
+      "Interpreted 'per year since 2015' as grouping by start_date year with start_year_min set to 2015.",
+      "Used trial count as the measure for 'number of trials'."
     ],
     "warnings": [
       "Registry lag undercounts the most recent periods: sponsors register and update records on their own schedule.",

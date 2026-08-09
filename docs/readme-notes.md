@@ -73,22 +73,79 @@ worked example of the derivable case.
 
 ---
 
-## 3. `max_records` is not currently enforced
+## 3. Optional parameters are enforced, and a contradiction is refused
 
-**The problem.** `AnalyzeRequest.max_records` is documented in the request schema as an
-upper bound on records fetched, defaulting to 5,000 with a ceiling of 20,000. The API
-client does not read it. Retrieval is governed by a fixed 20-page cap at `pageSize=1000`,
-so the effective bound is 20,000 records per leg regardless of what the caller asked for.
+**The problem.** The assignment requires the service to accept optional structured fields
+alongside the query, and 13 are defined — covering every example it names. They were
+*accepted* and not *applied*. `overrides()` was injected into the planner's prompt as
+"constraints you must plan around" and echoed into `meta.filters_applied`, but nothing
+enforced them. Measured before the fix, with a planner that did not cooperate:
 
-**Why silence is not acceptable.** This is worse than an unimplemented feature: it is a
-documented input that appears to work. A caller who sets `max_records: 500` to bound cost
-or latency gets 20,000 records and no indication the parameter was ignored, and
-`meta.record_counts` will show a number that contradicts their own request.
+```
+request : condition=glioblastoma, drug_name=Pembrolizumab, start_year=2020
+issued  : query.cond=melanoma          ← the planner's own guess
+meta    : filters_applied = {"Melanoma": {"condition": "melanoma"},
+                             "overrides": {"condition": "glioblastoma", ...}}
+```
 
-**What the README must say.** Either the field is wired to the client's page cap before
-submission, or the README states plainly that it is accepted and not yet honoured, and the
-request-schema documentation says the same. The one unacceptable outcome is documenting it
-as effective while it is inert. Reconcile when `/analyze` is assembled.
+The response listed the parameters as applied *beside* the filters it had actually used.
+That is worse than not accepting them: a caller reading `filters_applied` would conclude
+their constraint had been honoured.
+
+They are now applied deterministically after planning, onto every leg, and reported in
+`meta.assumptions` — which is the same object that produced them, so the two cannot
+disagree.
+
+**Conflict is refused rather than resolved.** "How have melanoma trials changed?" with
+`condition="glioblastoma"` is not a precedence question; it is a contradiction, and
+honouring either side answers something the caller did not ask. It returns **422** naming
+the specific disagreement. The sharpest case is a comparison: "pembrolizumab vs nivolumab"
+plans two legs differing on `intervention`, so a `drug_name` parameter matches one and
+contradicts the other, and the request is refused rather than collapsed into two identical
+legs.
+
+**Three stages, deliberately.** The planner is *told* the parameters, so its probes run on
+the slice that will actually be fetched — a planner ignorant of `drug_name` probes the whole
+corpus and calibrates granularity, bins and `top_n` to a population nobody asked about.
+`apply_overrides` *applies* them, because telling is not enforcing. The **judge**
+adjudicates contradiction, because it is the only stage that reads the question and the plan
+together.
+
+A first attempt withheld the parameters from the planner so the plan would be an independent
+reading of the question. It worked, and is recorded in `decisions.md` as rejected, because
+it bought contradiction detection at the price of planning against the wrong slice. Two
+things came out of that detour and are worth keeping in the README:
+
+* It was caught by being asked *why*, not by a test. The measurement offered in its defence
+  compared two plans and found them identical — but both ran **zero probes**, so it never
+  exercised the risk it was meant to rule out. A measurement that cannot fail proves
+  nothing.
+* Running the assignment's own example live exposed a genuine planner bug. Reading *"trials
+  for **this drug**"* with no parameter in sight, the planner set `intervention="this drug"`
+  — a literal placeholder that would search the registry for that string and match nothing.
+  The rule that fixes it is right regardless of parameters: a question that points at
+  something without naming it leaves that filter **null**.
+
+**Honest limit.** Contradiction is detected by a language model, so it is best-effort rather
+than guaranteed — 15/15 on the adversarial set on both providers, which is evidence, not a
+proof. When it is missed the parameter is still applied and the chart is still built; what
+the caller loses is the error, not correctness of the values.
+
+**A comparison is never collapsed.** `apply_overrides` fills only the legs that are silent
+about a dimension. "pembrolizumab vs nivolumab" plans two legs differing on `intervention`,
+so a `drug_name` parameter is left off the second leg rather than overwriting it, and the
+substitution is reported in `meta.assumptions`. In practice the judge refuses that request
+first — the question names two drugs and the parameter names one — but the two mechanisms
+are independent, and the fallback is the safe one.
+
+**`max_records` was removed.** It was documented as an upper bound on records fetched and
+the client never read it — retrieval is governed by a fixed 20-page cap, so a caller asking
+for 500 got 20,000 with no indication their parameter was ignored. A knob that looks
+effective and is inert is worse than no knob.
+
+**What the README must say.** The request schema table with types, defaults and validation;
+that parameters are applied deterministically rather than suggested to a model; the 422
+behaviour with an example; and the best-effort caveat above stated plainly.
 
 ---
 
@@ -712,3 +769,74 @@ load-bearing rather than decorative — a real question, a legal plan, a wrong a
 and repaired, with the repair visible in the response. Quote the concern text and the
 11 MB → 270 KB result. Say that `top_n` remains planner-chosen and the reviewer is
 advisory with one re-plan, so this raises the odds rather than guaranteeing the outcome.
+
+
+---
+
+## 22. Case is normalised; route, salt and brand are deliberately not
+
+**The problem.** The registry stores sponsor-authored names as free text, so the same agent
+arrives under several capitalisations and becomes several buckets. On the drug network this
+is visible as duplicate nodes — `Dexamethasone` next to `dexamethasone` — each holding part
+of the drug's weight and therefore understating both. It only became obvious once the
+reviewer pushed `top_n` from 10 to 20 and the second copy came into view, which is worth
+saying: the defect had been in every earlier capture, unnoticed.
+
+Measured over 1,000 multiple-myeloma trials: **783 distinct free-text agent names, 721 after
+case folding — 62 names merged across 58 groups**, and those groups are the busiest drugs in
+the slice.
+
+| merged | uses |
+|---|---|
+| `dexamethasone` / `Dexamethasone` | 174 |
+| `Bortezomib` / `bortezomib` | 87 |
+| `lenalidomide` / `Lenalidomide` | 82 |
+| `cyclophosphamide` / `Cyclophosphamide` | 68 |
+| `Melphalan` / `melphalan` | 50 |
+| `Daratumumab` / `DARATUMUMAB` | 43 |
+
+Grouping now folds case for the four sponsor-authored fields (`intervention_names`,
+`conditions`, `sponsor_name`, `collaborators`) and displays the **commonest original
+spelling**, ties broken lexicographically so the choice is reproducible. The label stays a
+string the registry actually uses rather than an invented lower-cased one, and each
+contribution keeps the record's own spelling, which is what its citation quotes. On the
+captured network the effect is direct: zero duplicate nodes, and `Dexamethasone` goes from
+a weight of 498 to **571** once its other spelling is folded in.
+
+MeSH fields are excluded because the registry's own indexer has already made them canonical
+— 403 terms against 783 free-text names, and **none differing only in case**.
+
+**What this does NOT fix, on purpose.** Case folding leaves 66 groups (219 names) still
+split, and they must stay that way:
+
+```
+dexamethasone · dexamethasone (iv) · dexamethasone (oral) · dexamethasone (tablets)
+bortezomib · bortezomib for injection · bortezomib injection
+lenalidomide · lenalidomide (revlimid®) · lenalidomide po (25mg)
+melphalan hydrochloride · melphalan flufenamide (melflufen)
+```
+
+`dexamethasone (iv)` and `dexamethasone (oral)` are the same drug by different routes.
+Merging them is a clinical judgement this system has no basis for making, and the value of
+distinguishing them is exactly the sort of thing a user might be asking about. The hazard is
+sharper than the convenience: **`melphalan hydrochloride` and `melphalan flufenamide` share
+a stem and are different drugs** — flufenamide is a peptide-drug conjugate, not a salt form
+of melphalan. Any stem- or prefix-based merge that unified the dexamethasone variants would
+also unify those two, and would be silently wrong in a way no warning could undo.
+
+So the line is drawn where the evidence is unambiguous — two strings differing only in
+capitalisation are the same string — and stops there. Everything past that line stays split
+and stays disclosed, and `intervention_mesh` remains available as the field for anyone who
+wants brand and generic collapsed by an actual ontology.
+
+**Why silence is not acceptable.** A reader looking at the network sees one node per drug
+and will reasonably assume names were normalised. They were, but only by case, and the
+remaining split means a drug's true weight is still distributed across its route and
+formulation variants. Stating only "names are normalised" would overclaim; stating only
+"names are free text and not deduplicated" is now out of date.
+
+**What the README must say.** Both halves, with the numbers: 58 case groups merged and what
+that changed on the captured example, then the four uncollapsed families above and the
+`melphalan flufenamide` example as the reason the line is drawn there rather than further
+along. It is a good illustration of the general rule the project follows — normalise what
+the data proves, disclose what it does not.

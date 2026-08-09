@@ -548,3 +548,55 @@ def test_strength_is_derived_and_weight_stays_countable() -> None:
         assert edge.weight == edge.nct_id_total
         assert edge.nct_id_total >= len(edge.nct_ids)
         assert edge.strength is not None
+
+
+def test_case_variants_of_one_agent_are_one_node() -> None:
+    """`Dexamethasone` and `dexamethasone` are one drug, and were two nodes.
+
+    Measured on 1,000 multiple-myeloma trials: 58 groups differing only in case, covering
+    the six commonest agents in the slice. Two nodes for one drug split its weight and
+    understate both — visible on the captured network example as duplicate labels.
+    """
+    # The commonest spelling wins the label, so two trials say "Dexamethasone" and one
+    # shouts it.
+    records = [
+        record("NCT00000001", [agent("Dexamethasone", ["A"]), agent("Lenalidomide", ["A"])]),
+        record("NCT00000002", [agent("Dexamethasone", ["A"]), agent("Lenalidomide", ["A"])]),
+        record("NCT00000003", [agent("DEXAMETHASONE", ["A"]), agent("lenalidomide", ["A"])]),
+    ]
+    result = aggregate(plan_for(), {"Slice": records})
+
+    assert len(result.buckets) == 1, "one edge, not three"
+    bucket = result.buckets[0]
+    assert (bucket.dimension, bucket.series) == ("Dexamethasone", "Lenalidomide")
+    assert len(bucket.nct_ids) == 3, "every spelling lands on the same edge"
+
+    # The contribution keeps the pairing under the canonical spelling; the excerpt is
+    # located case-insensitively, so the shouting record is still citable.
+    assert all("Dexamethasone" in c.field_value for c in bucket.contributions)
+
+
+def test_route_and_salt_variants_are_deliberately_not_merged() -> None:
+    """The line is drawn at case, and stops there on purpose.
+
+    `dexamethasone (iv)` and `dexamethasone (oral)` are the same drug by different routes,
+    and merging them is a clinical judgement this system has no basis for. The hazard is
+    sharper than it looks: `melphalan hydrochloride` and `melphalan flufenamide` share a
+    stem and are *different drugs*.
+    """
+    records = [
+        record("NCT00000001", [
+            agent("Dexamethasone (IV)", ["A"]),
+            agent("dexamethasone (oral)", ["A"]),
+            agent("Melphalan hydrochloride", ["A"]),
+            agent("Melphalan flufenamide", ["A"]),
+        ])
+    ]
+    result = aggregate(plan_for(), {"Slice": records})
+    labels = {b.dimension for b in result.buckets} | {b.series for b in result.buckets}
+    assert labels == {
+        "Dexamethasone (IV)",
+        "dexamethasone (oral)",
+        "Melphalan hydrochloride",
+        "Melphalan flufenamide",
+    }

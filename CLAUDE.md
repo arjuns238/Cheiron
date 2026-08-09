@@ -24,6 +24,8 @@ five HTTP endpoints, and the captured example runs.
 | Per-endpoint edge citations | An edge cites both its drugs, so the shared arm label is visible |
 | Judge failure class 6 | `UNQUANTIFIED SUPERLATIVE` — see invariant 6 |
 | `meta.review` | The reviewer's verdict is now recorded on every reviewed request |
+| Free-text name casing | Sponsor-authored entity fields group case-insensitively under the commonest spelling; route/salt/brand variants deliberately stay split |
+| Optional parameters | 13 structured fields, applied deterministically; contradiction with the question is judge class 7 → 422. `max_records` removed |
 
 All **7** examples are captured; `verify_examples.py` independently reconciles three of them
 (phases, countries, posted-results medians) with no mismatches.
@@ -40,14 +42,14 @@ All **7** examples are captured; `verify_examples.py` independently reconciles t
 - `docs/api-findings.md` — what the API actually does, verified by curl. Items marked
   **CORRECTION** contradict `plan.md`; the findings win, because they were measured.
 - `docs/corpus-facts.md` — corpus statistics with the exact query that produced each.
-- `docs/readme-notes.md` — 21 disclosures the README must carry, each with the problem, why
+- `docs/readme-notes.md` — 22 disclosures the README must carry, each with the problem, why
   silence is unacceptable, and what to write. This is the raw material for ⑭.
 
 ### Commands
 
 ```bash
 uv sync --all-extras                      # install
-.venv/bin/pytest -q                       # 451 tests, offline, no API key needed
+.venv/bin/pytest -q                       # 459 tests, offline, no API key needed
 .venv/bin/ruff check src tests examples
 
 .venv/bin/python -m uvicorn cheiron.api.app:app --port 8000   # serve
@@ -69,7 +71,7 @@ stages against fake clients, the deterministic core against 11 real records in
 and cost money. `pytest` will not collect them (they are not named `test_*`):
 
 ```bash
-.venv/bin/python tests/adversarial_judge.py    [anthropic|openai]   # 12 cases, expect 12/12
+.venv/bin/python tests/adversarial_judge.py    [anthropic|openai]   # 15 cases, expect 15/15
 .venv/bin/python tests/adversarial_selector.py [anthropic|openai]   # 8 cases, expect 8/8
 ```
 
@@ -141,7 +143,16 @@ docs/          decisions, api findings, corpus facts, readme notes
    whole network. The restriction must come from the question, which is why it lives in the
    reviewer. Keep the list closed — "do not invent other grounds" is what stops the judge
    manufacturing concerns.
-7. **When you add anything that reads the raw record, check the projection.** The compiler
+7. **Structured parameters are told to the planner, applied deterministically, and
+   adjudicated by the judge — three different stages, on purpose.** The planner is told
+   them so its probes run on the slice that will actually be fetched. `apply_overrides`
+   pins them afterwards, because a prompt-only design produced responses listing a filter
+   in `filters_applied` that had not been used. The **judge** owns contradiction (class 7,
+   the one fatal verdict → 422), because it is the only stage that reads the question and
+   the plan together. A brief attempt to detect contradictions by withholding the
+   parameters from the planner is recorded in `decisions.md` as rejected: it worked, but
+   left the planner calibrating to a slice nobody asked about.
+8. **When you add anything that reads the raw record, check the projection.** The compiler
    fetches the narrowest `fields=` set that answers the plan, so a new reader silently sees
    nothing. This has bitten three times: `combination_groups` (empty graph, no error),
    struct sub-fields (`StartDate` without `.type`), and series citations (56% instead of

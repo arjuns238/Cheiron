@@ -350,10 +350,11 @@
       "sort": "value_desc",
       "viz_hint": "bar",
       "assumptions": [
-        "Interpreted 'melanoma' as the Condition field.",
-        "Restricted 'phase 3 trials' using phases = PHASE3.",
-        "Computed the median of serious_ae_participants across trials within each sponsor_class bucket.",
-        "Trials without a recorded serious_ae_participants value will be excluded from the median calculation within each sponsor_class bucket."
+        "Interpreted 'melanoma' as the condition filter.",
+        "Restricted to phase 3 trials using the phases field.",
+        "Computed the median of the trial-level serious adverse event participant counts within each sponsor class.",
+        "No status restriction was specified, so all overall statuses are included.",
+        "This metric is only populated for trials with posted results that report serious adverse events; trials lacking that measure will not contribute to the median in their sponsor class."
       ]
     },
     "filters_applied": {
@@ -362,8 +363,7 @@
         "phase": [
           "PHASE3"
         ]
-      },
-      "overrides": {}
+      }
     },
     "counting_semantics": "Each value is the median of participants with a serious adverse event over the trials in that bucket.",
     "record_counts": {
@@ -376,10 +376,11 @@
       "truncated": false
     },
     "assumptions": [
-      "Interpreted 'melanoma' as the Condition field.",
-      "Restricted 'phase 3 trials' using phases = PHASE3.",
-      "Computed the median of serious_ae_participants across trials within each sponsor_class bucket.",
-      "Trials without a recorded serious_ae_participants value will be excluded from the median calculation within each sponsor_class bucket."
+      "Interpreted 'melanoma' as the condition filter.",
+      "Restricted to phase 3 trials using the phases field.",
+      "Computed the median of the trial-level serious adverse event participant counts within each sponsor class.",
+      "No status restriction was specified, so all overall statuses are included.",
+      "This metric is only populated for trials with posted results that report serious adverse events; trials lacking that measure will not contribute to the median in their sponsor class."
     ],
     "warnings": [
       "Summed across arm groups. Compare against serious_ae_at_risk rather than enrollment: the safety population is often smaller than the enrolled one.",

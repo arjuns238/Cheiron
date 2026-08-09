@@ -67,6 +67,7 @@ answer but never an illegal one.
 | Decision | Chosen | Rejected | Why |
 |---|---|---|---|
 | Drug↔drug edges | Arm-scoped for `intervention_names`; trial-level for others, each labelled | One rule for all | User's call. Co-listing ≠ combination: 217 of 500 melanoma trials co-list ≥2 agents but only 157 share an arm |
+| Free-text name casing | **Fold case, display the commonest spelling** for the 4 sponsor-authored entity fields | Lower-case the labels; stem/prefix merging; MeSH-only nodes; leave as-is | 783 → 721 names on 1,000 myeloma trials, 58 groups, all the busiest drugs. Stops at case: `melphalan hydrochloride` and `melphalan flufenamide` share a stem and are different drugs, so any looser rule is silently wrong |
 | Agent types | `DRUG` **+ `BIOLOGICAL`** | `DRUG` only (per `plan.md`) | The split is regulatory, not pharmacological; pembrolizumab is `DRUG` 405× and `BIOLOGICAL` 94× |
 | Placebos | Excluded by name heuristic | Arm membership alone | Double-dummy designs put placebos in the *active* arm, typed `DRUG` |
 | Graph size | **Return complete**; advise via `suggested_min_occurrences` | Server-side threshold; hard node cap | User's call. Thresholding is presentation, and VOSviewer-style interactive filtering needs the whole network. 2.4 MB → 288 KB gzipped (measured 8.9×) |
@@ -96,6 +97,11 @@ See `readme-notes.md` §13.
 | Decision | Chosen | Rejected | Why |
 |---|---|---|---|
 | `unsupported` detection | Three-way router: question / conversational / unsupported, with reason + suggestions | Planner failure; a fifth touchpoint | User's call. Costs one cheap classification and zero retrieval; the reason names the obstruction and the suggestions are postable request bodies |
+| Optional parameters | **Applied deterministically** to every leg after planning; 13 fields | Prompt-injected as "constraints"; frontend-only | They were accepted and ignored — measured: request said glioblastoma, service issued `query.cond=melanoma`, `filters_applied` listed both |
+| Query/parameter contradiction | **422**, naming the disagreement | Parameter wins; query wins; warn and continue | User's call. Either answer is a question the caller did not ask. Detected by the judge, so best-effort rather than guaranteed |
+| Parameters in the planner prompt | **Passed** | Withheld, so the plan is an independent reading | Withholding was tried and reverted: it made contradictions detectable, but the planner's probes then ran on the unfiltered corpus, calibrating granularity/bins/top_n to a population nobody asked about. Contradiction moved to the judge instead |
+| Contradiction detection | **Judge class 7**, the one fatal verdict → 422 | Deterministic comparison in `apply_overrides`; planner-side | Only the judge reads the question and the plan together. 15/15 on the adversarial set, both providers |
+| `max_records` | **Removed** | Wire it to the page cap; document it as inert | User's call. Documented as an upper bound, never read by the client — a knob that looks effective and is not is worse than none |
 | Response shape | `unsupported` and `no_results` carry an empty visualization block | Null visualization | One render path for the frontend; only `conversational` is null |
 | Endpoints | All five from `plan.md` §1 | `/analyze` only | User's call. `/plan` shows the agent layer with no retrieval; `/capabilities` and `/schema` generate from the models so they cannot drift |
 | `InvariantError` at HTTP | 500 with no chart | Chart plus a caveat | A reconciliation failure means the chart is wrong; failing loudly has to hold at the boundary too |

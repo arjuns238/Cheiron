@@ -37,6 +37,10 @@ class Case:
     should_flag: bool
     #: What a correct review would notice, for reporting when it does not.
     expected: str = ""
+    #: Structured parameters the caller supplied, for the class-7 cases.
+    overrides: dict[str, object] | None = None
+    #: True when the correct verdict is the fatal `contradiction`, not an advisory concern.
+    fatal: bool = False
 
 
 CASES = [
@@ -195,6 +199,44 @@ CASES = [
         ),
         should_flag=False,
     ),
+    Case(
+        name="parameter contradiction: question and condition disagree",
+        query="How have melanoma trials changed over time?",
+        plan=Plan(
+            legs=[Leg(label="Glioblastoma", filters=Filters(condition="glioblastoma"))],
+            group_by="start_date",
+            granularity=Granularity.YEAR,
+        ),
+        overrides={"condition": "glioblastoma"},
+        should_flag=True,
+        fatal=True,
+        expected=(
+            "the question names melanoma and the caller pinned condition=glioblastoma; "
+            "no plan satisfies both, so this is fatal rather than advisory"
+        ),
+    ),
+    Case(
+        name="control: the question leaves the dimension open",
+        query="How has the number of trials for this drug changed over time?",
+        plan=Plan(
+            legs=[Leg(label="Pembrolizumab", filters=Filters(intervention="Pembrolizumab"))],
+            group_by="start_date",
+            granularity=Granularity.YEAR,
+        ),
+        overrides={"drug_name": "Pembrolizumab"},
+        should_flag=False,
+    ),
+    Case(
+        name="control: parameter agrees with the question",
+        query="How have melanoma trials changed over time?",
+        plan=Plan(
+            legs=[Leg(label="Melanoma", filters=Filters(condition="melanoma"))],
+            group_by="start_date",
+            granularity=Granularity.YEAR,
+        ),
+        overrides={"condition": "Melanoma"},
+        should_flag=False,
+    ),
 ]
 
 
@@ -209,9 +251,17 @@ async def main() -> int:
     caught = missed = correct = false_alarm = 0
 
     for case in CASES:
-        verdict = await review(client, case.query, case.plan)
+        verdict = await review(
+            client, case.query, case.plan, overrides=case.overrides
+        )
         flagged = verdict.is_concerned
         ok = flagged == case.should_flag
+        # Class 7 must be *fatal*, not merely flagged: an advisory concern would spend a
+        # re-plan on a disagreement no plan can resolve.
+        if ok and case.fatal:
+            ok = verdict.is_contradiction
+        if ok and case.should_flag and not case.fatal:
+            ok = not verdict.is_contradiction
 
         if case.should_flag:
             caught += ok
@@ -222,7 +272,10 @@ async def main() -> int:
 
         mark = "PASS" if ok else "FAIL"
         print(f"[{mark}] {case.name}")
-        print(f"       verdict={verdict.verdict!r} flagged={flagged} expected={case.should_flag}")
+        print(
+            f"       verdict={verdict.verdict!r} flagged={flagged} "
+            f"expected={case.should_flag}" + (" (fatal)" if case.fatal else "")
+        )
         if case.expected and not ok:
             print(f"       should have noticed: {case.expected}")
         for concern in verdict.concerns[:2]:

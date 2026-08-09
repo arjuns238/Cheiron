@@ -6,13 +6,22 @@ ClinicalTrials.gov API can push down server-side, or to a documented local filte
 exist to remove ambiguity from the natural-language query, not to become a second,
 parallel query language.
 
-Override precedence
--------------------
-A structured field, when present, **overrides** whatever the planner infers from the
-natural-language query for that same dimension, and the override is reported in
-`meta.assumptions`. The planner is told the overrides up front so it can plan around
-them rather than fight them. Rationale: the caller typed the structured field
-deliberately and it is unambiguous; the natural-language phrasing is neither.
+Override precedence, and conflict
+---------------------------------
+A structured field **supplies** what the query leaves open, and is applied to every leg
+deterministically after planning — not by asking the model nicely. The assignment's own
+example is the intended shape: `{"query": "How has the number of trials for this drug
+changed over time?", "drug_name": "Pembrolizumab"}`, where the query names no drug.
+
+When the query and a structured field say **different** things on the same dimension, the
+request is rejected with 422 rather than resolved. "melanoma trials" with
+`condition="glioblastoma"` is not a precedence question, it is a contradiction, and
+silently honouring one of the two would produce a chart the caller did not ask for.
+
+This is why the planner is *not* told the overrides. It reads the query alone, so its plan
+is an independent statement of what the query asked for, and disagreement is detectable.
+Telling it first — the earlier design — made it adopt the override and the conflict became
+invisible.
 
 Nothing here is required except `query`.
 """
@@ -20,9 +29,12 @@ Nothing here is required except `query`.
 from __future__ import annotations
 
 from enum import StrEnum
-from typing import Annotated
+from typing import TYPE_CHECKING, Annotated
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
+
+if TYPE_CHECKING:
+    from cheiron.schemas.plan import Plan
 
 # These mirror `/studies/enums` exactly. They are duplicated as Python enums so that
 # FastAPI can generate a real JSON Schema for `/schema` and reject bad input at the edge
@@ -92,6 +104,47 @@ class InterventionType(StrEnum):
 #: this, but dates before it are almost always data-entry errors.
 MIN_YEAR = 1900
 MAX_YEAR = 2100
+
+
+#: Request fields that are execution options rather than filters.
+_NON_FILTER_FIELDS = frozenset({"query", "include_citations", "include_planning_trace"})
+
+#: Request field -> the `Filters` field it pins. Two request fields deliberately carry
+#: names from the assignment's own example rather than the internal vocabulary:
+#: `drug_name` is an intervention search, and `start_year`/`end_year` bound the *start*
+#: date on both sides (there is no separate completion-year filter here).
+OVERRIDE_TO_FILTER: dict[str, str] = {
+    "drug_name": "intervention",
+    "condition": "condition",
+    "sponsor": "sponsor",
+    "country": "country",
+    "phase": "phase",
+    "status": "status",
+    "study_type": "study_type",
+    "sponsor_class": "sponsor_class",
+    "intervention_type": "intervention_type",
+    "start_year": "start_year_min",
+    "end_year": "start_year_max",
+    "enrollment_min": "enrollment_min",
+    "enrollment_max": "enrollment_max",
+}
+
+
+class OverrideConflict(ValueError):
+    """The query and a structured field disagree on the same dimension.
+
+    Raised rather than resolved. A caller who asks about melanoma while pinning
+    `condition="glioblastoma"` has contradicted themselves, and either answer would be a
+    chart they did not ask for — so neither is produced. Surfaces as HTTP 422.
+    """
+
+    def __init__(self, conflicts: list[str]) -> None:
+        self.conflicts = conflicts
+        super().__init__(
+            "The question and the structured parameters disagree: "
+            + "; ".join(conflicts)
+            + ". Remove one side, or make them agree."
+        )
 
 
 class AnalyzeRequest(BaseModel):
@@ -192,13 +245,10 @@ class AnalyzeRequest(BaseModel):
     )
 
     # --- execution options ------------------------------------------------------------
-    max_records: int = Field(
-        5000,
-        ge=1,
-        le=20000,
-        description="Upper bound on records fetched. If the matching set is larger the "
-        "result is a sample and `meta.record_counts.truncated` is true.",
-    )
+    # `max_records` was removed rather than shipped inert. It was documented as an upper
+    # bound on records fetched, and the client never read it: retrieval is governed by a
+    # fixed 20-page cap, so a caller asking for 500 got 20,000 and no indication their
+    # parameter was ignored. A knob that looks effective and is not is worse than no knob.
     include_citations: bool = Field(
         True,
         description="Emit each datum's `citations`. Disabling it reduces payload size but "
@@ -229,13 +279,82 @@ class AnalyzeRequest(BaseModel):
         return self
 
     def overrides(self) -> dict[str, object]:
-        """The structured fields the caller actually supplied.
-
-        Returned to the planner as hard constraints and echoed into
-        `meta.filters_applied` so the response states exactly what was pinned.
-        """
+        """The structured fields the caller actually supplied, by request field name."""
         return {
             k: v
             for k, v in self.model_dump(exclude_none=True).items()
-            if k not in {"query", "max_records", "include_citations", "include_planning_trace"}
+            if k not in _NON_FILTER_FIELDS
         }
+
+
+def apply_overrides(plan: Plan, request: AnalyzeRequest) -> tuple[Plan, list[str]]:
+    """Pin the caller's structured parameters onto every leg that is silent about them.
+
+    Deterministic on purpose. The planner *is* told the parameters — it must plan against
+    the slice that will actually be fetched — but it is not trusted to apply them. The
+    earlier design put them in the prompt and nowhere else, so a model that ignored them
+    produced a chart without them while `meta.filters_applied` still listed them as
+    applied: the response claiming a filter it had not used.
+
+    Rules, per dimension:
+
+    * the leg says nothing → the parameter is applied, and reported as an assumption.
+    * the leg agrees (case- and order-insensitively) → nothing to do.
+    * the leg says something else → **left alone**, and noted. The planner saw the
+      parameter and still chose differently, which is right for a comparison: "pembrolizumab
+      vs nivolumab" with `drug_name="Pembrolizumab"` plans two legs, and overwriting the
+      second would collapse the comparison into the same population twice.
+
+    Contradiction between the question and a parameter is *not* judged here. It needs the
+    question, which this function does not have — the judge reads both and raises
+    `OverrideConflict` itself (class 7).
+    """
+    supplied = request.overrides()
+    if not supplied:
+        return plan, []
+
+    notes: list[str] = []
+    legs = [leg.model_copy(deep=True) for leg in plan.legs]
+
+    for field, value in supplied.items():
+        target = OVERRIDE_TO_FILTER[field]
+        kept: list[str] = []
+        for leg in legs:
+            current = getattr(leg.filters, target)
+            if current is None:
+                setattr(leg.filters, target, value)
+            elif not _same(current, value):
+                kept.append(leg.label)
+        notes.append(f"{target} pinned to {_render(value)} by the {field} parameter.")
+        if kept:
+            notes.append(
+                f"{target} was left as the plan set it on leg(s) {', '.join(kept)}: the "
+                f"planner distinguished them on that field, and forcing the {field} "
+                f"parameter there would merge them into one population."
+            )
+    return plan.model_copy(update={"legs": legs}), notes
+
+
+def _same(current: object, value: object) -> bool:
+    """Whether a planner-derived filter and an override mean the same thing.
+
+    Case- and order-insensitive: a caller typing `condition="Melanoma"` against a planner
+    that wrote `"melanoma"` has not contradicted anything, and refusing that would make
+    the parameters unusable in practice.
+    """
+    if isinstance(current, list) or isinstance(value, list):
+        return _as_set(current) == _as_set(value)
+    return str(getattr(current, "value", current)).casefold() == str(
+        getattr(value, "value", value)
+    ).casefold()
+
+
+def _as_set(value: object) -> set[str]:
+    items = value if isinstance(value, list) else [value]
+    return {str(getattr(x, "value", x)).casefold() for x in items}
+
+
+def _render(value: object) -> str:
+    if isinstance(value, list):
+        return ", ".join(str(getattr(v, "value", v)) for v in value)
+    return str(getattr(value, "value", value))

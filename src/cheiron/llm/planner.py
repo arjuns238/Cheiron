@@ -30,7 +30,7 @@ from cheiron.llm.client import LLMClient, LLMError, Provider, Tier
 from cheiron.llm.probes import PROBE_BUDGET, ProbeCall, ProbeRunner, probe_tool_specs
 from cheiron.schemas.fields import FIELDS, FieldKind
 from cheiron.schemas.plan import BinScale, Plan, validate_plan
-from cheiron.schemas.request import AnalyzeRequest
+from cheiron.schemas.request import AnalyzeRequest, OverrideConflict
 
 log = logging.getLogger(__name__)
 
@@ -214,6 +214,11 @@ RULES
   metric_field the y measure, both numeric.
 - filters: apply the user's constraints. Prefer intervention for drugs, condition for
   diseases, sponsor for organisations. Use start_year_min/max for date ranges.
+  If the question points at something without naming it — "this drug", "the sponsor",
+  "that condition" — leave that filter **null**. Never copy the phrase in as a value: the
+  registry would be searched for the literal string "this drug" and match nothing. Where
+  the question *does* name a value, always record it: your plan is the only statement of
+  what the question asked for.
 - assumptions: state any interpretation you made that a careful reader would want to
   check — which field you read a term as, a date range you inferred, a default you chose.
 
@@ -234,14 +239,31 @@ Return only the Plan."""
 
 
 def build_user_prompt(request: AnalyzeRequest) -> str:
-    """The question plus any structured overrides the caller supplied."""
+    """The question plus the caller's structured parameters.
+
+    The planner is told them so it plans against the slice that will actually be fetched:
+    its probes run on the plan's own filters, so a planner ignorant of `drug_name` probes
+    the whole corpus and calibrates granularity, bins and top_n to a population nobody
+    asked about.
+
+    It is not *trusted* with them. `apply_overrides` pins them onto every leg afterwards,
+    deterministically — the earlier design put them here and nowhere else, so a model that
+    ignored them produced a chart without them while the response still reported them as
+    applied.
+
+    Detecting a **contradiction** between the question and a parameter is deliberately not
+    done here. Told the value, the planner adopts it and the disagreement vanishes from the
+    plan; the judge sees the question and the plan together and is the stage that catches
+    it — see `judge.SYSTEM_PROMPT` class 7.
+    """
     overrides = request.overrides()
     parts = [f"QUESTION: {request.query}"]
     if overrides:
         parts.append(
-            "STRUCTURED OVERRIDES (the caller set these deliberately; they take "
-            "precedence over your reading of the question, and you must plan around "
-            f"them):\n{json.dumps(overrides, indent=2, default=str)}"
+            "STRUCTURED PARAMETERS the caller set explicitly. Plan against them — they are "
+            "applied to every leg after you finish, so a plan built on a different slice "
+            f"will be calibrated to the wrong population:\n"
+            f"{json.dumps(overrides, indent=2, default=str)}"
         )
     return "\n\n".join(parts)
 
@@ -407,6 +429,11 @@ async def plan_and_review(
         client, request.query, result.plan, result.probes, request.overrides()
     )
     result.review = verdict
+    if verdict.is_contradiction:
+        # Fatal, and raised here rather than carried forward: the caller's question and the
+        # caller's parameters state different things, so no plan satisfies both and a
+        # re-plan would spend a revision arriving at the same place. See judge class 7.
+        raise OverrideConflict(list(verdict.concerns))
     if not verdict.is_concerned:
         return result
 

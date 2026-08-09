@@ -29,7 +29,7 @@ from cheiron.llm.router import Intent, RouterVerdict
 from cheiron.llm.selector import ChartChoice
 from cheiron.pipeline import Deps, analyze
 from cheiron.schemas.plan import Filters, Leg, Plan
-from cheiron.schemas.request import AnalyzeRequest
+from cheiron.schemas.request import AnalyzeRequest, OverrideConflict
 from cheiron.schemas.response import ResponseType, VizType
 
 FIXTURE_DIR = Path(__file__).parent / "fixtures" / "raw_studies"
@@ -323,3 +323,115 @@ async def test_an_approval_is_recorded_not_just_a_concern() -> None:
     assert response.meta.review is not None
     assert response.meta.review.verdict
     assert response.meta.review.revised is False
+
+
+async def test_a_structured_parameter_is_actually_applied_not_merely_echoed() -> None:
+    """The planner here returns a fixed plan that mentions no drug, as an uncooperative
+    model would. The parameter must still reach the issued query."""
+    response = await analyze(
+        deps(), AnalyzeRequest(query="how are trials distributed?", drug_name="Pembrolizumab")
+    )
+    leg = response.meta.plan.legs[0]
+    assert leg.filters.intervention == "Pembrolizumab"
+    assert any("Pembrolizumab" in a for a in response.meta.assumptions)
+    assert any("Pembrolizumab" in url for url in response.meta.api_requests)
+
+
+async def test_a_contradiction_verdict_ends_the_request_rather_than_re_planning() -> None:
+    """Class 7 is the judge's one fatal verdict.
+
+    Every other class describes a plan that could be better, so a re-plan is a real remedy.
+    A contradiction is in the *input* — "melanoma trials" asked with condition=glioblastoma
+    — and no plan satisfies both, so re-planning would spend a revision arriving nowhere.
+    """
+    llm = FakeLLM(
+        RouterVerdict=RouterVerdict(intent=Intent.QUESTION),
+        Plan=PLAN,
+        JudgeVerdict=JudgeVerdict(
+            verdict="contradiction",
+            concerns=[
+                "PARAMETER CONTRADICTION — the question says melanoma, "
+                "condition=glioblastoma"
+            ],
+        ),
+        ChartChoice=ChartChoice(chart="bar"),
+    )
+    with pytest.raises(OverrideConflict) as caught:
+        await analyze(
+            deps(llm=llm),
+            AnalyzeRequest(query="melanoma trials", condition="glioblastoma"),
+        )
+    assert "melanoma" in str(caught.value)
+
+
+async def test_a_bare_contradiction_token_does_not_kill_a_request() -> None:
+    """Requiring a stated concern stops a malformed verdict from refusing silently."""
+    llm = FakeLLM(
+        RouterVerdict=RouterVerdict(intent=Intent.QUESTION),
+        Plan=PLAN,
+        JudgeVerdict=JudgeVerdict(verdict="contradiction", concerns=[]),
+        ChartChoice=ChartChoice(chart="bar"),
+    )
+    response = await analyze(deps(llm=llm), AnalyzeRequest(query="phases"))
+    assert response.response_type is ResponseType.VISUALIZATION
+
+
+async def test_a_parameter_never_collapses_a_comparison() -> None:
+    """`drug_name` matching one leg of a two-drug comparison must not overwrite the other."""
+    comparison = Plan(
+        legs=[
+            Leg(label="Pembro", filters=Filters(intervention="pembrolizumab")),
+            Leg(label="Nivo", filters=Filters(intervention="nivolumab")),
+        ],
+        group_by="phases",
+    )
+    llm = FakeLLM(
+        RouterVerdict=RouterVerdict(intent=Intent.QUESTION),
+        Plan=comparison,
+        JudgeVerdict=JudgeVerdict(verdict="ok"),
+        ChartChoice=ChartChoice(chart="grouped_bar"),
+    )
+    response = await analyze(
+        deps(llm=llm),
+        AnalyzeRequest(query="compare pembrolizumab vs nivolumab", drug_name="pembrolizumab"),
+    )
+    kept = [leg.filters.intervention for leg in response.meta.plan.legs]
+    assert kept == ["pembrolizumab", "nivolumab"], "the comparison survives"
+    assert any("left as the plan set it" in a for a in response.meta.assumptions)
+
+
+async def test_a_parameter_agreeing_with_the_question_is_not_a_conflict() -> None:
+    """Case-insensitively: refusing 'Melanoma' against 'melanoma' would make the
+    parameters unusable in practice."""
+    response = await analyze(
+        deps(), AnalyzeRequest(query="melanoma trials", condition="Melanoma")
+    )
+    assert response.meta.plan.legs[0].filters.condition == "melanoma"
+
+
+def test_a_conflict_surfaces_as_422_not_500() -> None:
+    from fastapi.testclient import TestClient
+
+    from cheiron.api.app import app
+
+    llm = FakeLLM(
+        RouterVerdict=RouterVerdict(intent=Intent.QUESTION),
+        Plan=PLAN,
+        JudgeVerdict=JudgeVerdict(
+            verdict="contradiction",
+            concerns=[
+                "PARAMETER CONTRADICTION — question says melanoma, parameter "
+                "says glioblastoma"
+            ],
+        ),
+        ChartChoice=ChartChoice(chart="bar"),
+    )
+    # Set *inside* the context: the lifespan builds real clients on startup and would
+    # otherwise replace the fake, quietly turning this into a live-model test.
+    with TestClient(app, raise_server_exceptions=False) as client:
+        app.state.deps = deps(llm=llm)
+        r = client.post("/analyze", json={"query": "melanoma trials", "condition": "glioblastoma"})
+    assert r.status_code == 422
+    body = r.json()
+    assert body["error"] == "override_conflict"
+    assert body["detail"], "the specific contradiction is named, not just 'invalid'"

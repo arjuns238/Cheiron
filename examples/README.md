@@ -8,11 +8,17 @@ changes rather than churn.
 |---|---|---|---|---|---|
 | `01-time-trend.json` | pembrolizumab trials per year since 2015 | visualization | line | 2,857 | 63 |
 | `02-distribution.json` | melanoma trials across phases | visualization | bar | 3,743 | 40 |
-| `03-comparison.json` | pembrolizumab vs nivolumab by phase | visualization | grouped_bar | 4,938 | 125 |
+| `03-comparison.json` | pembrolizumab vs nivolumab by phase | visualization | grouped_bar | 4,938 | 149 |
 | `04-geographic.json` | where recruiting NSCLC trials run | visualization | choropleth | 1,295 | 55 |
-| `05-drug-network.json` | drugs co-occurring in myeloma combinations | visualization | network | 1,392 | 179 |
+| `05-drug-network.json` | drugs co-occurring in myeloma combinations | visualization | network | 1,391 | 370 |
 | `06-adverse-events.json` | median serious AEs by sponsor class | visualization | bar | 79 | 17 |
 | `07-unsupported.json` | which drug works better for melanoma | unsupported | kpi | 0 | 0 |
+
+`05-drug-network` shows the reviewer doing real work. The planner first set `top_n: null`,
+which returns every pair that co-occurs at all — 5,215 edges, including pairs seen once —
+and does not answer *"which drugs **frequently** co-occur"*. The judge raised
+UNQUANTIFIED SUPERLATIVE, the plan was revised to `top_n: 20`, and `meta.review` records
+both. The concern is visible in the response, not just in the outcome.
 
 `06-adverse-events` is the posted-results path, and its `used` count is the point: 219
 melanoma phase 3 trials match, and **140 of them have posted no results at all**. Those are

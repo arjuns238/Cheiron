@@ -181,7 +181,7 @@ class InvariantError(AssertionError):
 
 
 def _cooccurrence_pairs(
-    record: NormalizedRecord, field_key: str
+    record: NormalizedRecord, field_key: str, canonical: dict[str, str] | None = None
 ) -> tuple[list[tuple[str, str, str]], str | None]:
     """Every unordered pair of values this trial contributes, and where they came from.
 
@@ -207,10 +207,16 @@ def _cooccurrence_pairs(
         groups = [record.get(field_key) or []]
         path = FIELDS[field_key].source
 
+    # Canonicalised before pairing, so `Dexamethasone` and `dexamethasone` are one node
+    # rather than two that each understate the other. Applied here as well as in
+    # `_dimension_values` because an edge's endpoints never pass through that function.
+    def display(name: str) -> str:
+        return (canonical or {}).get(name.casefold(), name)
+
     pairs: list[tuple[str, str, str]] = []
     seen: set[tuple[str, str]] = set()
     for members in groups:
-        distinct = sorted({m.strip() for m in members if m and m.strip()})
+        distinct = sorted({display(m.strip()) for m in members if m and m.strip()})
         for index, first in enumerate(distinct):
             for second in distinct[index + 1 :]:
                 if (first, second) in seen:
@@ -414,11 +420,51 @@ def _rounded_edges(edges: list[float]) -> tuple[float, ...]:
 # --------------------------------------------------------------------------------------
 
 
+def canonical_spellings(
+    records_by_leg: dict[str, list[NormalizedRecord]], *field_keys: str | None
+) -> dict[str, dict[str, str]]:
+    """One display spelling per case-insensitive entity, chosen from the records.
+
+    The registry stores sponsor-authored names as free text, so the same agent arrives as
+    `dexamethasone` and `Dexamethasone` and becomes two buckets — two nodes on a graph,
+    each understating the other. Measured on 1,000 multiple-myeloma trials: 58 such groups,
+    covering the six commonest drugs in the slice.
+
+    Buckets are therefore keyed case-insensitively and *displayed* using the spelling that
+    appears most often, so the label stays a string the registry actually uses rather than
+    an invented lower-cased one. Ties break lexicographically, so the choice is
+    reproducible rather than dependent on record order.
+
+    Deliberately no further normalisation. `dexamethasone (iv)` and `dexamethasone (oral)`
+    remain distinct: they are the same drug by different routes, and merging them is a
+    clinical judgement this system has no basis for. The hazard is sharper than it looks —
+    `melphalan hydrochloride` and `melphalan flufenamide` share a stem and are different
+    drugs. See `docs/readme-notes.md` for what that leaves unmerged.
+    """
+    maps: dict[str, dict[str, str]] = {}
+    for key in {k for k in field_keys if k}:
+        if not spec(key).sponsor_authored:
+            continue
+        counts: dict[str, Counter[str]] = defaultdict(Counter)
+        for records in records_by_leg.values():
+            for record in records:
+                raw = record.get(key)
+                values = raw if isinstance(raw, list) else [raw]
+                for value in (v for v in values if v):
+                    counts[str(value).casefold()][str(value)] += 1
+        maps[key] = {
+            folded: min(spellings.items(), key=lambda kv: (-kv[1], kv[0]))[0]
+            for folded, spellings in counts.items()
+        }
+    return maps
+
+
 def _dimension_values(
     record: NormalizedRecord,
     field_key: str,
     granularity: Granularity | None,
     bins: Bins | None = None,
+    canonical: dict[str, str] | None = None,
 ) -> tuple[list[tuple[str, str, str, float | None]], str | None]:
     """Resolve a record's bucket label(s) for one dimension.
 
@@ -439,17 +485,24 @@ def _dimension_values(
         label, order = bins.label_for(float(raw))
         return [(label, field_spec.source, str(raw), order)], None
 
+    # The label may differ from the value: a sponsor-authored name is displayed under one
+    # canonical spelling, while the contribution keeps the record's own — which is what the
+    # citation has to quote, since the excerpt must state the value it is cited for.
+    def label_for(value: str) -> str:
+        return (canonical or {}).get(value.casefold(), value)
+
     if field_spec.multi:
         values = [v for v in (raw or []) if v]
         if not values:
             return [], missing_reason(field_key)
         return [
-            (str(v), f"{field_spec.source}[{i}]", str(v), None) for i, v in enumerate(values)
+            (label_for(str(v)), f"{field_spec.source}[{i}]", str(v), None)
+            for i, v in enumerate(values)
         ], None
 
     if raw is None or raw == "":
         return [], missing_reason(field_key)
-    return [(str(raw), field_spec.source, str(raw), None)], None
+    return [(label_for(str(raw)), field_spec.source, str(raw), None)], None
 
 
 def _temporal_values(
@@ -574,6 +627,9 @@ def aggregate(
     result.retrieved = sum(result.excluded_by_reason.values())
     buckets: dict[tuple[str, str | None], Bucket] = {}
     multi_leg = len(records_by_leg) > 1
+    # Resolved before bucketing because the display spelling is a property of the whole
+    # slice, not of whichever record happens to arrive first.
+    canonical = canonical_spellings(records_by_leg, plan.group_by, plan.series_by)
 
     def exclude(reason: str) -> None:
         result.excluded_by_reason[reason] = result.excluded_by_reason.get(reason, 0) + 1
@@ -599,7 +655,9 @@ def aggregate(
 
             if plan.layout is Layout.COOCCURRENCE:
                 assert plan.group_by is not None
-                pairs, pair_missing = _cooccurrence_pairs(record, plan.group_by)
+                pairs, pair_missing = _cooccurrence_pairs(
+                    record, plan.group_by, canonical.get(plan.group_by)
+                )
                 if pair_missing:
                     exclude(pair_missing)
                     continue
@@ -628,7 +686,8 @@ def aggregate(
                 dimension_missing = None
             else:
                 dimension_values, dimension_missing = _dimension_values(
-                    record, plan.group_by, plan.granularity, bins
+                    record, plan.group_by, plan.granularity, bins,
+                    canonical=canonical.get(plan.group_by),
                 )
             if dimension_missing:
                 exclude(dimension_missing)
@@ -636,7 +695,8 @@ def aggregate(
 
             if plan.series_by is not None:
                 series_values, series_missing = _dimension_values(
-                    record, plan.series_by, None
+                    record, plan.series_by, None,
+                    canonical=canonical.get(plan.series_by),
                 )
                 if series_missing:
                     exclude(series_missing)

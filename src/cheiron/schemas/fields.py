@@ -60,6 +60,15 @@ class FieldSpec:
         filterable: May appear in a leg's filters.
         label: Human-readable axis title, used by the spec assembler.
         note: A data-quality caveat surfaced to the user when the field is used.
+        sponsor_authored: True when the registry stores the value as free text written by
+            the sponsor, so the same entity appears under several capitalisations —
+            measured on 1,000 myeloma trials, 58 groups differing only in case, including
+            `dexamethasone`/`Dexamethasone` (174 uses). Grouping folds case for these
+            fields and displays the commonest spelling. It does **not** normalise further:
+            `dexamethasone (iv)` and `dexamethasone (oral)` stay distinct, and must, since
+            `melphalan hydrochloride` and `melphalan flufenamide` are different drugs.
+            False for MeSH fields, which the registry's own indexer has already made
+            canonical (403 terms against 783 free-text names, none differing only in case).
         skewed: True when the value distribution is heavy-tailed enough that equal-width
             histogram bins collapse into a single bar. Drives the default bin scale, so a
             numeric field added here brings its own binning behaviour rather than relying
@@ -78,6 +87,7 @@ class FieldSpec:
     label: str = ""
     note: str | None = None
     skewed: bool = False
+    sponsor_authored: bool = False
 
     def __post_init__(self) -> None:
         if not self.label:
@@ -240,6 +250,7 @@ _FIELDS: tuple[FieldSpec, ...] = (
     # --- sponsors -----------------------------------------------------------------
     FieldSpec(
         key="sponsor_name",
+        sponsor_authored=True,
         kind=FieldKind.ENTITY,
         source="protocolSection.sponsorCollaboratorsModule.leadSponsor.name",
         projection=("LeadSponsorName",),
@@ -257,6 +268,7 @@ _FIELDS: tuple[FieldSpec, ...] = (
     ),
     FieldSpec(
         key="collaborators",
+        sponsor_authored=True,
         kind=FieldKind.ENTITY,
         source="protocolSection.sponsorCollaboratorsModule.collaborators[].name",
         projection=("CollaboratorName",),
@@ -266,6 +278,7 @@ _FIELDS: tuple[FieldSpec, ...] = (
     # --- subject matter -----------------------------------------------------------
     FieldSpec(
         key="conditions",
+        sponsor_authored=True,
         kind=FieldKind.ENTITY,
         source="protocolSection.conditionsModule.conditions",
         projection=("Condition",),
@@ -276,6 +289,7 @@ _FIELDS: tuple[FieldSpec, ...] = (
     ),
     FieldSpec(
         key="intervention_names",
+        sponsor_authored=True,
         kind=FieldKind.ENTITY,
         source="protocolSection.armsInterventionsModule.interventions[].name",
         projection=("InterventionName",),

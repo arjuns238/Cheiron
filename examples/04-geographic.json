@@ -945,10 +945,10 @@
       "sort": "value_desc",
       "viz_hint": "choropleth or ranked bar chart by country",
       "assumptions": [
-        "Interpreted 'non-small cell lung cancer' as the Condition field.",
-        "Interpreted 'recruiting trials' using overall trial status = RECRUITING.",
-        "Interpreted 'where are ... running' as trial counts grouped by Country.",
-        "Applied top_n because Country is a multi-valued entity field and the tail is long; a map or ranked bar is appropriate."
+        "Interpreted 'non-small cell lung cancer' as the condition filter.",
+        "Interpreted 'recruiting trials' using trial overall status = RECRUITING.",
+        "Interpreted 'where are ... running' as grouping trials by country.",
+        "Used a top-N country breakdown because country is a multi-valued entity field and trials may span multiple countries."
       ]
     },
     "filters_applied": {
@@ -957,8 +957,7 @@
         "status": [
           "RECRUITING"
         ]
-      },
-      "overrides": {}
+      }
     },
     "counting_semantics": "Trials are counted once per distinct country, so a trial with several contributes to several buckets and the column totals exceed the distinct trial count.",
     "record_counts": {
@@ -969,61 +968,17 @@
       "truncated": false
     },
     "assumptions": [
-      "Interpreted 'non-small cell lung cancer' as the Condition field.",
-      "Interpreted 'recruiting trials' using overall trial status = RECRUITING.",
-      "Interpreted 'where are ... running' as trial counts grouped by Country.",
-      "Applied top_n because Country is a multi-valued entity field and the tail is long; a map or ranked bar is appropriate."
+      "Interpreted 'non-small cell lung cancer' as the condition filter.",
+      "Interpreted 'recruiting trials' using trial overall status = RECRUITING.",
+      "Interpreted 'where are ... running' as grouping trials by country.",
+      "Used a top-N country breakdown because country is a multi-valued entity field and trials may span multiple countries."
     ],
     "warnings": [
       "Country is multi-valued: bucket totals sum to more than the number of distinct trials.",
       "Deduplicated per trial. Location lists are frequently incomplete relative to the trial's prose, and trial-level status differs from site-level status.",
       "60 value(s) beyond the top 10 were collapsed into 'Other'."
     ],
-    "planning_trace": [
-      {
-        "tool": "probe_count",
-        "args": {
-          "condition": "non-small cell lung cancer",
-          "status": [
-            "RECRUITING"
-          ]
-        },
-        "result": {
-          "total": 1295,
-          "exact": true,
-          "note": ""
-        }
-      },
-      {
-        "tool": "field_values",
-        "args": {
-          "condition": "non-small cell lung cancer",
-          "status": [
-            "RECRUITING"
-          ],
-          "field_name": "countries"
-        },
-        "result": {
-          "top_values_in_sample": {
-            "China": 438,
-            "United States": 405,
-            "Spain": 136,
-            "France": 128,
-            "Italy": 122,
-            "South Korea": 99,
-            "Germany": 88,
-            "Australia": 86,
-            "Canada": 84,
-            "United Kingdom": 82
-          },
-          "distinct_values_in_sample": 70,
-          "sample_size": 1000,
-          "matching_total": 1295,
-          "exact": false,
-          "note": "counts are from a sample and are not chart values; use them only to judge how many buckets this dimension produces"
-        }
-      }
-    ],
+    "planning_trace": [],
     "review": {
       "verdict": "ok",
       "concerns": [],

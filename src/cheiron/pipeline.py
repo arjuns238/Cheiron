@@ -43,7 +43,7 @@ from cheiron.llm.planner import PlanningError, plan_and_review
 from cheiron.llm.probes import ProbeRunner
 from cheiron.llm.router import Intent, route
 from cheiron.llm.selector import select
-from cheiron.schemas.request import AnalyzeRequest
+from cheiron.schemas.request import AnalyzeRequest, apply_overrides
 from cheiron.schemas.response import (
     AnalyzeResponse,
     Encoding,
@@ -161,6 +161,12 @@ async def analyze(deps: Deps, request: AnalyzeRequest) -> AnalyzeResponse:
     probes = ProbeRunner(deps.ctgov)
     try:
         planned = await plan_and_review(deps.llm, request, probes=probes)
+        # Applied here rather than asked of the planner: the plan above is the model's
+        # reading of the *question*, so pinning the caller's parameters onto it is both
+        # deterministic and the only point at which the two can be compared. A
+        # contradiction raises and becomes a 422 — see `apply_overrides`.
+        plan, override_notes = apply_overrides(planned.plan, request)
+        planned.plan = plan
     except PlanningError as exc:
         return AnalyzeResponse(
             request_id=request_id,
@@ -210,7 +216,7 @@ async def analyze(deps: Deps, request: AnalyzeRequest) -> AnalyzeResponse:
         request_id=request_id,
         elapsed_ms=elapsed(),
     )
-    _attach_agent_trace(response, planned, retrieval, provider, request)
+    _attach_agent_trace(response, planned, retrieval, provider, request, override_notes)
     return response
 
 
@@ -220,6 +226,7 @@ def _attach_agent_trace(
     retrieval: Retrieval,
     provider: str,
     request: AnalyzeRequest,
+    override_notes: list[str],
 ) -> None:
     """Record how the plan was reached, so the answer can be audited rather than trusted.
 
@@ -229,7 +236,13 @@ def _attach_agent_trace(
     """
     meta = response.meta
     meta.llm_provider = provider
-    meta.filters_applied = {**meta.filters_applied, "overrides": request.overrides()}
+    # Reported as assumptions, not merely echoed. The old behaviour listed the overrides in
+    # `filters_applied` beside the filters that had actually been used, so a response could
+    # show `condition: melanoma` and `overrides: {condition: glioblastoma}` side by side and
+    # claim both. They are now the same thing by construction.
+    meta.assumptions = [*override_notes, *meta.assumptions]
+    if supplied := request.overrides():
+        meta.filters_applied = {**meta.filters_applied, "parameters": supplied}
 
     if request.include_planning_trace:
         meta.planning_trace = [

@@ -37,7 +37,7 @@ from cheiron.llm.probes import PROBE_BUDGET, ProbeRunner
 from cheiron.pipeline import Deps, analyze
 from cheiron.schemas.fields import FIELDS
 from cheiron.schemas.plan import Metric, Plan
-from cheiron.schemas.request import AnalyzeRequest
+from cheiron.schemas.request import AnalyzeRequest, OverrideConflict
 from cheiron.schemas.response import (
     AnalyzeResponse,
     CapabilitiesResponse,
@@ -134,6 +134,23 @@ async def _invariant_failed(request: Any, exc: InvariantError) -> JSONResponse:
                 "The record counts did not reconcile, so the chart would have been wrong. "
                 "No result is returned rather than an unverified one."
             ),
+        },
+    )
+
+
+@app.exception_handler(OverrideConflict)
+async def _override_conflict(request: Any, exc: OverrideConflict) -> JSONResponse:
+    """The question and the structured parameters disagree, so neither is guessed at.
+
+    422 rather than a chart: honouring either side would answer a question the caller did
+    not ask, and there is no basis for choosing between two things they stated themselves.
+    """
+    return JSONResponse(
+        status_code=422,
+        content={
+            "error": "override_conflict",
+            "detail": exc.conflicts,
+            "message": str(exc),
         },
     )
 

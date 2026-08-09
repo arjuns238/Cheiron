@@ -3,7 +3,7 @@
   "response_type": "visualization",
   "answer": "Across 3,743 trials, the highest phase is PHASE2 at 1,033 trials.",
   "visualization": {
-    "type": "pie",
+    "type": "bar",
     "title": "Trials by Phase — Melanoma trials",
     "subtitle": "Each trial is counted once per bucket.",
     "encoding": {
@@ -23,175 +23,83 @@
     },
     "data": [
       {
-        "value": 65.0,
+        "value": 1033.0,
         "nct_ids": [
-          "NCT02320305",
-          "NCT05704933",
-          "NCT01666353",
-          "NCT00580060",
-          "NCT04891718"
+          "NCT00001144",
+          "NCT04598009",
+          "NCT03917069",
+          "NCT00387751",
+          "NCT07448831"
         ],
-        "nct_id_total": 65,
+        "nct_id_total": 1033,
         "citations": [
           {
-            "nct_id": "NCT02320305",
-            "url": "https://clinicaltrials.gov/study/NCT02320305",
-            "brief_title": "MART-1 Antigen With or Without TLR4 Agonist GLA-SE in Treating Patients With Stage II-IV Melanoma That Has Been Removed by Surgery",
+            "nct_id": "NCT00001144",
+            "url": "https://clinicaltrials.gov/study/NCT00001144",
+            "brief_title": "Modified Bone Marrow Stem Cell Transplantation for Chronic Myelogenous Leukemia",
             "field_path": "protocolSection.designModule.phases",
-            "field_value": "EARLY_PHASE1",
-            "excerpt": "\"phases\":[\"EARLY_PHASE1\"]",
+            "field_value": "PHASE2",
+            "excerpt": "\"phases\":[\"PHASE2\"]",
             "offset": [
-              229,
-              254
+              178,
+              197
             ],
             "supports": "value"
           },
           {
-            "nct_id": "NCT05704933",
-            "url": "https://clinicaltrials.gov/study/NCT05704933",
-            "brief_title": "Pilot Study of Nivolumab w/Ipilimumab or Relatlimab in Surgically Resectable Melanoma Brain Metastases",
+            "nct_id": "NCT04598009",
+            "url": "https://clinicaltrials.gov/study/NCT04598009",
+            "brief_title": "Binimetinib and Imatinib for Unresectable Stage III-IV KIT-Mutant Melanoma",
             "field_path": "protocolSection.designModule.phases",
-            "field_value": "EARLY_PHASE1",
-            "excerpt": "\"phases\":[\"EARLY_PHASE1\"]",
+            "field_value": "PHASE2",
+            "excerpt": "\"phases\":[\"PHASE2\"]",
             "offset": [
-              201,
-              226
-            ],
-            "supports": "value"
-          },
-          {
-            "nct_id": "NCT01666353",
-            "url": "https://clinicaltrials.gov/study/NCT01666353",
-            "brief_title": "PET Quantitative Assessments of Solid Tumor Response to Immune Checkpoint Blockade Therapy",
-            "field_path": "protocolSection.designModule.phases",
-            "field_value": "EARLY_PHASE1",
-            "excerpt": "\"phases\":[\"EARLY_PHASE1\"]",
-            "offset": [
-              189,
-              214
-            ],
-            "supports": "value"
-          },
-          {
-            "nct_id": "NCT00580060",
-            "url": "https://clinicaltrials.gov/study/NCT00580060",
-            "brief_title": "Injection Of AJCC Stage IIB, IIC, III And IV Melanoma Patients With A Multi-Epitope Peptide Vaccine Using GM-CSF DNA As An Adjuvant: A Pilot Trial To Assess Safety And Immunity",
-            "field_path": "protocolSection.designModule.phases",
-            "field_value": "EARLY_PHASE1",
-            "excerpt": "\"phases\":[\"EARLY_PHASE1\"]",
-            "offset": [
-              275,
-              300
-            ],
-            "supports": "value"
-          },
-          {
-            "nct_id": "NCT04891718",
-            "url": "https://clinicaltrials.gov/study/NCT04891718",
-            "brief_title": "CIVO Intratumoural Microdosing of Anti-Cancer Therapies in Australia",
-            "field_path": "protocolSection.designModule.phases",
-            "field_value": "EARLY_PHASE1",
-            "excerpt": "\"phases\":[\"EARLY_PHASE1\"]",
-            "offset": [
-              167,
+              173,
               192
             ],
             "supports": "value"
-          }
-        ],
-        "phases": "EARLY_PHASE1"
-      },
-      {
-        "value": 413.0,
-        "nct_ids": [
-          "NCT05367180",
-          "NCT02069769",
-          "NCT05421988",
-          "NCT06384417",
-          "NCT00872391"
-        ],
-        "nct_id_total": 413,
-        "citations": [
+          },
           {
-            "nct_id": "NCT05367180",
-            "url": "https://clinicaltrials.gov/study/NCT05367180",
-            "brief_title": "The Impact of a Prevention Program on Sun Risks in Primary School in Tropical French Region",
+            "nct_id": "NCT03917069",
+            "url": "https://clinicaltrials.gov/study/NCT03917069",
+            "brief_title": "Nab-PCE vs PC for MM After Failure of Anti-PD-1",
             "field_path": "protocolSection.designModule.phases",
-            "field_value": "NA",
-            "excerpt": "\"phases\":[\"NA\"]",
+            "field_value": "PHASE2",
+            "excerpt": "\"phases\":[\"PHASE2\"]",
             "offset": [
-              190,
-              205
+              146,
+              165
             ],
             "supports": "value"
           },
           {
-            "nct_id": "NCT02069769",
-            "url": "https://clinicaltrials.gov/study/NCT02069769",
-            "brief_title": "Ensuring Communication in Hospice by Oncology Study (ECHO)",
+            "nct_id": "NCT00387751",
+            "url": "https://clinicaltrials.gov/study/NCT00387751",
+            "brief_title": "Bevacizumab and Sorafenib in Treating Patients With Unresectable Stage III or Stage IV Malignant Melanoma",
             "field_path": "protocolSection.designModule.phases",
-            "field_value": "NA",
-            "excerpt": "\"phases\":[\"NA\"]",
+            "field_value": "PHASE2",
+            "excerpt": "\"phases\":[\"PHASE2\"]",
             "offset": [
-              157,
-              172
+              204,
+              223
             ],
             "supports": "value"
           },
           {
-            "nct_id": "NCT05421988",
-            "url": "https://clinicaltrials.gov/study/NCT05421988",
-            "brief_title": "Effectiveness of Group and Individual Training in EFT for Patients in Remission From Melanoma",
+            "nct_id": "NCT07448831",
+            "url": "https://clinicaltrials.gov/study/NCT07448831",
+            "brief_title": "A Phase II Clinical Trial on Neo-adjuvant Pembrolizumab in Patients With pT3b-T4a/b cN0M0 Melanoma.",
             "field_path": "protocolSection.designModule.phases",
-            "field_value": "NA",
-            "excerpt": "\"phases\":[\"NA\"]",
-            "offset": [
-              192,
-              207
-            ],
-            "supports": "value"
-          },
-          {
-            "nct_id": "NCT06384417",
-            "url": "https://clinicaltrials.gov/study/NCT06384417",
-            "brief_title": "Using an End-of-life Conversation Game to Engage Patients With Cancer in Advance Care Planning: Phase 2",
-            "field_path": "protocolSection.designModule.phases",
-            "field_value": "NA",
-            "excerpt": "\"phases\":[\"NA\"]",
-            "offset": [
-              202,
-              217
-            ],
-            "supports": "value"
-          },
-          {
-            "nct_id": "NCT00872391",
-            "url": "https://clinicaltrials.gov/study/NCT00872391",
-            "brief_title": "Hypofractionated Stereotactic Linear Accelerator Radiotherapy of Uveal Melanoma",
-            "field_path": "protocolSection.designModule.phases",
-            "field_value": "NA",
-            "excerpt": "Hypofractionated Stereotactic Linear Accelerator Radiotherapy of Uveal Me",
+            "field_value": "PHASE2",
+            "excerpt": "A Phase II Clinical Trial on Neo-adjuvant Pembrolizumab in Patients Wi",
             "offset": [
               80,
-              153
+              150
             ],
             "supports": "value"
           }
         ],
-        "phases": "NA"
-      },
-      {
-        "value": 632.0,
-        "nct_ids": [
-          "NCT05856565",
-          "NCT02143999",
-          "NCT00351728",
-          "NCT04588662",
-          "NCT01005537"
-        ],
-        "nct_id_total": 632,
-        "citations": [],
-        "phases": "NOT_REPORTED"
+        "phases": "PHASE2"
       },
       {
         "value": 868.0,
@@ -273,6 +181,19 @@
         "phases": "PHASE1"
       },
       {
+        "value": 632.0,
+        "nct_ids": [
+          "NCT05856565",
+          "NCT02143999",
+          "NCT00351728",
+          "NCT04588662",
+          "NCT01005537"
+        ],
+        "nct_id_total": 632,
+        "citations": [],
+        "phases": "NOT_REPORTED"
+      },
+      {
         "value": 476.0,
         "nct_ids": [
           "NCT01189383",
@@ -352,162 +273,83 @@
         "phases": "PHASE1|PHASE2"
       },
       {
-        "value": 1033.0,
+        "value": 413.0,
         "nct_ids": [
-          "NCT00001144",
-          "NCT04598009",
-          "NCT03917069",
-          "NCT00387751",
-          "NCT07448831"
+          "NCT05367180",
+          "NCT02069769",
+          "NCT05421988",
+          "NCT06384417",
+          "NCT00872391"
         ],
-        "nct_id_total": 1033,
+        "nct_id_total": 413,
         "citations": [
           {
-            "nct_id": "NCT00001144",
-            "url": "https://clinicaltrials.gov/study/NCT00001144",
-            "brief_title": "Modified Bone Marrow Stem Cell Transplantation for Chronic Myelogenous Leukemia",
+            "nct_id": "NCT05367180",
+            "url": "https://clinicaltrials.gov/study/NCT05367180",
+            "brief_title": "The Impact of a Prevention Program on Sun Risks in Primary School in Tropical French Region",
             "field_path": "protocolSection.designModule.phases",
-            "field_value": "PHASE2",
-            "excerpt": "\"phases\":[\"PHASE2\"]",
+            "field_value": "NA",
+            "excerpt": "\"phases\":[\"NA\"]",
             "offset": [
-              178,
-              197
+              190,
+              205
             ],
             "supports": "value"
           },
           {
-            "nct_id": "NCT04598009",
-            "url": "https://clinicaltrials.gov/study/NCT04598009",
-            "brief_title": "Binimetinib and Imatinib for Unresectable Stage III-IV KIT-Mutant Melanoma",
+            "nct_id": "NCT02069769",
+            "url": "https://clinicaltrials.gov/study/NCT02069769",
+            "brief_title": "Ensuring Communication in Hospice by Oncology Study (ECHO)",
             "field_path": "protocolSection.designModule.phases",
-            "field_value": "PHASE2",
-            "excerpt": "\"phases\":[\"PHASE2\"]",
+            "field_value": "NA",
+            "excerpt": "\"phases\":[\"NA\"]",
             "offset": [
-              173,
-              192
+              157,
+              172
             ],
             "supports": "value"
           },
           {
-            "nct_id": "NCT03917069",
-            "url": "https://clinicaltrials.gov/study/NCT03917069",
-            "brief_title": "Nab-PCE vs PC for MM After Failure of Anti-PD-1",
+            "nct_id": "NCT05421988",
+            "url": "https://clinicaltrials.gov/study/NCT05421988",
+            "brief_title": "Effectiveness of Group and Individual Training in EFT for Patients in Remission From Melanoma",
             "field_path": "protocolSection.designModule.phases",
-            "field_value": "PHASE2",
-            "excerpt": "\"phases\":[\"PHASE2\"]",
+            "field_value": "NA",
+            "excerpt": "\"phases\":[\"NA\"]",
             "offset": [
-              146,
-              165
+              192,
+              207
             ],
             "supports": "value"
           },
           {
-            "nct_id": "NCT00387751",
-            "url": "https://clinicaltrials.gov/study/NCT00387751",
-            "brief_title": "Bevacizumab and Sorafenib in Treating Patients With Unresectable Stage III or Stage IV Malignant Melanoma",
+            "nct_id": "NCT06384417",
+            "url": "https://clinicaltrials.gov/study/NCT06384417",
+            "brief_title": "Using an End-of-life Conversation Game to Engage Patients With Cancer in Advance Care Planning: Phase 2",
             "field_path": "protocolSection.designModule.phases",
-            "field_value": "PHASE2",
-            "excerpt": "\"phases\":[\"PHASE2\"]",
+            "field_value": "NA",
+            "excerpt": "\"phases\":[\"NA\"]",
             "offset": [
-              204,
-              223
+              202,
+              217
             ],
             "supports": "value"
           },
           {
-            "nct_id": "NCT07448831",
-            "url": "https://clinicaltrials.gov/study/NCT07448831",
-            "brief_title": "A Phase II Clinical Trial on Neo-adjuvant Pembrolizumab in Patients With pT3b-T4a/b cN0M0 Melanoma.",
+            "nct_id": "NCT00872391",
+            "url": "https://clinicaltrials.gov/study/NCT00872391",
+            "brief_title": "Hypofractionated Stereotactic Linear Accelerator Radiotherapy of Uveal Melanoma",
             "field_path": "protocolSection.designModule.phases",
-            "field_value": "PHASE2",
-            "excerpt": "A Phase II Clinical Trial on Neo-adjuvant Pembrolizumab in Patients Wi",
+            "field_value": "NA",
+            "excerpt": "Hypofractionated Stereotactic Linear Accelerator Radiotherapy of Uveal Me",
             "offset": [
               80,
-              150
+              153
             ],
             "supports": "value"
           }
         ],
-        "phases": "PHASE2"
-      },
-      {
-        "value": 25.0,
-        "nct_ids": [
-          "NCT00811200",
-          "NCT03928275",
-          "NCT02829775",
-          "NCT07310758",
-          "NCT02962947"
-        ],
-        "nct_id_total": 25,
-        "citations": [
-          {
-            "nct_id": "NCT00811200",
-            "url": "https://clinicaltrials.gov/study/NCT00811200",
-            "brief_title": "Treatment Of Radiation Retinopathy Trial",
-            "field_path": "protocolSection.designModule.phases",
-            "field_value": "PHASE2|PHASE3",
-            "excerpt": "\"phases\":[\"PHASE2\",\"PHASE3\"]",
-            "offset": [
-              139,
-              167
-            ],
-            "supports": "value"
-          },
-          {
-            "nct_id": "NCT03928275",
-            "url": "https://clinicaltrials.gov/study/NCT03928275",
-            "brief_title": "The Response to Intralesional IL-2 and/or BCG Treatment for Cutaneous Metastatic Melanoma",
-            "field_path": "protocolSection.designModule.phases",
-            "field_value": "PHASE2|PHASE3",
-            "excerpt": "\"phases\":[\"PHASE2\",\"PHASE3\"]",
-            "offset": [
-              188,
-              216
-            ],
-            "supports": "value"
-          },
-          {
-            "nct_id": "NCT02829775",
-            "url": "https://clinicaltrials.gov/study/NCT02829775",
-            "brief_title": "A Study of Continued Treatment Among Participants Who Have Responded to Peginterferon Alfa-2a (Pegasys®) or Recombinant Interferon Alfa-2a (Roferon-A®) in Prior Clinical Studies",
-            "field_path": "protocolSection.designModule.phases",
-            "field_value": "PHASE2|PHASE3",
-            "excerpt": "\"phases\":[\"PHASE2\",\"PHASE3\"]",
-            "offset": [
-              276,
-              304
-            ],
-            "supports": "value"
-          },
-          {
-            "nct_id": "NCT07310758",
-            "url": "https://clinicaltrials.gov/study/NCT07310758",
-            "brief_title": "Contrast-enhanced Ultrasound for Sentinel Node Detection",
-            "field_path": "protocolSection.designModule.phases",
-            "field_value": "PHASE2|PHASE3",
-            "excerpt": "\"phases\":[\"PHASE2\",\"PHASE3\"]",
-            "offset": [
-              155,
-              183
-            ],
-            "supports": "value"
-          },
-          {
-            "nct_id": "NCT02962947",
-            "url": "https://clinicaltrials.gov/study/NCT02962947",
-            "brief_title": "MELABLOCK: A Clinical Trial on the Efficacy and Safety of Propranolol 80 mg in Melanoma Patients",
-            "field_path": "protocolSection.designModule.phases",
-            "field_value": "PHASE2|PHASE3",
-            "excerpt": "\"phases\":[\"PHASE2\",\"PHASE3\"]",
-            "offset": [
-              195,
-              223
-            ],
-            "supports": "value"
-          }
-        ],
-        "phases": "PHASE2|PHASE3"
+        "phases": "NA"
       },
       {
         "value": 194.0,
@@ -589,6 +431,85 @@
         "phases": "PHASE3"
       },
       {
+        "value": 65.0,
+        "nct_ids": [
+          "NCT02320305",
+          "NCT05704933",
+          "NCT01666353",
+          "NCT00580060",
+          "NCT04891718"
+        ],
+        "nct_id_total": 65,
+        "citations": [
+          {
+            "nct_id": "NCT02320305",
+            "url": "https://clinicaltrials.gov/study/NCT02320305",
+            "brief_title": "MART-1 Antigen With or Without TLR4 Agonist GLA-SE in Treating Patients With Stage II-IV Melanoma That Has Been Removed by Surgery",
+            "field_path": "protocolSection.designModule.phases",
+            "field_value": "EARLY_PHASE1",
+            "excerpt": "\"phases\":[\"EARLY_PHASE1\"]",
+            "offset": [
+              229,
+              254
+            ],
+            "supports": "value"
+          },
+          {
+            "nct_id": "NCT05704933",
+            "url": "https://clinicaltrials.gov/study/NCT05704933",
+            "brief_title": "Pilot Study of Nivolumab w/Ipilimumab or Relatlimab in Surgically Resectable Melanoma Brain Metastases",
+            "field_path": "protocolSection.designModule.phases",
+            "field_value": "EARLY_PHASE1",
+            "excerpt": "\"phases\":[\"EARLY_PHASE1\"]",
+            "offset": [
+              201,
+              226
+            ],
+            "supports": "value"
+          },
+          {
+            "nct_id": "NCT01666353",
+            "url": "https://clinicaltrials.gov/study/NCT01666353",
+            "brief_title": "PET Quantitative Assessments of Solid Tumor Response to Immune Checkpoint Blockade Therapy",
+            "field_path": "protocolSection.designModule.phases",
+            "field_value": "EARLY_PHASE1",
+            "excerpt": "\"phases\":[\"EARLY_PHASE1\"]",
+            "offset": [
+              189,
+              214
+            ],
+            "supports": "value"
+          },
+          {
+            "nct_id": "NCT00580060",
+            "url": "https://clinicaltrials.gov/study/NCT00580060",
+            "brief_title": "Injection Of AJCC Stage IIB, IIC, III And IV Melanoma Patients With A Multi-Epitope Peptide Vaccine Using GM-CSF DNA As An Adjuvant: A Pilot Trial To Assess Safety And Immunity",
+            "field_path": "protocolSection.designModule.phases",
+            "field_value": "EARLY_PHASE1",
+            "excerpt": "\"phases\":[\"EARLY_PHASE1\"]",
+            "offset": [
+              275,
+              300
+            ],
+            "supports": "value"
+          },
+          {
+            "nct_id": "NCT04891718",
+            "url": "https://clinicaltrials.gov/study/NCT04891718",
+            "brief_title": "CIVO Intratumoural Microdosing of Anti-Cancer Therapies in Australia",
+            "field_path": "protocolSection.designModule.phases",
+            "field_value": "EARLY_PHASE1",
+            "excerpt": "\"phases\":[\"EARLY_PHASE1\"]",
+            "offset": [
+              167,
+              192
+            ],
+            "supports": "value"
+          }
+        ],
+        "phases": "EARLY_PHASE1"
+      },
+      {
         "value": 37.0,
         "nct_ids": [
           "NCT02068196",
@@ -666,10 +587,89 @@
           }
         ],
         "phases": "PHASE4"
+      },
+      {
+        "value": 25.0,
+        "nct_ids": [
+          "NCT00811200",
+          "NCT03928275",
+          "NCT02829775",
+          "NCT07310758",
+          "NCT02962947"
+        ],
+        "nct_id_total": 25,
+        "citations": [
+          {
+            "nct_id": "NCT00811200",
+            "url": "https://clinicaltrials.gov/study/NCT00811200",
+            "brief_title": "Treatment Of Radiation Retinopathy Trial",
+            "field_path": "protocolSection.designModule.phases",
+            "field_value": "PHASE2|PHASE3",
+            "excerpt": "\"phases\":[\"PHASE2\",\"PHASE3\"]",
+            "offset": [
+              139,
+              167
+            ],
+            "supports": "value"
+          },
+          {
+            "nct_id": "NCT03928275",
+            "url": "https://clinicaltrials.gov/study/NCT03928275",
+            "brief_title": "The Response to Intralesional IL-2 and/or BCG Treatment for Cutaneous Metastatic Melanoma",
+            "field_path": "protocolSection.designModule.phases",
+            "field_value": "PHASE2|PHASE3",
+            "excerpt": "\"phases\":[\"PHASE2\",\"PHASE3\"]",
+            "offset": [
+              188,
+              216
+            ],
+            "supports": "value"
+          },
+          {
+            "nct_id": "NCT02829775",
+            "url": "https://clinicaltrials.gov/study/NCT02829775",
+            "brief_title": "A Study of Continued Treatment Among Participants Who Have Responded to Peginterferon Alfa-2a (Pegasys®) or Recombinant Interferon Alfa-2a (Roferon-A®) in Prior Clinical Studies",
+            "field_path": "protocolSection.designModule.phases",
+            "field_value": "PHASE2|PHASE3",
+            "excerpt": "\"phases\":[\"PHASE2\",\"PHASE3\"]",
+            "offset": [
+              276,
+              304
+            ],
+            "supports": "value"
+          },
+          {
+            "nct_id": "NCT07310758",
+            "url": "https://clinicaltrials.gov/study/NCT07310758",
+            "brief_title": "Contrast-enhanced Ultrasound for Sentinel Node Detection",
+            "field_path": "protocolSection.designModule.phases",
+            "field_value": "PHASE2|PHASE3",
+            "excerpt": "\"phases\":[\"PHASE2\",\"PHASE3\"]",
+            "offset": [
+              155,
+              183
+            ],
+            "supports": "value"
+          },
+          {
+            "nct_id": "NCT02962947",
+            "url": "https://clinicaltrials.gov/study/NCT02962947",
+            "brief_title": "MELABLOCK: A Clinical Trial on the Efficacy and Safety of Propranolol 80 mg in Melanoma Patients",
+            "field_path": "protocolSection.designModule.phases",
+            "field_value": "PHASE2|PHASE3",
+            "excerpt": "\"phases\":[\"PHASE2\",\"PHASE3\"]",
+            "offset": [
+              195,
+              223
+            ],
+            "supports": "value"
+          }
+        ],
+        "phases": "PHASE2|PHASE3"
       }
     ],
     "config": {
-      "sort": "dimension_asc",
+      "sort": "value_desc",
       "granularity": null,
       "top_n": null,
       "other_bucket": false,
@@ -716,10 +716,10 @@
       "bins": null,
       "bin_scale": "linear",
       "top_n": null,
-      "sort": "dimension_asc",
+      "sort": "value_desc",
       "viz_hint": "bar",
       "assumptions": [
-        "Interpreted 'melanoma trials' using the conditions field with filter condition='melanoma'.",
+        "Interpreted 'melanoma trials' as trials filtered by the condition field using 'melanoma'.",
         "Interpreted 'distributed across phases' as a count of trials grouped by phases.",
         "Included all study types, statuses, countries, and years because none were specified."
       ]
@@ -727,8 +727,7 @@
     "filters_applied": {
       "Melanoma trials": {
         "condition": "melanoma"
-      },
-      "overrides": {}
+      }
     },
     "counting_semantics": "Each trial is counted once per bucket.",
     "record_counts": {
@@ -739,7 +738,7 @@
       "truncated": false
     },
     "assumptions": [
-      "Interpreted 'melanoma trials' using the conditions field with filter condition='melanoma'.",
+      "Interpreted 'melanoma trials' as trials filtered by the condition field using 'melanoma'.",
       "Interpreted 'distributed across phases' as a count of trials grouped by phases.",
       "Included all study types, statuses, countries, and years because none were specified."
     ],
