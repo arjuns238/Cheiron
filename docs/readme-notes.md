@@ -127,8 +127,8 @@ things came out of that detour and are worth keeping in the README:
   something without naming it leaves that filter **null**.
 
 **Honest limit.** Contradiction is detected by a language model, so it is best-effort rather
-than guaranteed — 15/15 on the adversarial set on both providers, which is evidence, not a
-proof. When it is missed the parameter is still applied and the chart is still built; what
+than guaranteed — the adversarial set passes on both providers (19/19 at last run), which
+is evidence, not a proof. When it is missed the parameter is still applied and the chart is still built; what
 the caller loses is the error, not correctness of the values.
 
 **A comparison is never collapsed.** `apply_overrides` fills only the legs that are silent
@@ -139,8 +139,9 @@ first — the question names two drugs and the parameter names one — but the t
 are independent, and the fallback is the safe one.
 
 **`max_records` was removed.** It was documented as an upper bound on records fetched and
-the client never read it — retrieval is governed by a fixed 20-page cap, so a caller asking
-for 500 got 20,000 with no indication their parameter was ignored. A knob that looks
+the client never read it — retrieval is governed by a fixed page cap (20 pages at the time,
+100 now, see §26), so a caller asking for 500 got 20,000 with no indication their parameter
+was ignored. A knob that looks
 effective and is inert is worse than no knob.
 
 **What the README must say.** The request schema table with types, defaults and validation;
@@ -321,8 +322,11 @@ it is given. Trimming server-side would make the primary interaction impossible,
 client handed a trimmed graph cannot recover the rest without another request.
 
 The payload objection is also weaker than it looks. JSON of this shape compresses **8.9×**
-(measured, not estimated), so that 2.4 MB response is **288 KB** over the wire, and the
-20,000-record retrieval cap bounds the worst case to roughly 1 MB gzipped.
+(measured, not estimated), so that 2.4 MB response is **288 KB** over the wire. The
+retrieval page cap bounds the worst case; when this was measured the cap was 20,000 records
+and that ceiling was roughly 1 MB gzipped. The cap is now 100,000 (§26), so quote the
+compression ratio rather than that ceiling — it is the ratio that was measured, and it is
+the part that does not move.
 
 What the system provides instead of a decision:
 
@@ -745,8 +749,8 @@ after the change:
              pairs."]}
 ```
 
-The plan was revised to `top_n: 10` and the response went from 11 MB to 270 KB. **12/12 on
-the adversarial set on both providers**, six wrong plans caught and six correct plans left
+The plan was revised to `top_n: 10` and the response went from 11 MB to 270 KB. **The
+adversarial set passes on both providers** (12/12 when this class was added, 19/19 today), six wrong plans caught and six correct plans left
 alone — the controls matter as much, since a reviewer that flags everything is as useless
 as one that flags nothing.
 
@@ -1002,7 +1006,21 @@ was never measured. A 39-query sweep measured it:
 are there by sponsor class* is an entirely ordinary question, and it answered from 83% of
 its slice.
 
-The cap is now **100,000 records per leg**, which completes four of the six.
+The cap is now **100,000 records per leg**, which completes four of the six. Verified on a
+re-run: `a02` (24,207), `d05` (33,792), `c04` (49,614) and `g06` (61,724) all fetch their
+slice whole. Four queries still truncate, and two of them only became visible once the
+first four stopped failing — `a11` and `g01` ask about conditions with no disease filter,
+so they match the **entire corpus** (597,691):
+
+| still truncated | matched | seen |
+|---|---|---|
+| phase composition of all oncology trials | 122,458 | 100,000 |
+| every trial started since 2000 | 585,468 | 100,000 |
+| conditions studied together (no filter) | 597,691 | 36,565 |
+| most common conditions (no filter) | 597,691 | 99,839 |
+
+Every one is a question about the whole registry rather than a slice of it, which is the
+shape a cap is *for*.
 
 **What it costs, measured rather than assumed.** At a narrow projection the registry
 returns 241 bytes per record and about 0.7s per 1,000-record page. So 100 pages is roughly
@@ -1074,28 +1092,35 @@ capability rather than a bad question.
 3. **Judgement** — does the plan answer the question? Not automatable; the runner prints
    what a reviewer needs.
 
-**What it found in the system.** Eight defects, and notably **not one wrong value**: 30
-rows reached ground truth (4 recounts, 10 membership checks, 16 totals) with zero
-mismatches, and a separate pass re-sliced **96 citations from freshly refetched records
-with 0 mismatched**. Where numbers could be independently verified, they were right. The
-defects were all in the layers ground truth does not touch:
+**What it found in the system.** Eight defects, and **not one wrong value**. Across the
+final run, **35 of 39 queries reached independent verification with zero mismatches** —
+6 full recounts, 12 membership checks, 17 total reconciliations — and a separate pass
+re-sliced **96 citations from freshly refetched records, 0 mismatched**. Where a number
+could be checked against ClinicalTrials.gov, it was right. Every defect lived in the layers
+ground truth does not touch: how a response *describes* its numbers, and whether the right
+question was asked.
 
-| finding | class |
-|---|---|
-| A two-leg comparison rendered as a KPI, discarding one leg | wrong |
-| An upstream 502 reported as `no_results` | wrong |
-| A stated qualifier ("actual recorded start date") dropped from the plan | wrong |
-| Every sum and median labelled "participants", including a *deaths* chart | misleading |
-| "Other" named as the leading condition | misleading |
-| Truncated charts describing themselves only as "a sample" | misleading |
-| Posted-results answers drawn from as little as 12% of the slice, unstated | misleading |
-| "Trials across 1,764 trials: 1,764." | cosmetic |
+| finding | class | fixed by |
+|---|---|---|
+| A two-leg comparison rendered as a KPI, discarding one leg | wrong | a KPI is *one* number; legs become the axis |
+| An upstream 502 reported as `no_results` | wrong | `ApiError` propagates to HTTP 502 |
+| A stated qualifier ("actual recorded start date") dropped from the plan | wrong | judge class 8, DROPPED QUALIFIER |
+| Every sum and median labelled "participants", including a *deaths* chart | misleading | `FieldSpec.unit` |
+| "Other" named as the leading condition | misleading | excluded from the ranking; residue stated separately |
+| Truncated charts describing themselves only as "a sample" | misleading | the warning now says magnitudes are not real counts |
+| Posted-results answers drawn from as little as 12% of the slice, unstated | misleading | exclusion share reported at ≥25% |
+| "Trials across 1,764 trials: 1,764." | cosmetic | "1,764 trials matched." |
 
-Seven of the eight are **right number, wrong words around it**. That category is why
-`audit.py` gives it its own severity, and why the sweep is worth more than another
+Seven of the eight are **right number, wrong words around it**. That is why `audit.py`
+gives that category its own severity, and why the sweep is worth more than another
 end-to-end test: unit tests assert values, and values were never the problem.
 
-**What it found in itself, which is the part worth stating.** The tooling was wrong three
+After the fixes the sweep re-ran clean — **39 queries, one finding, and that one is a
+`suspect`**: a question phrased "is there a relationship between enrolment and start year"
+was planned as a median-by-year line rather than a scatter, which is a defensible reading.
+The corpus marks the *expectation* as the doubtful thing there, not the system's choice.
+
+**What it found in itself, which is the part worth stating.** The tooling was wrong **four**
 times before the system was wrong once:
 
 * No HTTP backoff. The registry answers a throttled request with an HTML error page, so
@@ -1104,6 +1129,12 @@ times before the system was wrong once:
 * Result files truncated to 4 MB, which is invalid JSON, so the re-audit could not read
   them back.
 * Totals compared against one leg of a multi-leg plan, fabricating three failures.
+* A recount that stopped at its own 20,000-record ceiling once the service's cap rose to
+  100,000, and reported the shortfall as *the service being wrong* — "INDUSTRY: published
+  6,606, recounted 5,500", nine such lines on one query, every one of them the verifier's
+  own truncation. This was the worst in kind, so the behaviour was fixed rather than the
+  number: a recount that cannot see the whole slice, or whose total disagrees with the
+  response's, now returns "not comparable" instead of emitting per-bucket accusations.
 
 Plus seven auditors too strict to be usable: a KPI has no dimension by design; a histogram
 bin labelled `1–3.2` is legitimately cited by a trial with enrolment `3`, because no record
@@ -1118,4 +1149,6 @@ and cannot see; the 0-mismatch ground-truth result with the 96 re-sliced citatio
 that is the strongest evidence the citation design works; the eight findings as evidence
 the sweep earns its keep; and — plainly — that the verification tooling itself was wrong
 three times first. A verifier that has not been verified is another source of confident
-wrong answers, which is the failure this whole project is organised against.
+wrong answers, which is the failure this whole project is organised against. State the
+count honestly — four tooling bugs to one system bug is the real ratio, and it is the most
+useful thing this exercise has to say about verification.
