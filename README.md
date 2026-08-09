@@ -10,6 +10,8 @@ POST /analyze  {"query": "How are melanoma trials distributed across phases?"}
       from the records that produced it
 ```
 
+https://github.com/user-attachments/assets/c304366c-9127-47a2-9cae-0d3752c01705
+
 ## Live demo
 
 **[cheiron-take-home-tjum.onrender.com/ui](https://cheiron-take-home-tjum.onrender.com/ui)**
