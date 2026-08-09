@@ -384,7 +384,7 @@ system; and **it must not be sorted on alone**, because a pair occurring only wi
 other scores maximally on a single trial. Apply `config.suggested_min_occurrences` to
 `Node.weight` first.
 
-### `Citation`
+### Bonus: `Citation`
 
 Deep citations hang off each datum, and off each edge. There is **no response-level map**.
 
