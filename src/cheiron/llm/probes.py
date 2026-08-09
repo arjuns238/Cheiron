@@ -35,23 +35,30 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
-from cheiron.ctgov.client import MAX_PAGES, ApiError, CtGovClient
+from cheiron.ctgov.client import ApiError, CtGovClient, resolve_max_pages
 from cheiron.ctgov.compiler import PAGE_SIZE, compile_leg
 from cheiron.ctgov.normalizer import PHASE_NOT_REPORTED, normalize_studies
 from cheiron.schemas.fields import FIELDS, FieldKind
 from cheiron.schemas.plan import Filters
 from cheiron.schemas.request import Phase, Status, StudyType
 
-#: The retrieval ceiling, derived rather than restated. A duplicated literal here would
-#: keep advising the planner about a cap the client no longer enforces — and the probe's
-#: whole job is to tell the planner whether a slice will be truncated.
-RECORD_CAP = MAX_PAGES * PAGE_SIZE
-
 log = logging.getLogger(__name__)
 
 #: `plan.md` §3: at most four probe calls per planning attempt. The budget exists because
 #: probes are the planner's slowest step, not because they are risky.
 PROBE_BUDGET = 4
+
+
+def record_cap() -> int:
+    """The retrieval ceiling in records, derived rather than restated.
+
+    A function rather than a constant because the page cap is resolved from the environment
+    at call time (`CHEIRON_MAX_PAGES`). An import-time literal here would keep advising the
+    planner about a cap the client no longer enforces — and the probe's whole job is to tell
+    the planner whether a slice will be truncated.
+    """
+    return resolve_max_pages() * PAGE_SIZE
+
 
 #: Records pulled when a field's vocabulary is open and has to be sampled. One page is the
 #: cheapest useful sample and is enough to answer "roughly how many buckets".
@@ -207,9 +214,9 @@ class ProbeRunner:
                 "no trials match — the term may be misspelled or belong in a different "
                 "filter field"
                 if total == 0
-                else f"exceeds the {RECORD_CAP:,}-record page cap; the chart would be a "
+                else f"exceeds the {record_cap():,}-record page cap; the chart would be a "
                 f"sample"
-                if total > RECORD_CAP
+                if total > record_cap()
                 else ""
             ),
         }
@@ -439,4 +446,5 @@ __all__ = [
     "ProbeFilters",
     "ProbeRunner",
     "probe_tool_specs",
+    "record_cap",
 ]

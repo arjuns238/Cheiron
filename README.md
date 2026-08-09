@@ -506,6 +506,9 @@ long; the request would time out having shown nothing.
 
 The cap is therefore a bound on round trips rather than on bytes.
 
+**The cap is set per deployment, via `CHEIRON_MAX_PAGES`.** It defaults to 100 pages and is
+read from the environment, because the right ceiling is a property of the machine rather than of the question:
+
 ---
 
 ## Future work
@@ -563,29 +566,13 @@ Built with **Claude Code**. The architecture, the core invariant, the decision l
 
 ### How correctness was validated
 
-Four layers, because each catches what the others cannot.
-
-**1. Unit tests — 466, fully offline.** The API client against a mock transport, the model
-stages against fake clients, the deterministic core against real records in
-`tests/fixtures/`. Golden aggregator snapshots are hand-counted from eleven fixture records.
-
-**2. Adversarial prompt sets, run live.** `tests/adversarial_judge.py` (19 cases) and
-`tests/adversarial_selector.py` (8 cases). Half of each set is plans that must be left
-alone: a reviewer that flags everything is as useless as one that flags nothing, and only
-the control cases reveal which you have. Both pass on both providers, and **each has caught
-a real bug that unit tests could not** — one of them a serialization bug that left the
-reviewer structurally unable to check one of its own rules.
-
-**3. A 39-query sweep**, chosen to force every axis: all eleven chart families, all four
+**A 39-query sweep**, chosen to force every axis: all eleven chart families, all four
 metrics, all three layouts, every filter, posted results, multi-leg comparisons, the
 non-chart response types, and deliberate traps ("trials in Georgia" — country or US state?).
 Audited on three levels: self-consistency (14 checks, each documenting the bug that
 motivated it), ground truth (`tests/ground_truth.py`, which **imports nothing from
 `cheiron`** and refetches from the registry), and human judgement.
 
-**4. A browser smoke test.** `tests/ui_smoke.py` drives headless Chrome over the DevTools
-protocol, loads each captured example, clicks a datum and checks the drawer's excerpt
-against the datum that was clicked.
 
 **What that found.** Across the final sweep, **35 of 39 queries reached independent
 verification against the live registry with zero mismatches**, and a separate pass re-sliced

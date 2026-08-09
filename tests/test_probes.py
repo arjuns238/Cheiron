@@ -24,13 +24,13 @@ import pytest
 from cheiron.ctgov.client import CtGovClient
 from cheiron.llm.probes import (
     PROBE_BUDGET,
-    RECORD_CAP,
     FieldValuesArgs,
     FillRateArgs,
     ProbeCountArgs,
     ProbeFilters,
     ProbeRunner,
     probe_tool_specs,
+    record_cap,
 )
 
 FIXTURE_DIR = Path(__file__).parent / "fixtures" / "raw_studies"
@@ -87,15 +87,15 @@ async def test_a_term_that_does_not_resolve_says_so() -> None:
 async def test_a_slice_beyond_the_page_cap_is_flagged() -> None:
     """Beyond the cap a chart becomes a sample, and the planner can choose to narrow.
 
-    Both bounds are derived from `RECORD_CAP` rather than written as literals. The earlier
+    Both bounds are derived from `record_cap()` rather than written as literals. The earlier
     version asserted on France's 42,724 trials, which stopped exercising anything the
     moment the cap moved past it — the test still passed while testing nothing.
     """
-    over = await runner(Registry(total=RECORD_CAP + 1)).run("probe_count", {"country": "x"})
+    over = await runner(Registry(total=record_cap() + 1)).run("probe_count", {"country": "x"})
     assert "page cap" in over["note"]
-    assert f"{RECORD_CAP:,}" in over["note"], "the note must quote the cap actually in force"
+    assert f"{record_cap():,}" in over["note"], "the note must quote the cap actually in force"
 
-    under = await runner(Registry(total=RECORD_CAP - 1)).run("probe_count", {"country": "x"})
+    under = await runner(Registry(total=record_cap() - 1)).run("probe_count", {"country": "x"})
     assert "page cap" not in under["note"], "a slice that fits must not be called a sample"
 
 

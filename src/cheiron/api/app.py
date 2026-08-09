@@ -30,10 +30,10 @@ from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from cheiron.agg.aggregator import InvariantError
-from cheiron.ctgov.client import BASE_URL, MAX_PAGES, ApiError, CtGovClient
+from cheiron.ctgov.client import BASE_URL, ApiError, CtGovClient
 from cheiron.llm.client import LLMError, LLMSettings, build_client
 from cheiron.llm.planner import plan_and_review
-from cheiron.llm.probes import PROBE_BUDGET, ProbeRunner
+from cheiron.llm.probes import PROBE_BUDGET, ProbeRunner, record_cap
 from cheiron.pipeline import Deps, analyze
 from cheiron.schemas.fields import FIELDS
 from cheiron.schemas.plan import Metric, Plan
@@ -241,7 +241,7 @@ async def capabilities() -> CapabilitiesResponse:
         max_legs=6,
         limitations=[
             *LIMITATIONS,
-            f"Retrieval stops after {MAX_PAGES * 1000:,} records per leg; beyond that a "
+            f"Retrieval stops after {record_cap():,} records per leg; beyond that a "
             f"chart is a sample and `meta.record_counts.truncated` says so.",
             f"The planner may run at most {PROBE_BUDGET} probes per attempt.",
         ],

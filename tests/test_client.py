@@ -22,13 +22,17 @@ import pytest
 
 from cheiron.ctgov.cache import DiskCache, NullCache, cache_key
 from cheiron.ctgov.client import (
+    DEFAULT_MAX_PAGES,
+    MAX_PAGES_ENV,
     ApiError,
     CtGovClient,
     FetchResult,
     ReconciliationError,
+    resolve_max_pages,
 )
-from cheiron.ctgov.compiler import CompiledRequest, compile_plan
+from cheiron.ctgov.compiler import PAGE_SIZE, CompiledRequest, compile_plan
 from cheiron.ctgov.retrieval import assemble
+from cheiron.llm.probes import record_cap
 from cheiron.schemas.plan import Filters, Leg, Plan
 
 FIXTURE_DIR = Path(__file__).parent / "fixtures" / "raw_studies"
@@ -361,3 +365,89 @@ def test_real_fixture_payload_survives_the_whole_retrieval_path() -> None:
     assert record.get("phases") == "PHASE3"
     assert len(record.get("countries")) == 33
     assert retrieval.exclusions == {}
+
+
+
+# --------------------------------------------------------------------------------------
+# The page cap is configurable, and the configuration is not inert
+#
+# `max_records` was once accepted, documented as an upper bound on records fetched, and
+# never read — so a caller asking for 500 got 20,000 with no sign their parameter had been
+# ignored. It was removed rather than shipped inert. These tests exist so that
+# `CHEIRON_MAX_PAGES` cannot quietly become the same thing: they assert the value is read,
+# that it actually stops pagination, and that the places which *report* the cap report the
+# one being enforced.
+# --------------------------------------------------------------------------------------
+
+
+def test_page_cap_defaults_when_the_variable_is_absent(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv(MAX_PAGES_ENV, raising=False)
+    assert resolve_max_pages() == DEFAULT_MAX_PAGES
+
+
+def test_page_cap_is_read_from_the_environment(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv(MAX_PAGES_ENV, "7")
+    assert resolve_max_pages() == 7
+
+
+def test_page_cap_is_read_lazily_rather_than_at_import(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """`.env` is loaded in the app's lifespan, which runs after this module is imported.
+
+    An import-time read would honour a real environment variable and silently ignore a
+    `.env` entry — a knob that works on one deployment and not the other.
+    """
+    monkeypatch.setenv(MAX_PAGES_ENV, "3")
+    assert make_client(Recorder([ok(page(["NCT1"], total=1))])).max_pages == 3
+
+
+def test_an_explicit_argument_beats_the_environment(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Tests pass `max_pages=` directly, and must not be at the mercy of the shell."""
+    monkeypatch.setenv(MAX_PAGES_ENV, "7")
+    assert resolve_max_pages(2) == 2
+
+
+@pytest.mark.parametrize("bad", ["nonsense", "0", "-4", "1.5", "1e3"])
+def test_an_unusable_page_cap_raises_rather_than_reverting(
+    monkeypatch: pytest.MonkeyPatch, bad: str
+) -> None:
+    """A typo'd cap must not fall back to the default.
+
+    Reverting silently is the inert-knob failure exactly: the operator believes they have
+    lowered the ceiling while the service keeps fetching to the old one.
+    """
+    monkeypatch.setenv(MAX_PAGES_ENV, bad)
+    with pytest.raises(ValueError, match=MAX_PAGES_ENV):
+        resolve_max_pages()
+
+
+async def test_the_configured_cap_actually_stops_pagination(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The knob has to change behaviour, not merely a reported number."""
+    monkeypatch.setenv(MAX_PAGES_ENV, "2")
+    recorder = Recorder([ok(page(["NCT1"], total=500, next_token="more"))])
+
+    result = await make_client(recorder).fetch(a_request(condition="melanoma"))
+
+    assert result.pages == 2
+    assert result.retrieved == 2
+    assert result.truncated is True
+    assert recorder.call_count == 2, "pagination stopped at the configured cap"
+
+
+def test_everything_that_reports_the_cap_reports_the_enforced_one(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Three modules resolve the cap, and a stale copy would make the service contradict itself.
+
+    `/capabilities` publishes the record ceiling and the probe tools warn the planner when a
+    slice exceeds it. If either kept an import-time constant, the service would state one
+    ceiling and enforce another — the same defect as a filter reported as applied but
+    compiled to nothing.
+    """
+    monkeypatch.setenv(MAX_PAGES_ENV, "5")
+
+    assert make_client(Recorder([ok(page(["NCT1"], total=1))])).max_pages == 5
+    assert record_cap() == 5 * PAGE_SIZE

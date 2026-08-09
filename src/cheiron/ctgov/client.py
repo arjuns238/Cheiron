@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import os
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -46,7 +47,45 @@ BASE_URL = "https://clinicaltrials.gov/api/v2"
 #:
 #: Past the cap the chart is a sample, and it says so: `truncated` is set, surfaced as a
 #: warning, and `matched` vs `retrieved` in `meta.record_counts` shows how much was seen.
-MAX_PAGES = 100
+DEFAULT_MAX_PAGES = 100
+
+#: Environment variable that overrides the default, so a deployment can run a lower cap
+#: than a developer machine without a code change. A 512 MB container cannot hold the
+#: retained payloads of a 100,000-record slice; a laptop can.
+MAX_PAGES_ENV = "CHEIRON_MAX_PAGES"
+
+
+def resolve_max_pages(override: int | None = None) -> int:
+    """The page cap in force: an explicit argument, else the environment, else the default.
+
+    Read **lazily** rather than at import, on purpose. `.env` is loaded in the app's
+    lifespan, which runs after this module is imported, so an import-time read would honour
+    a real environment variable and silently ignore a `.env` entry — a knob that works in
+    one deployment and not the other is worse than no knob.
+
+    Every consumer of the cap resolves through here for the same reason. `/capabilities`
+    reports the cap and the probe tools advise the planner against it; if either kept an
+    import-time copy, the service would state one ceiling and enforce another.
+
+    Raises:
+        ValueError: if the variable is set to something that is not a positive integer.
+            A typo'd cap that quietly reverted to the default would be the inert knob this
+            design exists to avoid.
+    """
+    if override is not None:
+        return override
+    raw = os.getenv(MAX_PAGES_ENV)
+    if raw is None or not raw.strip():
+        return DEFAULT_MAX_PAGES
+    try:
+        value = int(raw)
+    except ValueError:
+        raise ValueError(
+            f"{MAX_PAGES_ENV}={raw!r} is not an integer; unset it or give a positive count"
+        ) from None
+    if value < 1:
+        raise ValueError(f"{MAX_PAGES_ENV}={raw!r} must be at least 1")
+    return value
 
 #: Retried on: the registry rate-limits and occasionally 502s behind its CDN. A 400 is a
 #: malformed query and retrying it would just be slower failure.
@@ -149,12 +188,12 @@ class CtGovClient:
         *,
         cache: Cache | None = None,
         base_url: str = BASE_URL,
-        max_pages: int = MAX_PAGES,
+        max_pages: int | None = None,
     ) -> None:
         self._client = client
         self._cache = cache or NullCache()
         self.base_url = base_url.rstrip("/")
-        self.max_pages = max_pages
+        self.max_pages = resolve_max_pages(max_pages)
         self._slots = asyncio.Semaphore(MAX_CONCURRENCY)
         self._lock = asyncio.Lock()
         self._next_allowed = 0.0
@@ -270,9 +309,11 @@ def _retry_after(response: httpx.Response) -> float | None:
 
 __all__ = [
     "BASE_URL",
-    "MAX_PAGES",
+    "DEFAULT_MAX_PAGES",
+    "MAX_PAGES_ENV",
     "ApiError",
     "CtGovClient",
     "FetchResult",
     "ReconciliationError",
+    "resolve_max_pages",
 ]
